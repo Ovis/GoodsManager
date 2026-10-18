@@ -4,7 +4,7 @@ const element = id => document.getElementById(id);
 const state = { connected: false, busy: false, session: null, setupRequired: false, passkeys: [] };
 const passkeyAvailable = Boolean(window.PublicKeyCredential?.parseCreationOptionsFromJSON
   && window.PublicKeyCredential?.parseRequestOptionsFromJSON
-  && window.PublicKeyCredential?.prototype.toJSON && navigator.credentials);
+  && navigator.credentials);
 const history = [];
 
 // 応答の本文・パスワード・チャレンジ・認証データを履歴へ保存しない
@@ -124,7 +124,7 @@ async function assertion(options) {
     publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options.publicKeyOptions)
   });
   if (!credential) throw new DOMException("認証を中止", "NotAllowedError");
-  return { challengeId: options.challengeId, credential: credential.toJSON() };
+  return { challengeId: options.challengeId, credential: serializePasskey(credential) };
 }
 
 async function verification(purpose) {
@@ -229,7 +229,7 @@ element("add-form").addEventListener("submit", event => {
     });
     if (!credential) throw new DOMException("登録を中止", "NotAllowedError");
     await api("account/passkeys", { method: "POST", body: {
-      challengeId: options.challengeId, credential: credential.toJSON(), displayName: element("passkey-name").value
+      challengeId: options.challengeId, credential: serializePasskey(credential), displayName: element("passkey-name").value
     } });
     await refreshedAfterSuccess();
   });

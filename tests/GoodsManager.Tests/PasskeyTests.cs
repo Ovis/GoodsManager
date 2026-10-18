@@ -16,6 +16,34 @@ namespace GoodsManager.Tests;
 /// <summary>試験用認証器の実署名をIdentity標準ハンドラーで検証</summary>
 public sealed class PasskeyTests
 {
+    /// <summary>空でも拡張結果が必須であり、正しいJSONなら標準検証で登録できることを確認</summary>
+    [Test]
+    public async Task RegistrationRequiresClientExtensionResultsEvenWhenEmpty()
+    {
+        await using var app = new TestApplication();
+        using var client = Client(app);
+        await SetupAsync(client);
+        using var authenticator = new TestAuthenticator();
+        var options = await RegistrationOptionsAsync(client);
+        var credential = System.Text.Json.Nodes.JsonNode.Parse(authenticator.Create(options.GetProperty("publicKeyOptions")).GetRawText())!.AsObject();
+        credential.Remove("clientExtensionResults");
+
+        var response = await SendAsync(client, "account/passkeys", new { challengeId = options.GetProperty("challengeId"), credential, displayName = "確認" });
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.That(problem.GetProperty("reason").GetString(), Is.EqualTo("CREDENTIAL_JSON_INVALID"));
+
+        // 失敗時もチャレンジは消費されるため、新しい選択肢からやり直す
+        options = await RegistrationOptionsAsync(client);
+        response = await SendAsync(client, "account/passkeys", new
+        {
+            challengeId = options.GetProperty("challengeId"),
+            credential = authenticator.Create(options.GetProperty("publicKeyOptions")),
+            displayName = "確認"
+        });
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created), await response.Content.ReadAsStringAsync());
+    }
+
     /// <summary>一覧の最新ETagを取得し、標準ユーザー更新後の版を使う</summary>
     public static async Task<string> EtagAsync(HttpClient client, string id) =>
         (await client.GetFromJsonAsync<JsonElement>("/api/v1/account/passkeys")).EnumerateArray().Single(x => x.GetProperty("id").GetString() == id).GetProperty("etag").GetString()!;

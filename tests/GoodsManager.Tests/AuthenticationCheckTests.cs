@@ -12,6 +12,7 @@ public sealed class AuthenticationCheckTests
     /// <summary>実際のアプリから埋め込み資源を返し、認証APIを公開したままにする</summary>
     [TestCase("/dev/auth-check", "text/html")]
     [TestCase("/dev/auth-check/auth-check.js", "text/javascript")]
+    [TestCase("/dev/auth-check/passkey-serialization.js", "text/javascript")]
     [TestCase("/dev/auth-check/auth-check.css", "text/css")]
     [TestCase("/dev/auth-check/config", "application/json")]
     public async Task DevelopmentServesOnlyKnownResources(string path, string contentType)
@@ -44,7 +45,7 @@ public sealed class AuthenticationCheckTests
         app.MapAuthenticationCheck();
         await app.StartAsync();
         using var client = app.GetTestClient();
-        foreach (var path in new[] { "/dev/auth-check", "/dev/auth-check/auth-check.js", "/dev/auth-check/auth-check.css", "/dev/auth-check/config" })
+        foreach (var path in new[] { "/dev/auth-check", "/dev/auth-check/auth-check.js", "/dev/auth-check/passkey-serialization.js", "/dev/auth-check/auth-check.css", "/dev/auth-check/config" })
         {
             Assert.That((await client.GetAsync(path)).StatusCode, Is.EqualTo(HttpStatusCode.NotFound), path);
         }

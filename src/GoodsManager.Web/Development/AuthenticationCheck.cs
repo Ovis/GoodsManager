@@ -14,6 +14,7 @@ public static class AuthenticationCheck
         MapAsset(app, "/dev/auth-check", "index.html", "text/html; charset=utf-8");
         MapAsset(app, "/dev/auth-check/auth-check.css", "auth-check.css", "text/css; charset=utf-8");
         MapAsset(app, "/dev/auth-check/auth-check.js", "auth-check.js", "text/javascript; charset=utf-8");
+        MapAsset(app, "/dev/auth-check/passkey-serialization.js", "passkey-serialization.js", "text/javascript; charset=utf-8");
         app.MapGet("/dev/auth-check/config", (HttpContext context, IConfiguration configuration) =>
         {
             SetHeaders(context);
