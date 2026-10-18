@@ -108,7 +108,7 @@ public sealed class SqliteTests
 
         foreach (var invalid in new object[] { id.ToString("D").ToUpperInvariant(), id.ToString("N"), "g0000000-0000-0000-0000-000000000000", "0000000--0000-0000-0000-000000000000", new byte[36] })
         {
-            Assert.ThrowsAsync<SqliteException>(async () => await ScalarAsync("UPDATE Rows SET ParentId=@value", invalid));
+            Assert.ThrowsAsync<SqliteException>(async () => await ScalarAsync("UPDATE Rows SET Id=@value WHERE Id=(SELECT Id FROM Rows LIMIT 1)", invalid));
         }
 
         foreach (var invalid in new object[] { StorageValues.MinimumTimestamp - 1, StorageValues.MaximumTimestamp + 1, "bad", 0.5 })
@@ -162,6 +162,7 @@ public sealed class SqliteTests
         Assert.ThrowsAsync<SqliteException>(async () => await ScalarAsync("UPDATE Rows SET Revision=Revision+1 WHERE Revision=9223372036854775807"));
         Assert.That(StorageValues.RequireSafeTotal(StorageValues.MaximumSafeInteger), Is.EqualTo(StorageValues.MaximumSafeInteger));
         Assert.Throws<OverflowException>(() => StorageValues.RequireSafeTotal(StorageValues.MaximumSafeInteger + 1));
+        Assert.Throws<InvalidDataException>(() => StorageValues.ParseBoolean(2));
 
         await using (var transaction = await db.Database.BeginTransactionAsync())
         {
@@ -213,6 +214,31 @@ public sealed class SqliteTests
         Assert.Throws<IOException>(second.AcquireLease);
         first.Dispose();
         Assert.DoesNotThrow(second.AcquireLease);
+    }
+
+    /// <summary>SQ12: 別接続の書込競合が一部確定や誤った成功にならない</summary>
+    [Test]
+    public async Task SeparateConnectionsRespectWriteLockAndRollback()
+    {
+        await using var db = await CreateContractAsync();
+        db.Rows.Add(new ContractRow());
+        await db.SaveChangesAsync();
+        await using var first = new SqliteConnection(connectionString);
+        await using var second = new SqliteConnection(connectionString);
+        await first.OpenAsync();
+        await second.OpenAsync();
+        await using var transaction = first.BeginTransaction();
+        using var update = first.CreateCommand();
+        update.Transaction = transaction;
+        update.CommandText = "UPDATE Rows SET Quantity=2";
+        await update.ExecuteNonQueryAsync();
+        using var competing = second.CreateCommand();
+        competing.CommandTimeout = 1;
+        competing.CommandText = "UPDATE Rows SET Quantity=3";
+        var failure = Assert.ThrowsAsync<SqliteException>(async () => await competing.ExecuteNonQueryAsync());
+        Assert.That(failure!.SqliteErrorCode, Is.EqualTo(5));
+        await transaction.RollbackAsync();
+        Assert.That(await ScalarAsync("SELECT Quantity FROM Rows"), Is.EqualTo(1));
     }
 }
 

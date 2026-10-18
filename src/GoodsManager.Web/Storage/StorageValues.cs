@@ -29,6 +29,14 @@ public static class StorageValues
     public static long RequireSafeTotal(long value) => value is >= 0 and <= MaximumSafeInteger
         ? value : throw new OverflowException("数量合計が安全な整数の範囲外");
 
+    /// <summary>破損データを暗黙のfalseへ置き換えず拒否</summary>
+    public static bool ParseBoolean(long value) => value switch
+    {
+        0 => false,
+        1 => true,
+        _ => throw new InvalidDataException("真偽値の保存値が不正")
+    };
+
     /// <summary>補助文字を含めコードポイント数を数え、不正なUTF-16とNULも拒否</summary>
     public static bool IsValidText(string? value, int minimum, int maximum)
     {
@@ -83,7 +91,7 @@ public static class StorageValues
                 }
                 else if (type == typeof(bool))
                 {
-                    property.SetValueConverter(new ValueConverter<bool, long>(v => v ? 1 : 0, v => v == 1));
+                    property.SetValueConverter(new ValueConverter<bool, long>(v => v ? 1 : 0, v => ParseBoolean(v)));
                     property.SetColumnType("INTEGER");
                     rule = $"typeof({column}) = 'integer' AND {column} IN (0,1)";
                 }
