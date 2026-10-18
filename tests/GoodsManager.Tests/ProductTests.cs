@@ -269,7 +269,7 @@ public sealed class ProductTests
     [TestCase("{\"commands\":[{\"type\":\"createLot\",\"clientRef\":\"a\",\"quantity\":\"1\",\"fields\":{}}]}")]
     [TestCase("{\"commands\":[{\"type\":\"createLot\",\"clientRef\":\"a\",\"quantity\":2147483648,\"fields\":{}}]}")]
     [TestCase("{\"commands\":[{\"type\":\"createLot\",\"type\":\"createLot\",\"clientRef\":\"a\",\"quantity\":1,\"fields\":{}}]}")]
-    [TestCase("{\"commands\":[{\"type\":\"replaceItemImages\",\"itemRef\":\"a\",\"entries\":[]}]}")]
+    [TestCase("{\"commands\":[{\"type\":\"unknownImageCommand\",\"itemRef\":\"a\",\"entries\":[]}]}")]
     [TestCase("{\"commands\":[{\"type\":\"updateItem\",\"itemRef\":\"\\uD800\",\"fields\":{}}]}")]
     public async Task InvalidJsonTypesAndUnknownFieldsDoNotMutate(string raw)
     {

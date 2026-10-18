@@ -1,13 +1,14 @@
 using GoodsManager.Web.Masters;
+using GoodsManager.Web.Images;
 using GoodsManager.Web.Storage;
 using Microsoft.EntityFrameworkCore;
 
 namespace GoodsManager.Web.Products;
 
 /// <summary>操作列を順に適用する。途中失敗時に呼出側がDB・更新番号・再送記録をまとめて取り消す。</summary>
-public sealed class InventoryOperations(AppDbContext db, ProductOperations products)
+public sealed class InventoryOperations(AppDbContext db, ProductOperations products, ImageLinks images)
 {
-    public async Task<IReadOnlyDictionary<string, Guid>> ApplyAsync(Product product, IReadOnlyList<InventoryCommand> commands, DateTimeOffset now, CancellationToken token)
+    public async Task<IReadOnlyDictionary<string, Guid>> ApplyAsync(Product product, IReadOnlyList<InventoryCommand> commands, DateTimeOffset now, CancellationToken token, Guid? userId = null)
     {
         products.RequireTransaction();
         if (commands.Count is < 1 or > 100 || commands.OfType<ExtractItems>().Sum(x => (long)x.ItemRefs.Length) > 100) throw InputObject.Invalid("commands");
@@ -97,11 +98,15 @@ public sealed class InventoryOperations(AppDbContext db, ProductOperations produ
                 case UpdateItem c:
                     ChangeFields(Item(c.ItemRef), c.Fields);
                     break;
+                case ReplaceItemImages c:
+                    if (!userId.HasValue) throw Invalid();
+                    changed |= await images.ReplaceItemAsync(Item(c.ItemRef).Id, userId.Value, c.Entries, token);
+                    break;
                 case ReturnItem c:
                     {
                         var item = Item(c.ItemRef);
                         if (c.MemoAction != "discardConfirmed" || c.PhotoAction is not ("moveToProduct" or "deleteConfirmed")) throw Invalid();
-                        // P07/P09で写真を接続するまでは画像を持つ個体は存在しない。
+                        await images.MoveItemImagesAsync(item.Id, product.Id, c.PhotoAction == "moveToProduct", token);
                         AddLot(c.NewLotRef, 1, item, new(default, default, default, new(true, null)));
                         items.Remove(item); db.Remove(item);
                         break;

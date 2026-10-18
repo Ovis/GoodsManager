@@ -8,7 +8,9 @@ using System.Text.Json.Serialization;
 using GoodsManager.Web.Development;
 using GoodsManager.Web.Products;
 using GoodsManager.Web.Search;
+using GoodsManager.Web.Images;
 
+if (args.FirstOrDefault() == "image-worker") { Environment.ExitCode = ImageConverter.RunCli(args); return; }
 var recovery = args.FirstOrDefault() == "recover-account";
 var builder = WebApplication.CreateBuilder(recovery ? [] : args);
 // 承認した7種各100件のID条件と200コードポイントの検索値をURLで扱う。
@@ -29,6 +31,15 @@ builder.Services.AddScoped<InventoryOperations>();
 builder.Services.AddScoped<ProductWrites>();
 builder.Services.AddScoped<SearchProjection>();
 builder.Services.AddScoped<ProductSearch>();
+builder.Services.AddSingleton<ImageLimits>();
+builder.Services.AddSingleton<ImageActivity>();
+builder.Services.AddSingleton<IImageFiles, ImageFiles>();
+builder.Services.AddSingleton<IImageConverter, IsolatedImageConverter>();
+builder.Services.AddScoped<ImageUploads>();
+builder.Services.AddScoped<ImageLinks>();
+builder.Services.AddScoped<ImageGc>();
+builder.Services.AddScoped<ImageAlerts>();
+builder.Services.AddHostedService<ImageWorker>();
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict);
 
 var app = builder.Build();
@@ -39,6 +50,8 @@ try
     await using var scope = app.Services.CreateAsyncScope();
     await DatabaseMaintenance.MigrateAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), runtime.DirectoryPath);
     await scope.ServiceProvider.GetRequiredService<SearchProjection>().RebuildAllAsync();
+    await ImageWorker.InitializeAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), scope.ServiceProvider.GetRequiredService<TimeProvider>());
+    if (!recovery) await scope.ServiceProvider.GetRequiredService<ImageGc>().RunAsync(CancellationToken.None);
 }
 catch
 {
@@ -65,7 +78,7 @@ app.UseStatusCodePages();
 app.Use(async (context, next) =>
 {
     // 認証のチャレンジが短絡した場合もAPI応答をキャッシュさせない
-    if (context.Request.Path.StartsWithSegments("/api"))
+    if (context.Request.Path.StartsWithSegments("/api") || context.Request.Path.StartsWithSegments("/media"))
     {
         context.Response.Headers.CacheControl = "private, no-store";
     }
@@ -99,6 +112,7 @@ app.MapControllers();
 app.MapAuthenticationCheck();
 app.MapMasterCheck();
 app.MapProductCheck();
+app.MapImageCheck();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 app.Run();

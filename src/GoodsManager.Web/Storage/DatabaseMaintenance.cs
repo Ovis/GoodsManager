@@ -111,6 +111,27 @@ public static class DatabaseMaintenance
         }
     }
 
+    private static void AddFormalImages(SqliteConnection source, string dataDirectory, ZipArchive zip)
+    {
+        using var command = source.CreateCommand();
+        command.CommandText = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='ImageFiles'";
+        if (Convert.ToInt64(command.ExecuteScalar()) == 0) return;
+        command.CommandText = """
+            SELECT DISTINCT f.ImageFileId,f.Sha256,f.RelativePath,f.ByteLength
+            FROM ImageFiles f JOIN ImageAssets a ON f.ImageFileId IN (a.DisplayFileId,a.ThumbnailFileId,a.OriginalFileId)
+            WHERE EXISTS (SELECT 1 FROM ProductImages p WHERE p.ImageAssetId=a.ImageAssetId)
+               OR EXISTS (SELECT 1 FROM InventoryItemImages i WHERE i.ImageAssetId=a.ImageAssetId)
+            """;
+        using var reader = command.ExecuteReader();
+        using var runtime = new DatabaseRuntime(dataDirectory);
+        var files = new GoodsManager.Web.Images.ImageFiles(runtime);
+        while (reader.Read())
+        {
+            var file = new GoodsManager.Web.Images.ImageFile { Id = Guid.Parse(reader.GetString(0)), Sha256 = reader.GetString(1), RelativePath = reader.GetString(2), ByteLength = reader.GetInt64(3) };
+            files.VerifyAsync(file, default).GetAwaiter().GetResult();
+            zip.CreateEntryFromFile(files.Resolve(file.RelativePath), "images/" + file.RelativePath, CompressionLevel.NoCompression);
+        }
+    }
     /// <summary>WALを含む一貫したDBと鍵をZIPへ退避し、完成前のファイルと区別</summary>
     private static void CreateSnapshot(SqliteConnection source, string dataDirectory)
     {
@@ -130,6 +151,7 @@ public static class DatabaseMaintenance
             using (var zip = ZipFile.Open(stem + ".partial", ZipArchiveMode.Create))
             {
                 zip.CreateEntryFromFile(snapshot, "goods-manager.db");
+                AddFormalImages(source, dataDirectory, zip);
                 var keys = Path.Combine(dataDirectory, "keys");
                 if (Directory.Exists(keys))
                 {

@@ -2,6 +2,7 @@ using System.Data.Common;
 using System.Globalization;
 using GoodsManager.Web.Masters;
 using GoodsManager.Web.Products;
+using GoodsManager.Web.Images;
 using GoodsManager.Web.Storage;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -74,8 +75,7 @@ public sealed class ProductSearch(AppDbContext db)
             var clause = string.Join(" AND ", holding);
             where.Add($"(EXISTS(SELECT 1 FROM InventoryLots h WHERE {clause}) OR EXISTS(SELECT 1 FROM InventoryItems h WHERE {clause}))");
         }
-        // P07の共通画像テーブル接続前は、商品画像を持つ正本が存在しない。
-        if (query.HasImages == true) where.Add("0");
+        if (query.HasImages.HasValue) where.Add((query.HasImages.Value ? "" : "NOT ") + "EXISTS(SELECT 1 FROM ProductImages pi WHERE pi.ProductId=p.ProductId)");
         var rank = "5";
         if (query.Terms.Length > 0)
         {
@@ -134,9 +134,10 @@ public sealed class ProductSearch(AppDbContext db)
         var lots = await db.Set<InventoryLot>().AsNoTracking().Where(x => ids.Contains(x.ProductId)).Select(x => new { x.ProductId, x.Condition, x.StorageLocation }).ToArrayAsync(token);
         var items = await db.Set<InventoryItem>().AsNoTracking().Where(x => ids.Contains(x.ProductId)).Select(x => new { x.ProductId, x.Condition, x.StorageLocation }).ToArrayAsync(token);
         var own = lots.Concat(items).ToArray();
+        var images = await (from link in db.Set<ProductImage>().AsNoTracking() join asset in db.Set<ImageAsset>() on link.ImageAssetId equals asset.Id where ids.Contains(link.ProductId) && link.IsPrimary select new { Link = link, asset.KeepOriginal }).ToArrayAsync(token);
         return rows.Select(r => new ProductSummary(r.Id, r.Name, r.Category, works.Where(w => w.ProductId == r.Id).Select(w => new NamedRef(w.Id, w.Name)).ToArray(), r.Total,
             own.Where(x => x.ProductId == r.Id).Select(x => x.Condition).Distinct().Order(StringComparer.Ordinal).ToArray(),
-            own.Where(x => x.ProductId == r.Id && x.StorageLocation is not null).Select(x => x.StorageLocation!).Distinct().Order(StringComparer.Ordinal).ToArray(), null, r.CreatedAt, r.UpdatedAt, r.Revision.ToString(CultureInfo.InvariantCulture))).ToArray();
+            own.Where(x => x.ProductId == r.Id && x.StorageLocation is not null).Select(x => x.StorageLocation!).Distinct().Order(StringComparer.Ordinal).ToArray(), images.Where(x => x.Link.ProductId == r.Id).Select(x => ImageLinks.Ref(x.Link, true, x.KeepOriginal)).FirstOrDefault(), r.CreatedAt, r.UpdatedAt, r.Revision.ToString(CultureInfo.InvariantCulture))).ToArray();
     }
     public async Task<object> SummaryAsync(string inventory, CancellationToken token)
     {

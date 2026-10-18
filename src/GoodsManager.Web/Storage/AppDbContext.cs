@@ -5,6 +5,7 @@ using GoodsManager.Web.Auth;
 using GoodsManager.Web.Masters;
 using GoodsManager.Web.Products;
 using GoodsManager.Web.Search;
+using GoodsManager.Web.Images;
 
 namespace GoodsManager.Web.Storage;
 
@@ -66,6 +67,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         MasterSchema.Configure(modelBuilder);
         ProductSchema.Configure(modelBuilder);
         SearchSchema.Configure(modelBuilder);
+        ImageSchema.Configure(modelBuilder);
         StorageValues.ApplyConventions(modelBuilder);
     }
 }

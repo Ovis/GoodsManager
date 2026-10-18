@@ -1,5 +1,6 @@
 using System.Globalization;
 using GoodsManager.Web.Masters;
+using GoodsManager.Web.Images;
 using GoodsManager.Web.Storage;
 using Microsoft.EntityFrameworkCore;
 
@@ -111,6 +112,7 @@ public sealed class ProductOperations(AppDbContext db)
         var identifiers = await db.Set<ProductIdentifier>().AsNoTracking().Where(x => x.ProductId == product.Id).OrderBy(x => x.Id).Select(x => new { x.Id, x.Scheme, x.RawValue, x.NormalizedValue, x.ComparisonValue }).ToArrayAsync(token);
         var links = await db.Set<ProductLink>().AsNoTracking().Where(x => x.ProductId == product.Id).OrderBy(x => x.Id).Select(x => new { x.Id, x.Url }).ToArrayAsync(token);
         var inventory = await InventoryAsync(product, new Dictionary<string, Guid>(), token);
+        var images = await ImageLinks.ProductRefsAsync(db, product.Id, token);
         return new
         {
             product.Id,
@@ -125,6 +127,8 @@ public sealed class ProductOperations(AppDbContext db)
             tags,
             identifiers,
             links,
+            images,
+            primaryImage = images.FirstOrDefault(x => x.IsPrimary),
             inventory.TotalQuantity,
             inventory,
             product.CreatedAt,
@@ -138,8 +142,10 @@ public sealed class ProductOperations(AppDbContext db)
     {
         var lots = await db.Set<InventoryLot>().AsNoTracking().Where(x => x.ProductId == product.Id).OrderBy(x => x.Id).ToArrayAsync(token);
         var items = await db.Set<InventoryItem>().AsNoTracking().Where(x => x.ProductId == product.Id).OrderBy(x => x.Id).ToArrayAsync(token);
+        var itemIds = items.Select(x => x.Id).ToArray();
+        var itemImages = await (from link in db.Set<InventoryItemImage>().AsNoTracking() join asset in db.Set<ImageAsset>() on link.ImageAssetId equals asset.Id where itemIds.Contains(link.InventoryItemId) orderby link.SortOrder, link.Id select new { Link = link, asset.KeepOriginal }).ToArrayAsync(token);
         return new(product.Revision.ToString(CultureInfo.InvariantCulture), Etag(product), Total(lots, items), lots.Select(x => new LotView(x.Id, x.Quantity, x.Condition, x.StorageLocation, x.PurchasePlace, x.Memo, x.CreatedAt, x.UpdatedAt)).ToArray(),
-            items.Select(x => new ItemView(x.Id, x.Condition, x.StorageLocation, x.PurchasePlace, x.Memo, x.CreatedAt, x.UpdatedAt)).ToArray(), refs);
+            items.Select(x => new ItemView(x.Id, x.Condition, x.StorageLocation, x.PurchasePlace, x.Memo, x.CreatedAt, x.UpdatedAt, itemImages.Where(i => i.Link.InventoryItemId == x.Id).Select(i => ImageLinks.Ref(i.Link, false, i.KeepOriginal)).ToArray())).ToArray(), refs);
     }
 
     internal static long Total(IEnumerable<InventoryLot> lots, IEnumerable<InventoryItem> items)
@@ -149,5 +155,5 @@ public sealed class ProductOperations(AppDbContext db)
     }
 }
 public sealed record LotView(Guid Id, int Quantity, string? Condition, string? StorageLocation, string? PurchasePlace, string? Memo, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
-public sealed record ItemView(Guid Id, string? Condition, string? StorageLocation, string? PurchasePlace, string? Memo, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
-public sealed record InventoryResult(string ProductRevision, string Etag, long TotalQuantity, LotView[] Lots, ItemView[] Items, IReadOnlyDictionary<string, Guid> CreatedRefs);
+public sealed record ItemView(Guid Id, string? Condition, string? StorageLocation, string? PurchasePlace, string? Memo, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, ImageRef[] Images);
+public sealed record InventoryResult(string ProductRevision, string Etag, long TotalQuantity, LotView[] Lots, ItemView[] Items, IReadOnlyDictionary<string, Guid> CreatedRefs, int DeduplicatedCount = 0);

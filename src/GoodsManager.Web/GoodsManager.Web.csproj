@@ -9,6 +9,7 @@
     <EmbeddedResource Include="Development/AuthCheck/*" />
     <EmbeddedResource Include="Development/MasterCheck/*" />
     <EmbeddedResource Include="Development/ProductCheck/*" />
+    <EmbeddedResource Include="Development/ImageCheck/*" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.13" />
@@ -17,6 +18,8 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
+    <PackageReference Include="SkiaSharp" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
   </ItemGroup>
   <ItemGroup>
     <!-- 生成アセットは発行直前に確定し、運用データと鍵を発行物へ混入させない。 -->

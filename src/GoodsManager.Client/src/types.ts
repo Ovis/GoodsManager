@@ -1,5 +1,6 @@
 export type NamedRef = { id: string; name: string };
-export type ProductSummary = { id: string; name: string; category: NamedRef; works: NamedRef[]; totalQuantity: number; conditions: (string|null)[]; storageLocations: string[]; primaryImage: null; createdAt: string; updatedAt: string; revision: string };
+export type ImageRef = { linkId:string; assetId:string; sortOrder:number; isPrimary:boolean; thumbnailUrl:string; displayUrl:string; originalUrl:string|null };
+export type ProductSummary = { id: string; name: string; category: NamedRef; works: NamedRef[]; totalQuantity: number; conditions: (string|null)[]; storageLocations: string[]; primaryImage: ImageRef|null; createdAt: string; updatedAt: string; revision: string };
 export type SearchPage = { items: ProductSummary[]; page: number; pageSize: number; totalCount: number; totalPages: number; dataRevision: string };
 export type CollectionSummary = { productCount: number; totalQuantity: number; recentProducts: ProductSummary[] };
 export type Holding = { id: string; quantity?: number; condition: string|null; storageLocation: string|null; purchasePlace: string|null; memo: string|null };

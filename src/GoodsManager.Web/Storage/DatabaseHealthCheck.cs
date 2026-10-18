@@ -13,6 +13,7 @@ public sealed class DatabaseHealthCheck(AppDbContext database) : IHealthCheck
         {
             return !await DatabaseMaintenance.HasPendingMigrationsAsync(database, cancellationToken)
                 && await database.SystemStates.AnyAsync(x => x.Id == 1, cancellationToken)
+                && !await database.Set<GoodsManager.Web.Images.SystemAlert>().AnyAsync(x => x.ResolvedAt == null && x.Code == "IMAGE_FILE_UNAVAILABLE", cancellationToken)
                 ? HealthCheckResult.Healthy() : HealthCheckResult.Unhealthy();
         }
         catch (Exception)

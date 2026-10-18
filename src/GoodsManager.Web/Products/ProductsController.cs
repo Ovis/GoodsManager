@@ -32,7 +32,7 @@ public sealed class ProductsController(AppDbContext db, ProductOperations produc
         var product = await products.FindAsync(id, token);
         ProductWrites.CheckVersion(product, Request.Headers.IfMatch.ToString());
         var commands = ProductWrites.Parse(() => InventoryCommands.Parse(body));
-        var refs = await inventory.ApplyAsync(product, commands, now, token);
+        var refs = await inventory.ApplyAsync(product, commands, now, token, Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value));
         return (product, refs);
     });
 
