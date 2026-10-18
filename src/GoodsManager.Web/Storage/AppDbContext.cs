@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using GoodsManager.Web.Auth;
 using GoodsManager.Web.Masters;
+using GoodsManager.Web.Products;
 
 namespace GoodsManager.Web.Storage;
 
@@ -62,6 +63,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             entity.HasData(new SystemState { Id = 1, DataRevision = 0, UpdatedAt = DateTimeOffset.UnixEpoch });
         });
         MasterSchema.Configure(modelBuilder);
+        ProductSchema.Configure(modelBuilder);
         StorageValues.ApplyConventions(modelBuilder);
     }
 }

@@ -594,6 +594,387 @@ namespace GoodsManager.Web.Storage.Migrations
                         });
                 });
 
+            modelBuilder.Entity("GoodsManager.Web.Products.InventoryItem", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("InventoryItemId");
+
+                    b.Property<string>("Condition")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Memo")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PurchasePlace")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StorageLocation")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "Id");
+
+                    b.ToTable("InventoryItems", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryItems_Condition", "Condition IS NULL OR Condition IN ('unopened','opened','inUse')");
+
+                            t.HasCheckConstraint("CK_InventoryItems_Condition_Storage", "\"Condition\" IS NULL OR (typeof(\"Condition\") = 'text' AND instr(\"Condition\", char(0)) = 0)");
+
+                            t.HasCheckConstraint("CK_InventoryItems_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_InventoryItems_Id_Storage", "typeof(\"InventoryItemId\") = 'text' AND length(\"InventoryItemId\") = 36 AND instr(\"InventoryItemId\", char(0)) = 0 AND substr(\"InventoryItemId\",9,1) = '-' AND substr(\"InventoryItemId\",14,1) = '-' AND substr(\"InventoryItemId\",19,1) = '-' AND substr(\"InventoryItemId\",24,1) = '-' AND length(replace(\"InventoryItemId\",'-','')) = 32 AND replace(\"InventoryItemId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_InventoryItems_Location", "StorageLocation IS NULL OR length(StorageLocation)<=200");
+
+                            t.HasCheckConstraint("CK_InventoryItems_Memo", "Memo IS NULL OR length(Memo)<=4000");
+
+                            t.HasCheckConstraint("CK_InventoryItems_Memo_Storage", "\"Memo\" IS NULL OR (typeof(\"Memo\") = 'text' AND instr(\"Memo\", char(0)) = 0)");
+
+                            t.HasCheckConstraint("CK_InventoryItems_ProductId_Storage", "typeof(\"ProductId\") = 'text' AND length(\"ProductId\") = 36 AND instr(\"ProductId\", char(0)) = 0 AND substr(\"ProductId\",9,1) = '-' AND substr(\"ProductId\",14,1) = '-' AND substr(\"ProductId\",19,1) = '-' AND substr(\"ProductId\",24,1) = '-' AND length(replace(\"ProductId\",'-','')) = 32 AND replace(\"ProductId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_InventoryItems_Purchase", "PurchasePlace IS NULL OR length(PurchasePlace)<=200");
+
+                            t.HasCheckConstraint("CK_InventoryItems_PurchasePlace_Storage", "\"PurchasePlace\" IS NULL OR (typeof(\"PurchasePlace\") = 'text' AND instr(\"PurchasePlace\", char(0)) = 0)");
+
+                            t.HasCheckConstraint("CK_InventoryItems_StorageLocation_Storage", "\"StorageLocation\" IS NULL OR (typeof(\"StorageLocation\") = 'text' AND instr(\"StorageLocation\", char(0)) = 0)");
+
+                            t.HasCheckConstraint("CK_InventoryItems_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.InventoryLot", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("InventoryLotId");
+
+                    b.Property<string>("Condition")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Memo")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PurchasePlace")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StorageLocation")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "Id");
+
+                    b.ToTable("InventoryLots", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryLots_Condition", "Condition IS NULL OR Condition IN ('unopened','opened','inUse')");
+
+                            t.HasCheckConstraint("CK_InventoryLots_Condition_Storage", "\"Condition\" IS NULL OR (typeof(\"Condition\") = 'text' AND instr(\"Condition\", char(0)) = 0)");
+
+                            t.HasCheckConstraint("CK_InventoryLots_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_InventoryLots_Id_Storage", "typeof(\"InventoryLotId\") = 'text' AND length(\"InventoryLotId\") = 36 AND instr(\"InventoryLotId\", char(0)) = 0 AND substr(\"InventoryLotId\",9,1) = '-' AND substr(\"InventoryLotId\",14,1) = '-' AND substr(\"InventoryLotId\",19,1) = '-' AND substr(\"InventoryLotId\",24,1) = '-' AND length(replace(\"InventoryLotId\",'-','')) = 32 AND replace(\"InventoryLotId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_InventoryLots_Location", "StorageLocation IS NULL OR length(StorageLocation)<=200");
+
+                            t.HasCheckConstraint("CK_InventoryLots_Memo", "Memo IS NULL OR length(Memo)<=4000");
+
+                            t.HasCheckConstraint("CK_InventoryLots_Memo_Storage", "\"Memo\" IS NULL OR (typeof(\"Memo\") = 'text' AND instr(\"Memo\", char(0)) = 0)");
+
+                            t.HasCheckConstraint("CK_InventoryLots_ProductId_Storage", "typeof(\"ProductId\") = 'text' AND length(\"ProductId\") = 36 AND instr(\"ProductId\", char(0)) = 0 AND substr(\"ProductId\",9,1) = '-' AND substr(\"ProductId\",14,1) = '-' AND substr(\"ProductId\",19,1) = '-' AND substr(\"ProductId\",24,1) = '-' AND length(replace(\"ProductId\",'-','')) = 32 AND replace(\"ProductId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_InventoryLots_Purchase", "PurchasePlace IS NULL OR length(PurchasePlace)<=200");
+
+                            t.HasCheckConstraint("CK_InventoryLots_PurchasePlace_Storage", "\"PurchasePlace\" IS NULL OR (typeof(\"PurchasePlace\") = 'text' AND instr(\"PurchasePlace\", char(0)) = 0)");
+
+                            t.HasCheckConstraint("CK_InventoryLots_Quantity_Storage", "typeof(\"Quantity\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_InventoryLots_StorageLocation_Storage", "\"StorageLocation\" IS NULL OR (typeof(\"StorageLocation\") = 'text' AND instr(\"StorageLocation\", char(0)) = 0)");
+
+                            t.HasCheckConstraint("CK_InventoryLots_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_Lot_Quantity", "Quantity BETWEEN 1 AND 2147483647");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.Product", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ProductId");
+
+                    b.Property<string>("CategoryId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("DeletedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ManufacturerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Memo")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SellerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Version")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("ManufacturerId");
+
+                    b.HasIndex("SellerId");
+
+                    b.HasIndex("DeletedAt", "NormalizedName", "Id");
+
+                    b.ToTable("Products", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Product_Memo", "Memo IS NULL OR length(Memo)<=4000");
+
+                            t.HasCheckConstraint("CK_Product_Name", "length(Name) BETWEEN 1 AND 200 AND length(trim(Name,char(9,10,11,12,13,32,133,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288)))>0");
+
+                            t.HasCheckConstraint("CK_Product_Revision", "Revision>=1");
+
+                            t.HasCheckConstraint("CK_Product_Version", "Version IS NULL OR length(Version)<=200");
+
+                            t.HasCheckConstraint("CK_Products_CategoryId_Storage", "typeof(\"CategoryId\") = 'text' AND length(\"CategoryId\") = 36 AND instr(\"CategoryId\", char(0)) = 0 AND substr(\"CategoryId\",9,1) = '-' AND substr(\"CategoryId\",14,1) = '-' AND substr(\"CategoryId\",19,1) = '-' AND substr(\"CategoryId\",24,1) = '-' AND length(replace(\"CategoryId\",'-','')) = 32 AND replace(\"CategoryId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_Products_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_Products_DeletedAt_Storage", "\"DeletedAt\" IS NULL OR (typeof(\"DeletedAt\") = 'integer' AND \"DeletedAt\" BETWEEN -62135596800000 AND 253402300799999)");
+
+                            t.HasCheckConstraint("CK_Products_Id_Storage", "typeof(\"ProductId\") = 'text' AND length(\"ProductId\") = 36 AND instr(\"ProductId\", char(0)) = 0 AND substr(\"ProductId\",9,1) = '-' AND substr(\"ProductId\",14,1) = '-' AND substr(\"ProductId\",19,1) = '-' AND substr(\"ProductId\",24,1) = '-' AND length(replace(\"ProductId\",'-','')) = 32 AND replace(\"ProductId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_Products_ManufacturerId_Storage", "\"ManufacturerId\" IS NULL OR (typeof(\"ManufacturerId\") = 'text' AND length(\"ManufacturerId\") = 36 AND instr(\"ManufacturerId\", char(0)) = 0 AND substr(\"ManufacturerId\",9,1) = '-' AND substr(\"ManufacturerId\",14,1) = '-' AND substr(\"ManufacturerId\",19,1) = '-' AND substr(\"ManufacturerId\",24,1) = '-' AND length(replace(\"ManufacturerId\",'-','')) = 32 AND replace(\"ManufacturerId\",'-','') NOT GLOB '*[^0-9a-f]*')");
+
+                            t.HasCheckConstraint("CK_Products_Memo_Storage", "\"Memo\" IS NULL OR (typeof(\"Memo\") = 'text' AND instr(\"Memo\", char(0)) = 0)");
+
+                            t.HasCheckConstraint("CK_Products_Name_Storage", "typeof(\"Name\") = 'text' AND instr(\"Name\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Products_NormalizedName_Storage", "typeof(\"NormalizedName\") = 'text' AND instr(\"NormalizedName\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Products_Revision_Storage", "typeof(\"Revision\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_Products_SellerId_Storage", "\"SellerId\" IS NULL OR (typeof(\"SellerId\") = 'text' AND length(\"SellerId\") = 36 AND instr(\"SellerId\", char(0)) = 0 AND substr(\"SellerId\",9,1) = '-' AND substr(\"SellerId\",14,1) = '-' AND substr(\"SellerId\",19,1) = '-' AND substr(\"SellerId\",24,1) = '-' AND length(replace(\"SellerId\",'-','')) = 32 AND replace(\"SellerId\",'-','') NOT GLOB '*[^0-9a-f]*')");
+
+                            t.HasCheckConstraint("CK_Products_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_Products_Version_Storage", "\"Version\" IS NULL OR (typeof(\"Version\") = 'text' AND instr(\"Version\", char(0)) = 0)");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.ProductCharacter", b =>
+                {
+                    b.Property<string>("ProductId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CharacterId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ProductId", "CharacterId");
+
+                    b.HasIndex("CharacterId", "ProductId");
+
+                    b.ToTable("ProductCharacters", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProductCharacters_CharacterId_Storage", "typeof(\"CharacterId\") = 'text' AND length(\"CharacterId\") = 36 AND instr(\"CharacterId\", char(0)) = 0 AND substr(\"CharacterId\",9,1) = '-' AND substr(\"CharacterId\",14,1) = '-' AND substr(\"CharacterId\",19,1) = '-' AND substr(\"CharacterId\",24,1) = '-' AND length(replace(\"CharacterId\",'-','')) = 32 AND replace(\"CharacterId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_ProductCharacters_ProductId_Storage", "typeof(\"ProductId\") = 'text' AND length(\"ProductId\") = 36 AND instr(\"ProductId\", char(0)) = 0 AND substr(\"ProductId\",9,1) = '-' AND substr(\"ProductId\",14,1) = '-' AND substr(\"ProductId\",19,1) = '-' AND substr(\"ProductId\",24,1) = '-' AND length(replace(\"ProductId\",'-','')) = 32 AND replace(\"ProductId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.ProductIdentifier", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ProductIdentifierId");
+
+                    b.Property<string>("ComparisonValue")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("NormalizedValue")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RawValue")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Scheme")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComparisonValue", "ProductId");
+
+                    b.HasIndex("ProductId", "Scheme", "NormalizedValue")
+                        .IsUnique();
+
+                    b.ToTable("ProductIdentifiers", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Identifier_Comparison", "length(ComparisonValue)=14 AND ComparisonValue NOT GLOB '*[^0-9]*'");
+
+                            t.HasCheckConstraint("CK_Identifier_Normalized", "(Scheme='ean8' AND length(NormalizedValue)=8 AND NormalizedValue NOT GLOB '*[^0-9]*') OR (Scheme='upca' AND length(NormalizedValue)=12 AND NormalizedValue NOT GLOB '*[^0-9]*') OR (Scheme IN ('ean13','isbn13') AND length(NormalizedValue)=13 AND NormalizedValue NOT GLOB '*[^0-9]*') OR (Scheme='isbn10' AND length(NormalizedValue)=10 AND substr(NormalizedValue,1,9) NOT GLOB '*[^0-9]*' AND substr(NormalizedValue,10,1) GLOB '[0-9X]')");
+
+                            t.HasCheckConstraint("CK_Identifier_Raw", "length(RawValue) BETWEEN 1 AND 200");
+
+                            t.HasCheckConstraint("CK_ProductIdentifiers_ComparisonValue_Storage", "typeof(\"ComparisonValue\") = 'text' AND instr(\"ComparisonValue\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_ProductIdentifiers_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_ProductIdentifiers_Id_Storage", "typeof(\"ProductIdentifierId\") = 'text' AND length(\"ProductIdentifierId\") = 36 AND instr(\"ProductIdentifierId\", char(0)) = 0 AND substr(\"ProductIdentifierId\",9,1) = '-' AND substr(\"ProductIdentifierId\",14,1) = '-' AND substr(\"ProductIdentifierId\",19,1) = '-' AND substr(\"ProductIdentifierId\",24,1) = '-' AND length(replace(\"ProductIdentifierId\",'-','')) = 32 AND replace(\"ProductIdentifierId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_ProductIdentifiers_NormalizedValue_Storage", "typeof(\"NormalizedValue\") = 'text' AND instr(\"NormalizedValue\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_ProductIdentifiers_ProductId_Storage", "typeof(\"ProductId\") = 'text' AND length(\"ProductId\") = 36 AND instr(\"ProductId\", char(0)) = 0 AND substr(\"ProductId\",9,1) = '-' AND substr(\"ProductId\",14,1) = '-' AND substr(\"ProductId\",19,1) = '-' AND substr(\"ProductId\",24,1) = '-' AND length(replace(\"ProductId\",'-','')) = 32 AND replace(\"ProductId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_ProductIdentifiers_RawValue_Storage", "typeof(\"RawValue\") = 'text' AND instr(\"RawValue\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_ProductIdentifiers_Scheme_Storage", "typeof(\"Scheme\") = 'text' AND instr(\"Scheme\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_ProductIdentifiers_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.ProductLink", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ProductLinkId");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "Id");
+
+                    b.ToTable("ProductLinks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProductLink_Url", "length(Url) BETWEEN 1 AND 2048 AND (lower(Url) GLOB 'https://?*' OR lower(Url) GLOB 'http://?*')");
+
+                            t.HasCheckConstraint("CK_ProductLinks_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_ProductLinks_Id_Storage", "typeof(\"ProductLinkId\") = 'text' AND length(\"ProductLinkId\") = 36 AND instr(\"ProductLinkId\", char(0)) = 0 AND substr(\"ProductLinkId\",9,1) = '-' AND substr(\"ProductLinkId\",14,1) = '-' AND substr(\"ProductLinkId\",19,1) = '-' AND substr(\"ProductLinkId\",24,1) = '-' AND length(replace(\"ProductLinkId\",'-','')) = 32 AND replace(\"ProductLinkId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_ProductLinks_ProductId_Storage", "typeof(\"ProductId\") = 'text' AND length(\"ProductId\") = 36 AND instr(\"ProductId\", char(0)) = 0 AND substr(\"ProductId\",9,1) = '-' AND substr(\"ProductId\",14,1) = '-' AND substr(\"ProductId\",19,1) = '-' AND substr(\"ProductId\",24,1) = '-' AND length(replace(\"ProductId\",'-','')) = 32 AND replace(\"ProductId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_ProductLinks_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_ProductLinks_Url_Storage", "typeof(\"Url\") = 'text' AND instr(\"Url\", char(0)) = 0");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.ProductTag", b =>
+                {
+                    b.Property<string>("ProductId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TagId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ProductId", "TagId");
+
+                    b.HasIndex("TagId", "ProductId");
+
+                    b.ToTable("ProductTags", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProductTags_ProductId_Storage", "typeof(\"ProductId\") = 'text' AND length(\"ProductId\") = 36 AND instr(\"ProductId\", char(0)) = 0 AND substr(\"ProductId\",9,1) = '-' AND substr(\"ProductId\",14,1) = '-' AND substr(\"ProductId\",19,1) = '-' AND substr(\"ProductId\",24,1) = '-' AND length(replace(\"ProductId\",'-','')) = 32 AND replace(\"ProductId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_ProductTags_TagId_Storage", "typeof(\"TagId\") = 'text' AND length(\"TagId\") = 36 AND instr(\"TagId\", char(0)) = 0 AND substr(\"TagId\",9,1) = '-' AND substr(\"TagId\",14,1) = '-' AND substr(\"TagId\",19,1) = '-' AND substr(\"TagId\",24,1) = '-' AND length(replace(\"TagId\",'-','')) = 32 AND replace(\"TagId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.ProductWork", b =>
+                {
+                    b.Property<string>("ProductId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WorkId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ProductId", "WorkId");
+
+                    b.HasIndex("WorkId", "ProductId");
+
+                    b.ToTable("ProductWorks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProductWorks_ProductId_Storage", "typeof(\"ProductId\") = 'text' AND length(\"ProductId\") = 36 AND instr(\"ProductId\", char(0)) = 0 AND substr(\"ProductId\",9,1) = '-' AND substr(\"ProductId\",14,1) = '-' AND substr(\"ProductId\",19,1) = '-' AND substr(\"ProductId\",24,1) = '-' AND length(replace(\"ProductId\",'-','')) = 32 AND replace(\"ProductId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_ProductWorks_WorkId_Storage", "typeof(\"WorkId\") = 'text' AND length(\"WorkId\") = 36 AND instr(\"WorkId\", char(0)) = 0 AND substr(\"WorkId\",9,1) = '-' AND substr(\"WorkId\",14,1) = '-' AND substr(\"WorkId\",19,1) = '-' AND substr(\"WorkId\",24,1) = '-' AND length(replace(\"WorkId\",'-','')) = 32 AND replace(\"WorkId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+                        });
+                });
+
             modelBuilder.Entity("GoodsManager.Web.Storage.SystemState", b =>
                 {
                     b.Property<int>("Id")
@@ -799,6 +1180,106 @@ namespace GoodsManager.Web.Storage.Migrations
                         .WithMany()
                         .HasForeignKey("SeriesId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GoodsManager.Web.Masters.Work", null)
+                        .WithMany()
+                        .HasForeignKey("WorkId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.InventoryItem", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.InventoryLot", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.Product", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Masters.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GoodsManager.Web.Masters.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("ManufacturerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GoodsManager.Web.Masters.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("SellerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.ProductCharacter", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Masters.Character", null)
+                        .WithMany()
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GoodsManager.Web.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.ProductIdentifier", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.ProductLink", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.ProductTag", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GoodsManager.Web.Masters.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.ProductWork", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("GoodsManager.Web.Masters.Work", null)

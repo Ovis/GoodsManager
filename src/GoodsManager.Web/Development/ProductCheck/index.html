@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GoodsManager P05検証</title>
+  <link rel="stylesheet" href="/dev/master-check/master-check.css">
+  <script type="module" src="/dev/product-check/product-check.js"></script>
+</head>
+<body><main>
+<header>
+  <p>Development限定・P05検証用</p>
+  <h1>商品・所持操作のブラウザ確認</h1>
+  <p>試験データを実際のDBへ保存します。通常の商品登録・重複確認・画像は後続工程です。</p>
+  <a href="/dev/auth-check" target="_blank" rel="noopener">認証確認画面でログインする</a>
+  <button id="session-refresh" type="button">ログイン状態を取得</button>
+  <pre id="session">準備中…</pre>
+</header>
+<fieldset id="controls" disabled>
+<section>
+  <h2>試験商品の作成</h2>
+  <label>商品と初期ロット（JSON）<textarea id="fixture" rows="16" spellcheck="false"></textarea></label>
+  <p>名前・版・場所・購入先200コードポイント、メモ4,000、URL2,048、コード表記200。画像は扱いません。</p>
+  <button id="create" type="button">試験商品を作成</button>
+</section>
+<section>
+  <h2>所持操作の入力・実行</h2>
+  <label>商品ID<input id="product-id" autocomplete="off"></label>
+  <button id="refresh" type="button">商品を再取得</button>
+  <p>取得済みの保存内容。再取得しても下の操作入力は保持します。</p>
+  <pre id="snapshot">未取得</pre>
+  <label>所持操作（JSON）<textarea id="commands" rows="10" spellcheck="false">{"commands":[]}</textarea></label>
+  <p>1回100コマンド・個体切出し合計100件・本文256KiB。保存済みロットと個体の総数に固定上限はありません。</p>
+  <button id="save" type="button" disabled>取得済みETagで操作を保存</button>
+</section>
+</fieldset>
+<section>
+  <h2>取得結果とログ</h2>
+  <p>入力エラー・412・通信失敗では入力を保持します。再送は送信済み本文・キー・If-Matchを使い、自動再送しません。</p>
+  <pre id="request">変更要求なし</pre>
+  <button id="replay" type="button" disabled>直前の要求を同じキーで再送</button>
+  <pre id="response">保存応答なし</pre>
+  <output id="result" role="status" aria-live="polite">準備中…</output>
+  <p>ページを閉じると送信情報は失われます。再送で得た古い応答を次の編集用ETagへ採用しません。</p>
+</section>
+</main></body></html>

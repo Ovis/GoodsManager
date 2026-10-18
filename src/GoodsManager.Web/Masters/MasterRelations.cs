@@ -67,7 +67,7 @@ public sealed partial class MastersController
         var state = await db.SystemStates.AsNoTracking().SingleAsync(token);
         return new
         {
-            items = selected.Select(x => Dto(peerKind, x)),
+            items = await RelationDtosAsync(peerKind, selected),
             page,
             pageSize,
             totalCount = count,
@@ -78,6 +78,12 @@ public sealed partial class MastersController
         };
     }
 
+    private async Task<object[]> RelationDtosAsync<T>(string kind, IEnumerable<T> selected) where T : class, INamedMaster
+    {
+        var items = new List<object>();
+        foreach (var item in selected) items.Add(await Dto(kind, item));
+        return items.ToArray();
+    }
     private async Task<INamedMaster> RelationOwnerAsync(string kind, Guid id)
     {
         INamedMaster? owner = kind switch

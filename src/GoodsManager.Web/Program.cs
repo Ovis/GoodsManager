@@ -6,6 +6,7 @@ using GoodsManager.Web.Auth;
 using Microsoft.AspNetCore.Antiforgery;
 using System.Text.Json.Serialization;
 using GoodsManager.Web.Development;
+using GoodsManager.Web.Products;
 
 var recovery = args.FirstOrDefault() == "recover-account";
 var builder = WebApplication.CreateBuilder(recovery ? [] : args);
@@ -20,6 +21,9 @@ builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", tag
 builder.AddAppAuthentication();
 builder.Services.AddScoped<OperationVerification>();
 builder.Services.AddScoped<AccountRecovery>();
+builder.Services.AddScoped<ProductOperations>();
+builder.Services.AddScoped<InventoryOperations>();
+builder.Services.AddScoped<ProductWrites>();
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict);
 
 var app = builder.Build();
@@ -87,6 +91,7 @@ app.Use(async (context, next) =>
 app.MapControllers();
 app.MapAuthenticationCheck();
 app.MapMasterCheck();
+app.MapProductCheck();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 app.Run();

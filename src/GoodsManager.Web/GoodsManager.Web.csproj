@@ -8,6 +8,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Development/AuthCheck/*" />
     <EmbeddedResource Include="Development/MasterCheck/*" />
+    <EmbeddedResource Include="Development/ProductCheck/*" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.13" />

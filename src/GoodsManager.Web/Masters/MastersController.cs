@@ -76,7 +76,7 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
             _ => null
         };
         if (item is null) throw new MasterProblem(404, "NOT_FOUND");
-        var dto = Dto(kind, item);
+        var dto = await Dto(kind, item);
         await native.CommitAsync(HttpContext.RequestAborted);
         Response.Headers.ETag = Etag(kind, item);
         return Ok(dto);
@@ -92,7 +92,7 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
             .OrderByDescending(x => db.Set<CharacterWork>().Any(r => r.CharacterId == x.Id && priority.Contains(r.WorkId)))
             .ThenBy(x => x.NormalizedName).ThenBy(x => x.Id).Skip((int)offset).Take(size).ToListAsync(token);
         var items = new List<object>();
-        foreach (var item in selected) items.Add(Dto(kind, item));
+        foreach (var item in selected) items.Add(await Dto(kind, item));
         var state = await db.SystemStates.AsNoTracking().SingleAsync(token);
         return new { items, page, pageSize = size, totalCount = count, totalPages = (count + size - 1) / size, dataRevision = Number(state.DataRevision) };
     }
@@ -163,7 +163,7 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
                 Key = key,
                 RequestHash = hash,
                 ResponseStatus = id.HasValue ? 200 : 201,
-                ResponseJson = JsonSerializer.Serialize(Dto(kind, item), Json),
+                ResponseJson = JsonSerializer.Serialize(await Dto(kind, item), Json),
                 ResponseEtag = Etag(kind, item),
                 Location = id.HasValue ? null : $"/api/v1/masters/{kind}/{item.Id:D}",
                 CompletedAt = completedAt,
@@ -232,7 +232,7 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
         }
     }
 
-    private static object Dto(string kind, INamedMaster item)
+    private async Task<object> Dto(string kind, INamedMaster item)
     {
         var result = new Dictionary<string, object?>
         {
@@ -242,7 +242,7 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
             ["etag"] = Etag(kind, item),
             ["createdAt"] = item.CreatedAt,
             ["updatedAt"] = item.UpdatedAt,
-            ["usage"] = new { activeProductCount = 0, trashedProductCount = 0 }
+            ["usage"] = await UsageAsync(kind, item.Id)
         };
         if (item is Organization org) { result["websiteUrl"] = org.WebsiteUrl; result["memo"] = org.Memo; }
         if (item is Category cat) { result["parentId"] = cat.ParentCategoryId; result["sortOrder"] = cat.SortOrder; }
