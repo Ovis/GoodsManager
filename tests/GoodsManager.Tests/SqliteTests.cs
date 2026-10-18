@@ -188,7 +188,7 @@ public sealed class SqliteTests
         }
 
         Directory.CreateDirectory(Path.Combine(directory, "keys"));
-        await File.WriteAllTextAsync(Path.Combine(directory, "keys", "test-key.xml"), "preserved-key");
+        await File.WriteAllTextAsync(Path.Combine(directory, "keys", "test-key.xml"), "<key />");
         await using var broken = new FailingContext(new DbContextOptionsBuilder<FailingContext>().UseSqlite(connectionString).ReplaceService<IMigrationsAssembly, FailingMigrationsAssembly>().Options);
         Assert.ThrowsAsync<SqliteException>(async () => await DatabaseMaintenance.MigrateAsync(broken, directory));
         Assert.That(await ScalarAsync("SELECT DataRevision FROM SystemState"), Is.EqualTo(77L));

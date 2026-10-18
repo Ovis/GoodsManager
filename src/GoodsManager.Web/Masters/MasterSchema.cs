@@ -145,7 +145,7 @@ public static class MasterSchema
             e.ToTable("IdempotencyRecords", t =>
             {
                 t.HasCheckConstraint("CK_Idempotency_Hash", "length(RequestHash)=64 AND RequestHash NOT GLOB '*[^0-9a-f]*'");
-                t.HasCheckConstraint("CK_Idempotency_Response", "json_valid(ResponseJson)=1 AND ((ResponseStatus IN (200,201) AND json_type(ResponseJson)='object') OR (ResponseStatus=204 AND json_type(ResponseJson)='null'))");
+                t.HasCheckConstraint("CK_Idempotency_Response", "json_valid(ResponseJson)=1 AND ((ResponseStatus IN (200,201,202) AND json_type(ResponseJson)='object') OR (ResponseStatus=204 AND json_type(ResponseJson)='null'))");
                 t.HasCheckConstraint("CK_Idempotency_Expiry", "ExpiresAt>CompletedAt");
             });
             e.HasKey(x => new { x.UserId, x.OperationScope, x.Key });

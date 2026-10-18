@@ -8,7 +8,7 @@ namespace GoodsManager.Web.Storage;
 public static class DatabaseMaintenance
 {
     /// <summary>JSON関数と整合性を検証し、更新失敗を呼出元へ伝えて起動を止める</summary>
-    public static async Task MigrateAsync(DbContext context, string dataDirectory)
+    public static async Task MigrateAsync(DbContext context, string dataDirectory, GoodsManager.Web.Backups.BackupOptions? backupOptions = null, object? keyLock = null)
     {
         await context.Database.OpenConnectionAsync();
         try
@@ -36,7 +36,8 @@ public static class DatabaseMaintenance
                 command.CommandText = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
                 if (Convert.ToInt64(await command.ExecuteScalarAsync()) > 0)
                 {
-                    CreateSnapshot(connection, dataDirectory);
+                    if (backupOptions is null) CreateSnapshot(connection, dataDirectory);
+                    else CreateFullSnapshot(connection, dataDirectory, backupOptions, keyLock ?? new object());
                 }
 
                 // 検証済みの退避が完成してから移行する。移行中の例外は握り潰さない
@@ -111,62 +112,27 @@ public static class DatabaseMaintenance
         }
     }
 
-    private static void AddFormalImages(SqliteConnection source, string dataDirectory, ZipArchive zip)
-    {
-        using var command = source.CreateCommand();
-        command.CommandText = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='ImageFiles'";
-        if (Convert.ToInt64(command.ExecuteScalar()) == 0) return;
-        command.CommandText = """
-            SELECT DISTINCT f.ImageFileId,f.Sha256,f.RelativePath,f.ByteLength
-            FROM ImageFiles f JOIN ImageAssets a ON f.ImageFileId IN (a.DisplayFileId,a.ThumbnailFileId,a.OriginalFileId)
-            WHERE EXISTS (SELECT 1 FROM ProductImages p WHERE p.ImageAssetId=a.ImageAssetId)
-               OR EXISTS (SELECT 1 FROM InventoryItemImages i WHERE i.ImageAssetId=a.ImageAssetId)
-            """;
-        using var reader = command.ExecuteReader();
-        using var runtime = new DatabaseRuntime(dataDirectory);
-        var files = new GoodsManager.Web.Images.ImageFiles(runtime);
-        while (reader.Read())
-        {
-            var file = new GoodsManager.Web.Images.ImageFile { Id = Guid.Parse(reader.GetString(0)), Sha256 = reader.GetString(1), RelativePath = reader.GetString(2), ByteLength = reader.GetInt64(3) };
-            files.VerifyAsync(file, default).GetAwaiter().GetResult();
-            zip.CreateEntryFromFile(files.Resolve(file.RelativePath), "images/" + file.RelativePath, CompressionLevel.NoCompression);
-        }
-    }
-    /// <summary>WALを含む一貫したDBと鍵をZIPへ退避し、完成前のファイルと区別</summary>
+    /// <summary>旧呼出元も完成版のマニフェスト付きZIPへ統一</summary>
     private static void CreateSnapshot(SqliteConnection source, string dataDirectory)
     {
-        var backupDirectory = Path.Combine(dataDirectory, "pre-migration");
-        Directory.CreateDirectory(backupDirectory);
-        var stem = Path.Combine(backupDirectory, $"{DateTimeOffset.UtcNow:yyyyMMddTHHmmssfffZ}-{Guid.NewGuid():N}");
-        var snapshot = stem + ".db";
+        using var runtime = new DatabaseRuntime(dataDirectory);
+        var options = new GoodsManager.Web.Backups.BackupOptions(new ConfigurationBuilder().Build(), runtime);
+        CreateFullSnapshot(source, dataDirectory, options, new object());
+    }
+
+    /// <summary>移行前のDB・正式画像・鍵を検証してから、上書きしないZIPとして公開</summary>
+    public static void CreateFullSnapshot(SqliteConnection source, string dataDirectory, GoodsManager.Web.Backups.BackupOptions options, object keyLock)
+    {
+        var directory = Path.Combine(dataDirectory, "pre-migration");
+        GoodsManager.Web.Backups.BackupPaths.RejectLinks(directory); Directory.CreateDirectory(directory);
+        var id = Guid.NewGuid(); var stage = Path.Combine(directory, id.ToString("N"));
         try
         {
-            using (var target = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = snapshot, Pooling = false }.ToString()))
-            {
-                target.Open();
-                source.BackupDatabase(target);
-                VerifyAsync(target).GetAwaiter().GetResult();
-            }
-
-            using (var zip = ZipFile.Open(stem + ".partial", ZipArchiveMode.Create))
-            {
-                zip.CreateEntryFromFile(snapshot, "goods-manager.db");
-                AddFormalImages(source, dataDirectory, zip);
-                var keys = Path.Combine(dataDirectory, "keys");
-                if (Directory.Exists(keys))
-                {
-                    foreach (var key in Directory.EnumerateFiles(keys))
-                    {
-                        zip.CreateEntryFromFile(key, "keys/" + Path.GetFileName(key));
-                    }
-                }
-            }
-
-            File.Move(stem + ".partial", stem + ".zip");
+            var keys = GoodsManager.Web.Backups.BackupSnapshot.ReadKeys(dataDirectory, keyLock);
+            var manifest = GoodsManager.Web.Backups.BackupSnapshot.StageAsync(source, dataDirectory, stage, keys, id, "preMigration", DateTimeOffset.UtcNow, default).GetAwaiter().GetResult();
+            GoodsManager.Web.Backups.BackupArchive.VerifyDatabaseAsync(stage, manifest, default).GetAwaiter().GetResult();
+            GoodsManager.Web.Backups.BackupArchive.CreateAsync(stage, Path.Combine(directory, id.ToString("N") + ".zip"), manifest, options, default).GetAwaiter().GetResult();
         }
-        finally
-        {
-            File.Delete(snapshot);
-        }
+        finally { GoodsManager.Web.Backups.BackupPaths.DeleteTree(directory, stage); }
     }
 }

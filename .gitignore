@@ -432,3 +432,7 @@ artifacts/
 # Generated React application
 src/GoodsManager.Web/wwwroot/
 src/GoodsManager.Client/dist/
+
+# Application backup source (not Visual Studio upgrade backups)
+!src/GoodsManager.Web/Backups/
+!src/GoodsManager.Web/Backups/*.cs

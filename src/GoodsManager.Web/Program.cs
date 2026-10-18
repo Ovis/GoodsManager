@@ -11,6 +11,12 @@ using GoodsManager.Web.Search;
 using GoodsManager.Web.Images;
 
 if (args.FirstOrDefault() == "image-worker") { Environment.ExitCode = ImageConverter.RunCli(args); return; }
+if (args.FirstOrDefault() == "backup")
+{
+    var cli = WebApplication.CreateBuilder([]);
+    Environment.ExitCode = await GoodsManager.Web.Backups.BackupCli.RunAsync(cli.Configuration, cli.Environment.ContentRootPath, args[1..]);
+    return;
+}
 var recovery = args.FirstOrDefault() == "recover-account";
 var builder = WebApplication.CreateBuilder(recovery ? [] : args);
 // 承認した7種各100件のID条件と200コードポイントの検索値をURLで扱う。
@@ -23,6 +29,11 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddSingleton(services => new DatabaseRuntime(services.GetRequiredService<IConfiguration>()["Storage:Directory"] ?? Path.Combine(builder.Environment.ContentRootPath, "data")));
 builder.Services.AddDbContext<AppDbContext>((services, options) => options.UseSqlite(services.GetRequiredService<DatabaseRuntime>().ConnectionString));
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
+builder.Services.AddSingleton<GoodsManager.Web.Backups.BackupGate>();
+builder.Services.AddSingleton<GoodsManager.Web.Backups.BackupOptions>();
+builder.Services.AddSingleton<GoodsManager.Web.Backups.BackupSignal>();
+builder.Services.AddScoped<GoodsManager.Web.Backups.BackupService>();
+builder.Services.AddHostedService<GoodsManager.Web.Backups.BackupWorker>();
 builder.AddAppAuthentication();
 builder.Services.AddScoped<OperationVerification>();
 builder.Services.AddScoped<AccountRecovery>();
@@ -49,10 +60,14 @@ runtime.AcquireLease();
 try
 {
     await using var scope = app.Services.CreateAsyncScope();
-    await DatabaseMaintenance.MigrateAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), runtime.DirectoryPath);
+    await DatabaseMaintenance.MigrateAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), runtime.DirectoryPath, app.Services.GetRequiredService<GoodsManager.Web.Backups.BackupOptions>(), app.Services.GetRequiredService<GoodsManager.Web.Backups.BackupGate>().KeyLock);
     await scope.ServiceProvider.GetRequiredService<SearchProjection>().RebuildAllAsync();
     await ImageWorker.InitializeAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), scope.ServiceProvider.GetRequiredService<TimeProvider>());
-    if (!recovery) await scope.ServiceProvider.GetRequiredService<ImageGc>().RunAsync(CancellationToken.None);
+    if (!recovery)
+    {
+        await scope.ServiceProvider.GetRequiredService<ImageGc>().RunAsync(CancellationToken.None);
+        await scope.ServiceProvider.GetRequiredService<GoodsManager.Web.Backups.BackupService>().InitializeAsync(CancellationToken.None);
+    }
 }
 catch
 {

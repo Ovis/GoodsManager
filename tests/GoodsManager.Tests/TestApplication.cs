@@ -24,7 +24,7 @@ public sealed class TestApplication : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureAppConfiguration((_, configuration) =>
-            configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Storage:Directory"] = DataDirectory }));
+            configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Storage:Directory"] = DataDirectory, ["Backups:WorkerEnabled"] = "false" }));
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<TimeProvider>();

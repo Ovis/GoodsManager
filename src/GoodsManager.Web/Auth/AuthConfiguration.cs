@@ -17,8 +17,8 @@ public static class AuthConfiguration
         builder.Services.AddSingleton<PasskeyCeremonies>();
         builder.Services.AddDataProtection().SetApplicationName("GoodsManager");
         builder.Services.AddOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>()
-            .Configure<DatabaseRuntime, ILoggerFactory>((options, runtime, loggerFactory) =>
-                options.XmlRepository = new Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository(new DirectoryInfo(Path.Combine(runtime.DirectoryPath, "keys")), loggerFactory));
+            .Configure<DatabaseRuntime, ILoggerFactory, GoodsManager.Web.Backups.BackupGate>((options, runtime, loggerFactory, gate) =>
+                options.XmlRepository = new GoodsManager.Web.Backups.BackupKeyRepository(new Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository(new DirectoryInfo(Path.Combine(runtime.DirectoryPath, "keys")), loggerFactory), gate));
         builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
         builder.Services.AddIdentityCore<AppUser>(options =>
         {

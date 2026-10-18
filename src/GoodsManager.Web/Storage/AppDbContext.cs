@@ -68,6 +68,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         ProductSchema.Configure(modelBuilder);
         SearchSchema.Configure(modelBuilder);
         ImageSchema.Configure(modelBuilder);
+        GoodsManager.Web.Backups.BackupSchema.Configure(modelBuilder);
         StorageValues.ApplyConventions(modelBuilder);
     }
 }

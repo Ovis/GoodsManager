@@ -22,10 +22,19 @@ public sealed class DatabaseRuntime : IDisposable
     }
 
     /// <summary>アプリ稼働中の別プロセスや復旧CLIによる同時変更を拒否</summary>
-    public void AcquireLease()
+    public void AcquireLease() => AcquireLease(false);
+
+    /// <summary>復元中断の処理だけは進行記録が残っていても排他を取得</summary>
+    public void AcquireLease(bool allowInterruptedRestore)
     {
+        GoodsManager.Web.Backups.BackupPaths.RejectLinks(DirectoryPath);
         Directory.CreateDirectory(DirectoryPath);
+        GoodsManager.Web.Backups.BackupPaths.RejectLinks(Path.Combine(DirectoryPath, "instance.lock"));
         lease = new FileStream(Path.Combine(DirectoryPath, "instance.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        if (!allowInterruptedRestore && File.Exists(Path.Combine(DirectoryPath, "restore-state.json")))
+        {
+            Dispose(); throw new InvalidOperationException("未完了の復元記録が残っているため、停止中にbackup rollbackで確認する必要がある");
+        }
     }
 
     /// <summary>プロセス終了時に排他を解放</summary>
