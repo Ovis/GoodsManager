@@ -19,11 +19,15 @@ public sealed class AuthenticationTests
     public static HttpClient Client(TestApplication app) => app.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost:7443"), AllowAutoRedirect = false });
 
     /// <summary>認証状態に対応したCSRFトークンを取得して送信</summary>
-    public static async Task<HttpResponseMessage> SendAsync(HttpClient client, string path, object? body = null, HttpMethod? method = null)
+    public static async Task<HttpResponseMessage> SendAsync(HttpClient client, string path, object? body = null, HttpMethod? method = null, string? ifMatch = null)
     {
         var csrf = await client.GetFromJsonAsync<JsonElement>("/api/v1/auth/csrf");
         using var request = new HttpRequestMessage(method ?? HttpMethod.Post, "/api/v1/" + path);
         request.Headers.Add("X-CSRF-Token", csrf.GetProperty("token").GetString());
+        if (ifMatch is not null)
+        {
+            request.Headers.TryAddWithoutValidation("If-Match", ifMatch);
+        }
         request.Content = JsonContent.Create(body ?? new { });
         return await client.SendAsync(request);
     }

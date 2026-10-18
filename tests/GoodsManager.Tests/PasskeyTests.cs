@@ -16,6 +16,10 @@ namespace GoodsManager.Tests;
 /// <summary>試験用認証器の実署名をIdentity標準ハンドラーで検証</summary>
 public sealed class PasskeyTests
 {
+    /// <summary>一覧の最新ETagを取得し、標準ユーザー更新後の版を使う</summary>
+    public static async Task<string> EtagAsync(HttpClient client, string id) =>
+        (await client.GetFromJsonAsync<JsonElement>("/api/v1/account/passkeys")).EnumerateArray().Single(x => x.GetProperty("id").GetString() == id).GetProperty("etag").GetString()!;
+
     /// <summary>登録の本人確認と標準選択肢を取得</summary>
     private static async Task<JsonElement> RegistrationOptionsAsync(HttpClient client)
     {
@@ -56,10 +60,10 @@ public sealed class PasskeyTests
         var replay = await SendAsync(loginClient, "auth/passkey/verify", new { challengeId = options.GetProperty("challengeId"), credential });
         Assert.That(replay.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
 
-        Assert.That((await SendAsync(owner, "account/passkeys/" + second.Id, new { displayName = "予備変更" }, HttpMethod.Put)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await SendAsync(owner, "account/passkeys/" + second.Id, new { displayName = "予備変更" }, HttpMethod.Put, await EtagAsync(owner, second.Id))).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var proofResponse = await SendAsync(owner, "auth/reauthenticate", new { purpose = "passkey-delete:" + second.Id });
         var proof = await proofResponse.Content.ReadFromJsonAsync<JsonElement>();
-        var deleted = await SendAsync(owner, "account/passkeys/" + second.Id, new { challengeId = proof.GetProperty("challengeId"), credential = first.Get(proof.GetProperty("publicKeyOptions")) }, HttpMethod.Delete);
+        var deleted = await SendAsync(owner, "account/passkeys/" + second.Id, new { challengeId = proof.GetProperty("challengeId"), credential = first.Get(proof.GetProperty("publicKeyOptions")) }, HttpMethod.Delete, await EtagAsync(owner, second.Id));
         Assert.That(deleted.StatusCode, Is.EqualTo(HttpStatusCode.NoContent), await deleted.Content.ReadAsStringAsync());
         Assert.That((await owner.GetFromJsonAsync<JsonElement>("/api/v1/account/passkeys")).GetArrayLength(), Is.EqualTo(1));
 

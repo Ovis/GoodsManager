@@ -106,7 +106,51 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
     {
         var ticket = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
         var user = await users.GetUserAsync(User);
+        Response.Headers.ETag = AuthenticationEtags.Account(user!);
         return Ok(new { user = UserDto(user!), expiresAt = ticket.Properties!.ExpiresUtc, persistent = ticket.Properties.IsPersistent });
+    }
+
+    /// <summary>標準の同時実行情報で古い変更を拒否し、ログインIDを変更</summary>
+    [Authorize]
+    [HttpPut("account")]
+    public async Task<IActionResult> ChangeLoginId(ChangeLoginIdRequest request)
+    {
+        if (!ValidLoginId(request.LoginId))
+        {
+            return Failure(400, "VALIDATION_FAILED");
+        }
+
+        await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
+        try
+        {
+            var user = await AuthenticationState.GetCurrentUserAsync(db, signIn, User);
+            if (user is null)
+            {
+                return Failure(401, "SESSION_EXPIRED");
+            }
+
+            if (AuthenticationEtags.Check(Request, AuthenticationEtags.Account(user)) is { } status)
+            {
+                return Failure(status, status == 428 ? "PRECONDITION_REQUIRED" : "REVISION_MISMATCH");
+            }
+
+            if (user.UserName != request.LoginId)
+            {
+                await using var transaction = await db.Database.BeginTransactionAsync();
+                // ID編集では認証世代を変更せず、標準の正規化・検証・同時実行制御で保存する
+                user.UserName = request.LoginId;
+                EnsureSuccess(await users.UpdateAsync(user));
+                await IncrementRevisionAsync();
+                await transaction.CommitAsync();
+            }
+
+            Response.Headers.ETag = AuthenticationEtags.Account(user);
+            return Ok(new { user = UserDto(user) });
+        }
+        finally
+        {
+            gate.Semaphore.Release();
+        }
     }
 
     /// <summary>現在の標準チケットとクッキーを削除</summary>
@@ -203,6 +247,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
         var expires = now.AddDays(rememberMe ? 30 : 7);
         var properties = new AuthenticationProperties { IsPersistent = rememberMe, IssuedUtc = now, ExpiresUtc = expires, AllowRefresh = false };
         await signIn.SignInAsync(user, properties);
+        Response.Headers.ETag = AuthenticationEtags.Account(user);
         // 標準チケットが採用した精度の期限を返し、表示上の期限と食い違わせない
         return properties.ExpiresUtc!.Value;
     }
@@ -214,7 +259,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
     internal static bool ValidLoginId(string? id) => id is { Length: >= 1 and <= 64 } && id.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-');
 
     /// <summary>秘密や標準エンティティを公開しないユーザー情報</summary>
-    internal static object UserDto(AppUser user) => new { id = user.Id, loginId = user.UserName };
+    internal static object UserDto(AppUser user) => new { id = user.Id, loginId = user.UserName, etag = AuthenticationEtags.Account(user) };
 
     /// <summary>認証処理のエラーを共通形式で返す</summary>
     internal ObjectResult Failure(int status, string code) => Problem(statusCode: status, title: "認証処理を確認してください", extensions: new Dictionary<string, object?> { ["code"] = code });
@@ -233,3 +278,4 @@ public sealed record SetupRequest(string LoginId, string Password);
 public sealed record LoginRequest(string LoginId, string Password, bool RememberMe);
 public sealed record VerificationRequest(string? Password, Guid? ChallengeId, System.Text.Json.JsonElement? Credential);
 public sealed record ChangePasswordRequest(string NewPassword, VerificationRequest Verification);
+public sealed record ChangeLoginIdRequest(string LoginId);

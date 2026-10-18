@@ -85,7 +85,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
     {
         var user = (await users.GetUserAsync(User))!;
         // 応答を書き始める前に全件検証し、破損時に途中までの200応答を返さない
-        return Ok((await users.GetPasskeysAsync(user)).Select(passkey => Dto(PasskeyMetadata.RequireValid(passkey))).ToArray());
+        return Ok((await users.GetPasskeysAsync(user)).Select(passkey => Dto(PasskeyMetadata.RequireValid(passkey), user)).ToArray());
     }
 
     /// <summary>対象操作の本人確認後に登録選択肢を発行</summary>
@@ -165,7 +165,8 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
             AuthController.EnsureSuccess(await users.AddOrUpdatePasskeyAsync(user, PasskeyMetadata.RequireValid(result.Passkey)));
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
-            return Created("/api/v1/account/passkeys/" + PasskeyCeremonies.CredentialId(result.Passkey.CredentialId), Dto(result.Passkey));
+            Response.Headers.ETag = AuthenticationEtags.Passkey(user, result.Passkey.CredentialId);
+            return Created("/api/v1/account/passkeys/" + PasskeyCeremonies.CredentialId(result.Passkey.CredentialId), Dto(result.Passkey, user));
         }
         finally
         {
@@ -198,13 +199,19 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
                 return NotFound();
             }
 
+            if (AuthenticationEtags.Check(Request, AuthenticationEtags.Passkey(user, passkey.CredentialId)) is { } status)
+            {
+                return Failure(status, status == 428 ? "PRECONDITION_REQUIRED" : "REVISION_MISMATCH");
+            }
+
             await using var transaction = await db.Database.BeginTransactionAsync();
             PasskeyMetadata.RequireValid(passkey);
             passkey.Name = request.DisplayName;
             AuthController.EnsureSuccess(await users.AddOrUpdatePasskeyAsync(user, passkey));
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
-            return Ok(Dto(passkey));
+            Response.Headers.ETag = AuthenticationEtags.Passkey(user, passkey.CredentialId);
+            return Ok(Dto(passkey, user));
         }
         finally
         {
@@ -226,15 +233,21 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
                 return Failure(401, "SESSION_EXPIRED");
             }
 
-            if (!await verification.VerifyAsync(user, request, "passkey-delete:" + id, HttpContext))
-            {
-                return Failure(403, "REAUTHENTICATION_REQUIRED");
-            }
-
             var passkey = (await users.GetPasskeysAsync(user)).SingleOrDefault(x => PasskeyCeremonies.CredentialId(x.CredentialId) == id);
             if (passkey is null)
             {
                 return NotFound();
+            }
+
+            if (AuthenticationEtags.Check(Request, AuthenticationEtags.Passkey(user, passkey.CredentialId)) is { } status)
+            {
+                return Failure(status, status == 428 ? "PRECONDITION_REQUIRED" : "REVISION_MISMATCH");
+            }
+
+            // 署名カウンターの更新で標準スタンプも変わるため、版の照合は本人確認の前に行う
+            if (!await verification.VerifyAsync(user, request, "passkey-delete:" + id, HttpContext))
+            {
+                return Failure(403, "REAUTHENTICATION_REQUIRED");
             }
 
             await using var transaction = await db.Database.BeginTransactionAsync();
@@ -266,7 +279,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
     private OkObjectResult Options(Guid id, string json) => Ok(new { challengeId = id, publicKeyOptions = JsonSerializer.Deserialize<JsonElement>(json) });
 
     /// <summary>表示用情報だけを返す。認証IDはUUIDと混同しない</summary>
-    private static object Dto(UserPasskeyInfo passkey) => new { id = PasskeyCeremonies.CredentialId(passkey.CredentialId), displayName = passkey.Name, createdAt = passkey.CreatedAt };
+    private static object Dto(UserPasskeyInfo passkey, AppUser user) => new { id = PasskeyCeremonies.CredentialId(passkey.CredentialId), displayName = passkey.Name, createdAt = passkey.CreatedAt, etag = AuthenticationEtags.Passkey(user, passkey.CredentialId) };
 
     /// <summary>認証設定の変更を保全対象へ反映</summary>
     private Task IncrementRevisionAsync() => db.Database.ExecuteSqlInterpolatedAsync($"UPDATE SystemState SET DataRevision=DataRevision+1, UpdatedAt={StorageValues.ToMilliseconds(clock.GetUtcNow())} WHERE Id=1");
