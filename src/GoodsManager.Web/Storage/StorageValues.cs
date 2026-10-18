@@ -58,6 +58,12 @@ public static class StorageValues
     {
         foreach (var entity in model.Model.GetEntityTypes())
         {
+            // Identity標準のパスキーメタデータはJSON所有型。物理列として二重定義しない
+            if (entity.IsOwned())
+            {
+                continue;
+            }
+
             foreach (var property in entity.GetProperties())
             {
                 var type = Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType;

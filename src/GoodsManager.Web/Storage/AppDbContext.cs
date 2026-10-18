@@ -1,16 +1,49 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using GoodsManager.Web.Auth;
 
 namespace GoodsManager.Web.Storage;
 
 /// <summary>現在の工程で必要な永続データ</summary>
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityUserContext<AppUser, Guid>(options)
 {
     public DbSet<SystemState> SystemStates => Set<SystemState>();
+    public DbSet<AuthTicket> AuthTickets => Set<AuthTicket>();
 
     /// <summary>通常テーブルへ制約を明示</summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        // 設計時ツールや試験でも、DIの有無に左右されず標準パスキースキーマを使用
+        modelBuilder.Entity<IdentityUserPasskey<Guid>>(entity =>
+        {
+            entity.HasKey(x => x.CredentialId);
+            entity.ToTable("AspNetUserPasskeys", table => table.HasCheckConstraint("CK_Passkey_Data", "typeof(Data)='text' AND json_valid(Data)=1 AND json_type(Data)='object'"));
+            entity.Property(x => x.CredentialId).HasMaxLength(1024);
+            entity.OwnsOne(x => x.Data).ToJson();
+            entity.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId);
+        });
+        modelBuilder.Entity<AppUser>(entity =>
+        {
+            entity.HasIndex(x => x.Singleton).IsUnique();
+            entity.Property(x => x.UserName).IsRequired();
+            entity.Property(x => x.NormalizedUserName).IsRequired();
+            entity.Property(x => x.PasswordHash).IsRequired();
+            entity.Property(x => x.SecurityStamp).IsRequired();
+            entity.ToTable("AspNetUsers", table =>
+            {
+                table.HasCheckConstraint("CK_User_Singleton", "Singleton=1");
+                table.HasCheckConstraint("CK_User_Name", "length(UserName) BETWEEN 1 AND 64 AND UserName NOT GLOB '*[^a-zA-Z0-9._-]*'");
+                table.HasCheckConstraint("CK_User_Failures", "AccessFailedCount>=0");
+            });
+        });
+        modelBuilder.Entity<AuthTicket>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(x => x.ExpiresAt);
+        });
         modelBuilder.Entity<SystemState>(entity =>
         {
             entity.ToTable("SystemState", table =>

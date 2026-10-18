@@ -24,3 +24,17 @@ dotnet ef migrations add 変更名 --project src/GoodsManager.Web --output-dir S
 ```
 
 SQLの保存型・制約・型変換・取消・移行失敗・プロセス排他を、試験ごとに分離した実ファイルSQLiteで検証する。試験専用の数量等のテーブルは本番DBには作成しない。Dapperは未導入。
+
+認証APIは`/api/v1/setup/status`、`/setup`、`/auth/csrf`、`/auth/password`、`/auth/session`、`/auth/logout`、`/auth/revoke-all`、`/account/password`。
+状態変更は匿名の初期登録・ログインを含め`GET /api/v1/auth/csrf`の`token`を`X-CSRF-Token`へ指定する。認証状態の変更後はトークンを取り直す。HTTPSの同一オリジンで接続する。
+
+ログインIDは英数字・`._-`の1～64文字、大小文字を区別しない。パスワードは12～128コードポイント、文字種の強制なし、NUL不可。5回の連続失敗で5分間停止。セッションクッキーは上限7日、保持ありはログインから30日。いずれも自動延長しない。標準IdentityのSecurityStampを毎要求で照合する。
+
+CLI復旧はアプリ停止後、永続領域を同じ設定にして対話端末で実行する。
+
+```text
+dotnet run --project src/GoodsManager.Web -- recover-account --keep-passkeys
+dotnet run --project src/GoodsManager.Web -- recover-account --clear-passkeys
+```
+
+新しいパスワードを非表示で2回入力。パスワードをコマンド引数や環境変数へ入れない。保持・削除の選択は必須。どちらも全端末を失効し、ロックアウトを解除する。HTTPの復旧APIは設けない。
