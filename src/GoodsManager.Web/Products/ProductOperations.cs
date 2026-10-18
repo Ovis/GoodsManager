@@ -140,6 +140,7 @@ public sealed partial class ProductOperations(AppDbContext db)
             inventory,
             product.CreatedAt,
             product.UpdatedAt,
+            product.DeletedAt,
             revision = product.Revision.ToString(CultureInfo.InvariantCulture),
             etag = Etag(product)
         };

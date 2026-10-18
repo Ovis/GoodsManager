@@ -859,7 +859,7 @@ namespace GoodsManager.Web.Storage.Migrations
 
                             t.HasCheckConstraint("CK_Idempotency_Hash", "length(RequestHash)=64 AND RequestHash NOT GLOB '*[^0-9a-f]*'");
 
-                            t.HasCheckConstraint("CK_Idempotency_Response", "ResponseStatus IN (200,201) AND json_valid(ResponseJson)=1 AND json_type(ResponseJson)='object'");
+                            t.HasCheckConstraint("CK_Idempotency_Response", "json_valid(ResponseJson)=1 AND ((ResponseStatus IN (200,201) AND json_type(ResponseJson)='object') OR (ResponseStatus=204 AND json_type(ResponseJson)='null'))");
                         });
                 });
 
@@ -1333,6 +1333,47 @@ namespace GoodsManager.Web.Storage.Migrations
                             t.HasCheckConstraint("CK_Products_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
                             t.HasCheckConstraint("CK_Products_Version_Storage", "\"Version\" IS NULL OR (typeof(\"Version\") = 'text' AND instr(\"Version\", char(0)) = 0)");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.ProductChange", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("OccurredAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "OccurredAt");
+
+                    b.ToTable("ProductChanges", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProductChange_Kind", "Kind IN ('created','updated','trashed','restored','purged')");
+
+                            t.HasCheckConstraint("CK_ProductChange_Revision", "Revision>=1");
+
+                            t.HasCheckConstraint("CK_ProductChanges_Id_Storage", "typeof(\"Id\") = 'text' AND length(\"Id\") = 36 AND instr(\"Id\", char(0)) = 0 AND substr(\"Id\",9,1) = '-' AND substr(\"Id\",14,1) = '-' AND substr(\"Id\",19,1) = '-' AND substr(\"Id\",24,1) = '-' AND length(replace(\"Id\",'-','')) = 32 AND replace(\"Id\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_ProductChanges_Kind_Storage", "typeof(\"Kind\") = 'text' AND instr(\"Kind\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_ProductChanges_OccurredAt_Storage", "typeof(\"OccurredAt\") = 'integer' AND \"OccurredAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_ProductChanges_ProductId_Storage", "typeof(\"ProductId\") = 'text' AND length(\"ProductId\") = 36 AND instr(\"ProductId\", char(0)) = 0 AND substr(\"ProductId\",9,1) = '-' AND substr(\"ProductId\",14,1) = '-' AND substr(\"ProductId\",19,1) = '-' AND substr(\"ProductId\",24,1) = '-' AND length(replace(\"ProductId\",'-','')) = 32 AND replace(\"ProductId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_ProductChanges_Revision_Storage", "typeof(\"Revision\") = 'integer'");
                         });
                 });
 

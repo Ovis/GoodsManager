@@ -61,6 +61,11 @@ public static class ProductSchema
 {
     public static void Configure(ModelBuilder model)
     {
+        model.Entity<ProductChange>(e =>
+        {
+            e.ToTable("ProductChanges", t => { t.HasCheckConstraint("CK_ProductChange_Kind", "Kind IN ('created','updated','trashed','restored','purged')"); t.HasCheckConstraint("CK_ProductChange_Revision", "Revision>=1"); });
+            e.HasKey(x => x.Id); e.Property(x => x.Id).ValueGeneratedNever(); e.HasIndex(x => new { x.ProductId, x.OccurredAt });
+        });
         model.Entity<Product>(e =>
         {
             e.ToTable("Products", t =>

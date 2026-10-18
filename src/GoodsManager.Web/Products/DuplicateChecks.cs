@@ -51,7 +51,7 @@ public sealed record DuplicateConfirmation(string InputFingerprint, ConfirmedCan
         if (candidates.DistinctBy(c => c.ProductId).Count() != candidates.Length) throw InputObject.Invalid("confirmedCandidates");
         var fingerprint = x.Text("inputFingerprint", 64); var decision = x.Text("decision"); var target = x.OptionalId("targetProductId");
         if (fingerprint.Length != 64 || fingerprint.Any(c => c is not (>= '0' and <= '9' or >= 'a' and <= 'f'))) throw InputObject.Invalid("inputFingerprint");
-        if (decision is not ("createSeparate" or "addToExisting" or "update") || (decision == "createSeparate" && target.HasValue) || (decision is "addToExisting" or "update" && !target.HasValue)) throw InputObject.Invalid("decision");
+        if (decision is not ("createSeparate" or "addToExisting" or "update" or "restore") || (decision == "createSeparate" && target.HasValue) || (decision is "addToExisting" or "update" or "restore" && !target.HasValue)) throw InputObject.Invalid("decision");
         return new(fingerprint, candidates, decision, target);
     }
 }
@@ -91,9 +91,9 @@ public sealed class DuplicateChecks(AppDbContext db, ProductSearch search)
         return new(fingerprint, candidates, strong.Length, weakCount);
     }
     /// <summary>入力が同じで、最新の強候補・理由が確認済み集合の部分集合なら再確認を省く</summary>
-    public async Task RequireConfirmationAsync(DuplicateInput input, DuplicateConfirmation? confirmation, string decision, Guid? target, CancellationToken token)
+    public async Task RequireConfirmationAsync(DuplicateInput input, DuplicateConfirmation? confirmation, string decision, Guid? target, CancellationToken token, Guid? excludeProductId = null)
     {
-        var latest = await CheckAsync(input, null, token);
+        var latest = await CheckAsync(input, excludeProductId, token);
         var valid = confirmation is not null && confirmation.InputFingerprint == latest.InputFingerprint && confirmation.Decision == decision && confirmation.TargetProductId == target;
         if (valid) valid = latest.Candidates.Where(x => x.Strength == "strong").All(candidate => confirmation!.ConfirmedCandidates.Any(c => c.ProductId == candidate.Product.Id && candidate.Reasons.All(r => c.Reasons.Contains(r, StringComparer.Ordinal))));
         if ((!valid && latest.StrongCandidateCount > 0) || (decision == "addToExisting" && !valid)) throw new MasterProblem(409, "DUPLICATE_CONFIRMATION_REQUIRED") { Details = latest };

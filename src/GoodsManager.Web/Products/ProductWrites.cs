@@ -20,7 +20,7 @@ public sealed class ProductWrites(AppDbContext db, SignInManager<AppUser> signIn
 
     public async Task<IActionResult> ExecuteAsync(HttpContext context, string scope, bool create,
         Func<JsonElement, DateTimeOffset, CancellationToken, Task<(Product Product, IReadOnlyDictionary<string, Guid> Refs)>> action,
-        Func<Product, CancellationToken, Task<object>>? responseBody = null)
+        Func<Product, CancellationToken, Task<object>>? responseBody = null, bool noContent = false, string changeKind = "updated")
     {
         var request = context.Request;
         var token = context.RequestAborted;
@@ -36,7 +36,9 @@ public sealed class ProductWrites(AppDbContext db, SignInManager<AppUser> signIn
         if (length > BodyLimit) throw new MasterProblem(413, "REQUEST_TOO_LARGE");
         if (!Guid.TryParseExact(request.Headers["Idempotency-Key"].ToString(), "D", out var key) || key == Guid.Empty) throw InputObject.Invalid("idempotencyKey");
         var bodyHash = Convert.ToHexStringLower(SHA256.HashData(bytes.AsSpan(0, length)));
-        var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new[] { bodyHash, request.Headers.IfMatch.ToString() }))));
+        var conditions = new List<string> { bodyHash, request.Headers.IfMatch.ToString() };
+        if (request.Headers.ContainsKey("X-Confirm-Delete")) conditions.Add(request.Headers["X-Confirm-Delete"].ToString());
+        var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(conditions))));
         await gate.Semaphore.WaitAsync(token);
         try
         {
@@ -57,9 +59,11 @@ public sealed class ProductWrites(AppDbContext db, SignInManager<AppUser> signIn
             catch (JsonException) { throw InputObject.Invalid("body"); }
             using var parsed = document;
             var result = await action(document.RootElement, now, token);
+            var entry = db.Entry(result.Product);
+            if (entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted) db.Add(new ProductChange { Id = Guid.NewGuid(), ProductId = result.Product.Id, Revision = result.Product.Revision, Kind = create ? "created" : changeKind, OccurredAt = now });
             await db.SaveChangesAsync(token);
             await projection.RebuildAsync([result.Product.Id], token);
-            var body = responseBody is not null ? await responseBody(result.Product, token) : create ? await products.DetailAsync(result.Product, token) : (await products.InventoryAsync(result.Product, result.Refs, token)) with { DeduplicatedCount = imageLinks.DeduplicatedCount };
+            var body = noContent ? null : responseBody is not null ? await responseBody(result.Product, token) : create ? await products.DetailAsync(result.Product, token) : (await products.InventoryAsync(result.Product, result.Refs, token)) with { DeduplicatedCount = imageLinks.DeduplicatedCount };
             var completedAt = StorageValues.FromMilliseconds(clock.GetUtcNow().ToUnixTimeMilliseconds());
             var saved = new IdempotencyRecord
             {
@@ -67,7 +71,7 @@ public sealed class ProductWrites(AppDbContext db, SignInManager<AppUser> signIn
                 OperationScope = scope,
                 Key = key,
                 RequestHash = hash,
-                ResponseStatus = create ? 201 : 200,
+                ResponseStatus = noContent ? 204 : create ? 201 : 200,
                 ResponseJson = JsonSerializer.Serialize(body, Json),
                 ResponseEtag = ProductOperations.Etag(result.Product),
                 Location = create ? $"/api/v1/products/{result.Product.Id:D}" : null,
@@ -83,6 +87,7 @@ public sealed class ProductWrites(AppDbContext db, SignInManager<AppUser> signIn
     }
     private static IActionResult Stored(HttpContext context, IdempotencyRecord saved)
     {
+        if (saved.ResponseStatus == 204) return new StatusCodeResult(204);
         context.Response.Headers.ETag = saved.ResponseEtag;
         if (saved.Location is not null) context.Response.Headers.Location = saved.Location;
         return new ContentResult { StatusCode = saved.ResponseStatus, ContentType = "application/json; charset=utf-8", Content = saved.ResponseJson };

@@ -11,20 +11,20 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace GoodsManager.Web.Search;
 
 public sealed record NamedRef(Guid Id, string Name);
-public sealed record ProductSummary(Guid Id, string Name, NamedRef Category, NamedRef[] Works, long TotalQuantity, string?[] Conditions, string[] StorageLocations, object? PrimaryImage, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, string Revision);
+public sealed record ProductSummary(Guid Id, string Name, NamedRef Category, NamedRef[] Works, long TotalQuantity, string?[] Conditions, string[] StorageLocations, object? PrimaryImage, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, string Revision, DateTimeOffset? DeletedAt = null);
 public sealed record SearchPage(ProductSummary[] Items, int Page, int PageSize, long TotalCount, long TotalPages, string DataRevision);
 
 /// <summary>SQLの構造は固定の許可リスト、利用者の値はすべてパラメーター。各読取は呼出側のスナップショットに参加。</summary>
 public sealed class ProductSearch(AppDbContext db)
 {
     internal sealed record Plan(string From, string Where, string Rank, Dictionary<string, object> Parameters);
-    internal static Plan Build(SearchQuery query)
+    internal static Plan Build(SearchQuery query, bool trash = false)
     {
         var values = new Dictionary<string, object>();
         string Param(object value) { var key = "@v" + values.Count; values.Add(key, value); return key; }
         string In(IEnumerable<string> source) => string.Join(',', source.Select(x => Param(x)));
         string Ids(string key) => In(query.Ids.GetValueOrDefault(key, []).Select(StorageValues.FormatId));
-        var where = new List<string> { "p.DeletedAt IS NULL" };
+        var where = new List<string> { trash ? "p.DeletedAt IS NOT NULL" : "p.DeletedAt IS NULL" };
         var cte = "";
         if (query.Ids.GetValueOrDefault("categoryIds", []).Length > 0)
         {
@@ -32,7 +32,7 @@ public sealed class ProductSearch(AppDbContext db)
             where.Add("p.CategoryId IN (SELECT Id FROM selectedCategories)");
         }
         var from = cte + "SELECT p.ProductId, p.Name, p.CategoryId, c.Name AS CategoryName, p.CreatedAt, p.UpdatedAt, p.Revision, p.NormalizedName, " +
-            "COALESCE((SELECT SUM(CAST(l.Quantity AS INTEGER)) FROM InventoryLots l WHERE l.ProductId=p.ProductId),0) + (SELECT COUNT(*) FROM InventoryItems i WHERE i.ProductId=p.ProductId) AS TotalQuantity " +
+            "COALESCE((SELECT SUM(CAST(l.Quantity AS INTEGER)) FROM InventoryLots l WHERE l.ProductId=p.ProductId),0) + (SELECT COUNT(*) FROM InventoryItems i WHERE i.ProductId=p.ProductId) AS TotalQuantity, p.DeletedAt " +
             "FROM Products p JOIN Categories c ON c.CategoryId=p.CategoryId";
         var codeChecks = new List<string>();
         foreach (var code in query.Terms.Select(SearchQuery.Comparable).Append(SearchQuery.Comparable(query.Q)).OfType<string>().Distinct())
@@ -104,14 +104,14 @@ public sealed class ProductSearch(AppDbContext db)
         foreach (var value in parameters) command.Parameters.Add(new SqliteParameter(value.Key, value.Value));
         return command;
     }
-    public async Task<SearchPage> PageAsync(SearchQuery query, CancellationToken token)
+    public async Task<SearchPage> PageAsync(SearchQuery query, CancellationToken token, bool trash = false)
     {
-        var plan = Build(query);
+        var plan = Build(query, trash);
         await using var countCommand = Command("SELECT COUNT(*) FROM (" + plan.From + plan.Where + ")", plan.Parameters);
         var count = Convert.ToInt64(await countCommand.ExecuteScalarAsync(token), CultureInfo.InvariantCulture);
         var pages = (count + query.PageSize - 1) / query.PageSize;
         var page = (int)Math.Min(query.Page, Math.Max(1, pages));
-        var order = query.Sort switch
+        var order = trash ? "DeletedAt DESC" : query.Sort switch
         {
             "relevance" => "SearchRank ASC, CreatedAt DESC",
             "createdAsc" => "CreatedAt ASC",
@@ -126,7 +126,7 @@ public sealed class ProductSearch(AppDbContext db)
         await using var command = Command(plan.From + plan.Where + " ORDER BY " + order + ", ProductId ASC LIMIT @limit OFFSET @offset", parameters);
         var rows = new List<Row>();
         await using (var reader = await command.ExecuteReaderAsync(token))
-            while (await reader.ReadAsync(token)) rows.Add(new(StorageValues.ParseId(reader.GetString(0)), reader.GetString(1), new(StorageValues.ParseId(reader.GetString(2)), reader.GetString(3)), StorageValues.FromMilliseconds(reader.GetInt64(4)), StorageValues.FromMilliseconds(reader.GetInt64(5)), reader.GetInt64(6), StorageValues.RequireSafeTotal(reader.GetInt64(8))));
+            while (await reader.ReadAsync(token)) rows.Add(new(StorageValues.ParseId(reader.GetString(0)), reader.GetString(1), new(StorageValues.ParseId(reader.GetString(2)), reader.GetString(3)), StorageValues.FromMilliseconds(reader.GetInt64(4)), StorageValues.FromMilliseconds(reader.GetInt64(5)), reader.GetInt64(6), StorageValues.RequireSafeTotal(reader.GetInt64(8)), reader.IsDBNull(reader.GetOrdinal("DeletedAt")) ? null : StorageValues.FromMilliseconds(reader.GetInt64(reader.GetOrdinal("DeletedAt")))));
         var items = await Summaries(rows, token);
         var revision = (await db.SystemStates.AsNoTracking().SingleAsync(token)).DataRevision.ToString(CultureInfo.InvariantCulture);
         return new(items, page, query.PageSize, count, pages, revision);
@@ -139,9 +139,9 @@ public sealed class ProductSearch(AppDbContext db)
         var items = await db.Set<InventoryItem>().AsNoTracking().Where(x => ids.Contains(x.ProductId)).Select(x => x.ProductId).ToArrayAsync(token);
         var lotQuantities = lots.ToLookup(x => x.ProductId, x => x.Quantity);
         var itemCounts = items.GroupBy(x => x).ToDictionary(x => x.Key, x => x.LongCount());
-        return await Summaries(products.Select(x => new Row(x.Product.Id, x.Product.Name, new(x.Category.Id, x.Category.Name), x.Product.CreatedAt, x.Product.UpdatedAt, x.Product.Revision, QuantityTotals.Calculate(lotQuantities[x.Product.Id], itemCounts.GetValueOrDefault(x.Product.Id)))).ToList(), token);
+        return await Summaries(products.Select(x => new Row(x.Product.Id, x.Product.Name, new(x.Category.Id, x.Category.Name), x.Product.CreatedAt, x.Product.UpdatedAt, x.Product.Revision, QuantityTotals.Calculate(lotQuantities[x.Product.Id], itemCounts.GetValueOrDefault(x.Product.Id)), x.Product.DeletedAt)).ToList(), token);
     }
-    private sealed record Row(Guid Id, string Name, NamedRef Category, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, long Revision, long Total);
+    private sealed record Row(Guid Id, string Name, NamedRef Category, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, long Revision, long Total, DateTimeOffset? DeletedAt = null);
     private async Task<ProductSummary[]> Summaries(List<Row> rows, CancellationToken token)
     {
         var ids = rows.Select(x => x.Id).ToArray();
@@ -152,7 +152,7 @@ public sealed class ProductSearch(AppDbContext db)
         var images = await (from link in db.Set<ProductImage>().AsNoTracking() join asset in db.Set<ImageAsset>() on link.ImageAssetId equals asset.Id where ids.Contains(link.ProductId) && link.IsPrimary select new { Link = link, asset.KeepOriginal }).ToArrayAsync(token);
         return rows.Select(r => new ProductSummary(r.Id, r.Name, r.Category, works.Where(w => w.ProductId == r.Id).Select(w => new NamedRef(w.Id, w.Name)).ToArray(), r.Total,
             own.Where(x => x.ProductId == r.Id).Select(x => x.Condition).Distinct().Order(StringComparer.Ordinal).ToArray(),
-            own.Where(x => x.ProductId == r.Id && x.StorageLocation is not null).Select(x => x.StorageLocation!).Distinct().Order(StringComparer.Ordinal).ToArray(), images.Where(x => x.Link.ProductId == r.Id).Select(x => ImageLinks.Ref(x.Link, true, x.KeepOriginal)).FirstOrDefault(), r.CreatedAt, r.UpdatedAt, r.Revision.ToString(CultureInfo.InvariantCulture))).ToArray();
+            own.Where(x => x.ProductId == r.Id && x.StorageLocation is not null).Select(x => x.StorageLocation!).Distinct().Order(StringComparer.Ordinal).ToArray(), images.Where(x => x.Link.ProductId == r.Id).Select(x => ImageLinks.Ref(x.Link, true, x.KeepOriginal)).FirstOrDefault(), r.CreatedAt, r.UpdatedAt, r.Revision.ToString(CultureInfo.InvariantCulture), r.DeletedAt)).ToArray();
     }
     public async Task<object> SummaryAsync(string inventory, CancellationToken token)
     {
