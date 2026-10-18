@@ -104,3 +104,12 @@
 @media(max-width:800px){.management>.panel {padding:18px}.bottom-nav a {font-size:12px;padding:12px 4px}.management .search-row {flex-wrap:wrap}}
 
 .management .tabs .btn {padding:10px 14px;min-width:64px;min-height:44px}
+.backups fieldset {border:0;padding:0;margin:0;min-width:0}
+.backups input[type=time] {max-width:180px}
+.backups .backup-path,.backup-summary dd {overflow-wrap:anywhere}
+.backups td small,.backup-summary small {display:block;color:#65776a}
+.backup-summary>div {display:grid;grid-template-columns:140px minmax(0,1fr);gap:12px;margin:12px 0}
+.backup-summary dd {margin:0}
+.system-warning {background:#fff5df;border:1px solid #dbcaa0;border-radius:8px;padding:14px 20px;margin-bottom:20px;color:#634b22}
+.system-warning p {margin:0 0 6px}
+@media(max-width:700px){.backup-summary>div{grid-template-columns:100px minmax(0,1fr)}.bottom-nav a{min-width:0;overflow-wrap:anywhere}.backups .panel{padding:18px}}
