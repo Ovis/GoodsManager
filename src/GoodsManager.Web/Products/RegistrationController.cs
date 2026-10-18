@@ -63,6 +63,19 @@ public sealed class RegistrationController(AppDbContext db, ProductOperations pr
         return (product, refs);
     }, async (p, token) => new { product = await products.DetailAsync(p, token), outcome = "addedToExisting", deduplicatedCount = images.DeduplicatedCount });
 
+    /// <summary>重複確認と全商品属性の編集を、親の更新条件と同一トランザクションで確定</summary>
+    [HttpPut("products/{id:guid}")]
+    [RequestSizeLimit(ProductWrites.BodyLimit)]
+    public Task<IActionResult> Update(Guid id) => writes.ExecuteAsync(HttpContext, $"PUT:/api/v1/products/{id:D}", false, async (body, now, token) =>
+    {
+        var product = await products.FindAsync(id, token); ProductWrites.CheckVersion(product, Request.Headers.IfMatch.ToString());
+        var input = ProductWrites.Parse(() => { var x = new InputObject(body, "product", "duplicateConfirmation"); return (Draft: RegistrationLimits.Product(InputObject.Product(x.Get("product"))), Confirmation: DuplicateConfirmation.Parse(x)); });
+        var before = await products.DraftAsync(product, token);
+        // 属性・参照を先に検証しても、確定と更新番号の変更は外側のトランザクションに留まる。
+        await products.UpdateAsync(product, input.Draft, now, token);
+        await duplicates.RequireEditConfirmationAsync(before, input.Draft, input.Confirmation, id, token);
+        return (product, (IReadOnlyDictionary<string, Guid>)new Dictionary<string, Guid>());
+    }, (p, token) => products.DetailAsync(p, token));
     /// <summary>認証済みユーザーの画像所有者IDを取得</summary>
     private Guid UserId() => Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
 }

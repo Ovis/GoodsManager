@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using static GoodsManager.Tests.AuthenticationTests;
 namespace GoodsManager.Tests;
 
-public sealed class RegistrationTests
+public sealed partial class RegistrationTests
 {
     private TestApplication app = null!; private HttpClient client = null!; private Guid category; private Guid a, b, c;
     [SetUp]

@@ -34,6 +34,7 @@ public sealed record ImageEditEntry(Guid? LinkId, string? ClientRef, Guid? Tempo
             if (string.IsNullOrWhiteSpace(reference) || Guid.TryParse(reference, out _)) throw InputObject.Invalid("clientRef");
             return new ImageEditEntry(null, reference, x.Id("temporaryUploadId"), x.Integer("sortOrder", 0));
         }).ToArray();
+        if (result.Count(x => x.TemporaryUploadId.HasValue) > 100) throw InputObject.Invalid("entries");
         if (result.Select(x => x.Ref).Distinct(StringComparer.Ordinal).Count() != result.Length) throw InputObject.Invalid("entries");
         return result;
     }

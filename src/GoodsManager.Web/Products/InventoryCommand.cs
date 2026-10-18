@@ -21,6 +21,7 @@ public static class InventoryCommands
         if (raw.Length is < 1 or > 100) throw InputObject.Invalid("commands");
         var commands = raw.Select(ParseOne).ToArray();
         if (commands.OfType<ExtractItems>().Sum(x => (long)x.ItemRefs.Length) > 100) throw InputObject.Invalid("itemRefs");
+        if (commands.OfType<ReplaceItemImages>().Sum(x => (long)x.Entries.Count(e => e.TemporaryUploadId.HasValue)) > 100) throw InputObject.Invalid("entries");
         return commands;
     }
 

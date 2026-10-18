@@ -47,3 +47,41 @@
 .success-message {background:#e9f2eb;color:#28583e;padding:16px;border-radius:8px}
 @media(max-width:800px){.registration-actions {flex-direction:column;align-items:stretch;bottom:62px}.registration-actions>div {justify-content:flex-end}.registration-page .panel {padding:18px}.unapplied dl {grid-template-columns:90px 1fr}.registration-candidate>img,.candidate-no-photo {width:60px;height:70px}}
 .conflict-image {width:100px;height:100px;object-fit:contain;margin:6px}
+
+.product-workspace>.panel {padding:24px;margin-bottom:24px}
+.product-workspace fieldset {border:0;padding:0;margin:0;min-width:0}
+.product-workspace .editor-actions {display:flex;justify-content:flex-end;gap:12px;margin-top:24px;flex-wrap:wrap}
+.photo-button {border:0;padding:0;background:transparent;cursor:zoom-in;color:inherit}
+.photo-button:disabled {cursor:default}
+.detail-photo-strip {display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.detail-photo-strip img {width:82px;height:82px;object-fit:contain;border-radius:8px;background:#eeeee6;border:1px solid #e1e4dc}
+.photo-editor .photo-zone {min-height:180px;padding:24px;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+.photo-editor .photo-zone strong,.photo-editor .photo-zone small {width:100%;text-align:center}
+.image-edit-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-top:20px}
+.image-edit-grid article {border:1px solid #dbe0d7;padding:14px;border-radius:10px;overflow-wrap:anywhere}
+.image-edit-grid article>img {width:100%;height:180px;object-fit:contain;background:#f7f6f2}
+.image-edit-actions {display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.image-edit-grid input[type=radio] {width:auto;margin-right:6px}
+.holding-edit {padding:22px;margin:20px 0;border:1px solid #dbe0d7;border-radius:12px}
+.ownership-fields .full {grid-column:1/-1}
+.ownership-fields .field {margin-bottom:12px}
+.lot-operations {padding-top:14px;margin-top:14px;border-top:1px solid #ddd}
+.lot-operations .field {max-width:250px}
+.draft-total,.previous-draft {background:#fff5df;border:1px solid #ead6ae;border-radius:8px;padding:16px}
+.previous-draft {margin:14px 0;overflow-wrap:anywhere}
+.item-editor-dialog {width:min(900px,94vw)}
+.latest-snapshot {background:#f8f8f3;padding:18px;margin-top:18px;overflow-wrap:anywhere}
+.latest-snapshot dl {display:grid;grid-template-columns:120px 1fr;gap:10px}
+.latest-snapshot dd {margin:0;white-space:pre-wrap}
+.lightbox {background:#15251f;color:#fff;border:0;width:min(1250px,98vw);max-height:96vh;border-radius:12px;padding:20px;overflow:auto}
+.lightbox::backdrop {background:#101813ed}
+.lightbox header,.lightbox footer {display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lightbox header {justify-content:space-between}
+.lightbox h2 {font-size:17px;margin:0}
+.lightbox .btn {background:#fff;color:#25392f}
+.lightbox-viewport {height:65vh;overflow:hidden;touch-action:none;display:flex;align-items:center;justify-content:center;user-select:none;margin:16px 0;cursor:grab}
+.lightbox-viewport:active {cursor:grabbing}
+.lightbox-viewport img {max-width:100%;max-height:100%;object-fit:contain;transform-origin:center;user-select:none;pointer-events:none}
+.lightbox footer {justify-content:center}
+.lightbox p {text-align:center;color:#c1cfc5;font-size:13px}
+@media(max-width:800px){.product-workspace>.panel {padding:18px}.holding-edit {padding:16px}.lightbox {padding:12px}.lightbox-viewport {height:58vh}.latest-snapshot dl {grid-template-columns:90px 1fr}}

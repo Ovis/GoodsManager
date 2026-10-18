@@ -5,7 +5,7 @@ import type {ProductSummary,ProductDetail,NamedRef} from './types';
 export type RegistrationDraft={name:string;categoryId:string;quantity:string;workIds:string[];characterIds:string[];tagIds:string[];condition:string;storageLocation:string;purchasePlace:string;ownershipMemo:string;version:string;manufacturerId:string;sellerId:string;memo:string;identifiers:{scheme:string;value:string}[];links:string[]};
 export type Candidate={product:ProductSummary;strength:'strong'|'weak';reasons:string[];isTrashed:boolean};
 export type DuplicateResult={inputFingerprint:string;candidates:Candidate[];strongCandidateCount:number;weakCandidateCount:number};
-export type Confirmation={inputFingerprint:string;confirmedCandidates:{productId:string;reasons:string[]}[];decision:'createSeparate'|'addToExisting';targetProductId:string|null};
+export type Confirmation={inputFingerprint:string;confirmedCandidates:{productId:string;reasons:string[]}[];decision:'createSeparate'|'addToExisting'|'update';targetProductId:string|null};
 export type UploadStatus={id:string;state:string;previewUrl:string|null;errorCode:string|null;progressStage:string};
 export type Photo={localId:string;file:File;url:string;key:string;state:string;progress:number;id?:string;previewUrl?:string;error?:string;xhr?:XMLHttpRequest;generation:number;sentAt?:number};
 export type SaveResult={product:ProductDetail;outcome:string;deduplicatedCount:number};
@@ -19,7 +19,7 @@ export function mutation<T>(){return new FrozenMutation<T>({csrf:async()=>(await
 const imageErrors:Record<string,string>={IMAGE_UNSUPPORTED_FORMAT:'JPEG・PNG・WebPを選択してください。',IMAGE_ANIMATED:'アニメーション画像は使用できません。',IMAGE_PIXEL_LIMIT:'40MP・長辺16,384pxまでの画像を選択してください。',IMAGE_SIZE_LIMIT:'1枚30MiBまでの画像を選択してください。',IMAGE_TIMEOUT:'画像の変換が30秒で完了しませんでした。',IMAGE_MEMORY_LIMIT:'画像の変換がメモリ監視値を超えました。',UPLOAD_EXPIRED:'未使用のまま24時間経過しました。再アップロードしてください。'};
 /** 入力・選択ファイル・保存要求はログイン画面を挟んでも同じページのメモリに残す */
 export class RegistrationStore{
-  draft:RegistrationDraft=blankDraft();carryEnabled=true;carrySelected:string[]=[...carryKeys];photos:Photo[]=[];names:Record<string,string>={};
+  excludeProductId:string|undefined;draft:RegistrationDraft=blankDraft();carryEnabled=true;carrySelected:string[]=[...carryKeys];photos:Photo[]=[];names:Record<string,string>={};
   save=mutation<SaveResult>();masterJobs:Record<string,{create:FrozenMutation<NamedRef&{etag:string}>;relation:FrozenMutation<NamedRef&{etag:string}>;works:string[];result?:NamedRef&{etag:string}}>={};
   attempt:SaveAttempt|null=null;confirmed:Confirmation|null=null;busy=false;notice='';error='';fieldErrors:Record<string,string[]>={};
   duplicates:DuplicateResult|null=null;checking=false;checkError='';private checks=new LatestCheck();private checkTimer:ReturnType<typeof setTimeout>|null=null;private checkAbort:AbortController|null=null;
@@ -37,7 +37,7 @@ export class RegistrationStore{
     if(!this.draft.name.trim()&&!this.draft.identifiers.some(x=>x.value)){this.duplicates=null;this.notify();return;}
     if(this.draft.identifiers.some(x=>codeError(x.scheme,x.value))){this.duplicates=null;this.notify();return;}
     this.checking=true;this.notify();this.checkTimer=setTimeout(async()=>{const abort=new AbortController();this.checkAbort=abort;
-      try{const result=await api<DuplicateResult>('/duplicate-checks',{method:'POST',body:JSON.stringify({input:duplicateInput(this.draft)}),signal:abort.signal});if(version===this.checks.version){this.duplicates=result;this.checkError='';}}
+      try{const result=await api<DuplicateResult>('/duplicate-checks',{method:'POST',body:JSON.stringify({input:duplicateInput(this.draft),excludeProductId:this.excludeProductId}),signal:abort.signal});if(version===this.checks.version){this.duplicates=result;this.checkError='';}}
       catch(e){if(!abort.signal.aborted&&version===this.checks.version)this.checkError=e instanceof Error?e.message:'候補を確認できませんでした。';}
       finally{if(version===this.checks.version){this.checking=false;this.notify();}}
     },300);
