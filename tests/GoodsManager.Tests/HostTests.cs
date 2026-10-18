@@ -10,7 +10,7 @@ public sealed class HostTests
     [Test]
     public async Task LiveEndpointStartsWithoutFrontend()
     {
-        await using var factory = new WebApplicationFactory<Program>();
+        await using var factory = new TestApplication();
         using var client = factory.CreateClient();
         Assert.That((await client.GetAsync("/health/live")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
@@ -19,7 +19,7 @@ public sealed class HostTests
     [Test]
     public async Task MissingApiReturnsProblemDetails()
     {
-        await using var factory = new WebApplicationFactory<Program>();
+        await using var factory = new TestApplication();
         using var client = factory.CreateClient();
         var response = await client.GetAsync("/api/v1/missing");
         Assert.Multiple(() =>
