@@ -11,38 +11,86 @@ public static class DatabaseMaintenance
     public static async Task MigrateAsync(DbContext context, string dataDirectory)
     {
         await context.Database.OpenConnectionAsync();
-        var connection = (SqliteConnection)context.Database.GetDbConnection();
-        await using (var command = connection.CreateCommand())
+        try
         {
-            command.CommandText = "SELECT json_valid('{\"test\":1}')";
-            if (Convert.ToInt64(await command.ExecuteScalarAsync()) != 1)
+            var connection = (SqliteConnection)context.Database.GetDbConnection();
+            await using (var command = connection.CreateCommand())
             {
-                throw new InvalidOperationException("JSON関数が利用できない");
+                command.CommandText = "SELECT json_valid('{\"test\":1}')";
+                if (Convert.ToInt64(await command.ExecuteScalarAsync()) != 1)
+                {
+                    throw new InvalidOperationException("JSON関数が利用できない");
+                }
+
+                command.CommandText = "PRAGMA journal_mode=WAL";
+                if (!string.Equals((string?)await command.ExecuteScalarAsync(), "wal", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("WALを有効にできない");
+                }
             }
 
-            command.CommandText = "PRAGMA journal_mode=WAL";
-            if (!string.Equals((string?)await command.ExecuteScalarAsync(), "wal", StringComparison.OrdinalIgnoreCase))
+            await VerifyAsync(connection);
+            if (await HasPendingMigrationsAsync(context))
             {
-                throw new InvalidOperationException("WALを有効にできない");
+                await using var command = connection.CreateCommand();
+                command.CommandText = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
+                if (Convert.ToInt64(await command.ExecuteScalarAsync()) > 0)
+                {
+                    CreateSnapshot(connection, dataDirectory);
+                }
+
+                // 検証済みの退避が完成してから移行する。移行中の例外は握り潰さない
+                await context.Database.MigrateAsync();
             }
+
+            await VerifyAsync(connection);
+        }
+        finally
+        {
+            await context.Database.CloseConnectionAsync();
+        }
+    }
+
+    /// <summary>未知・順序不整合の移行履歴と残留ロックを拒否し、未適用の有無を返す</summary>
+    public static async Task<bool> HasPendingMigrationsAsync(DbContext context, CancellationToken cancellationToken = default)
+    {
+        var known = context.Database.GetMigrations().ToArray();
+        var applied = (await context.Database.GetAppliedMigrationsAsync(cancellationToken)).ToArray();
+        if (!applied.SequenceEqual(known.Take(applied.Length)))
+        {
+            throw new InvalidOperationException("DBの移行履歴がこのアプリの対応範囲と一致しない");
         }
 
-        await VerifyAsync(connection);
-        if ((await context.Database.GetPendingMigrationsAsync()).Any())
+        var connection = (SqliteConnection)context.Database.GetDbConnection();
+        var openedHere = connection.State != System.Data.ConnectionState.Open;
+        if (openedHere)
+        {
+            await context.Database.OpenConnectionAsync(cancellationToken);
+        }
+
+        try
         {
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
-            if (Convert.ToInt64(await command.ExecuteScalarAsync()) > 0)
+            command.CommandText = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='__EFMigrationsLock'";
+            if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken)) != 0)
             {
-                CreateSnapshot(connection, dataDirectory);
+                command.CommandText = "SELECT count(*) FROM __EFMigrationsLock WHERE Id=1";
+                if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken)) != 0)
+                {
+                    // アプリ/CLIの排他取得後でもロック行が残る場合は、勝手に消して移行を再開しない
+                    throw new InvalidOperationException("DBに未解放の移行ロックが残っているため起動できない");
+                }
             }
-
-            // 検証済みの退避が完成してから移行する。移行中の例外は握り潰さない
-            await context.Database.MigrateAsync();
+        }
+        finally
+        {
+            if (openedHere)
+            {
+                await context.Database.CloseConnectionAsync();
+            }
         }
 
-        await VerifyAsync(connection);
-        await context.Database.CloseConnectionAsync();
+        return applied.Length < known.Length;
     }
 
     /// <summary>SQLiteの整合性と外部キー違反を検査</summary>

@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using System.Reflection;
 
 namespace GoodsManager.Tests;
 
@@ -188,7 +189,7 @@ public sealed class SqliteTests
 
         Directory.CreateDirectory(Path.Combine(directory, "keys"));
         await File.WriteAllTextAsync(Path.Combine(directory, "keys", "test-key.xml"), "preserved-key");
-        await using var broken = new FailingContext(new DbContextOptionsBuilder<FailingContext>().UseSqlite(connectionString).Options);
+        await using var broken = new FailingContext(new DbContextOptionsBuilder<FailingContext>().UseSqlite(connectionString).ReplaceService<IMigrationsAssembly, FailingMigrationsAssembly>().Options);
         Assert.ThrowsAsync<SqliteException>(async () => await DatabaseMaintenance.MigrateAsync(broken, directory));
         Assert.That(await ScalarAsync("SELECT DataRevision FROM SystemState"), Is.EqualTo(77L));
         var backup = Directory.GetFiles(Path.Combine(directory, "pre-migration"), "*.zip").Single();
@@ -277,6 +278,30 @@ public sealed class ContractContext(DbContextOptions<ContractContext> options) :
 }
 
 public sealed class FailingContext(DbContextOptions<FailingContext> options) : DbContext(options);
+
+/// <summary>本番の移行履歴を保ったまま、その次に失敗する試験用移行だけを追加</summary>
+public sealed class FailingMigrationsAssembly : IMigrationsAssembly
+{
+    public Assembly Assembly => typeof(AppDbContext).Assembly;
+    public ModelSnapshot? ModelSnapshot => null;
+    public IReadOnlyDictionary<string, TypeInfo> Migrations { get; } = typeof(AppDbContext).Assembly.GetTypes()
+        .Append(typeof(FailingMigration))
+        .Where(type => typeof(Migration).IsAssignableFrom(type) && type.GetCustomAttribute<MigrationAttribute>() is not null)
+        .OrderBy(type => type.GetCustomAttribute<MigrationAttribute>()!.Id, StringComparer.Ordinal)
+        .ToDictionary(type => type.GetCustomAttribute<MigrationAttribute>()!.Id, type => type.GetTypeInfo());
+
+    /// <summary>EFの移行選択に必要なIDを返す</summary>
+    public string? FindMigrationId(string nameOrId) => Migrations.Keys.SingleOrDefault(id =>
+        id.Equals(nameOrId, StringComparison.OrdinalIgnoreCase) || id.EndsWith("_" + nameOrId, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>公開インターフェースを通して実際の移行を生成</summary>
+    public Migration CreateMigration(TypeInfo migrationClass, string activeProvider)
+    {
+        var migration = (Migration)Activator.CreateInstance(migrationClass.AsType())!;
+        migration.ActiveProvider = activeProvider;
+        return migration;
+    }
+}
 
 [DbContext(typeof(FailingContext))]
 [Migration("20990101000000_Failing")]

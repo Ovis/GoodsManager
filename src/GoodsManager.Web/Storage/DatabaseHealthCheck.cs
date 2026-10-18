@@ -11,7 +11,7 @@ public sealed class DatabaseHealthCheck(AppDbContext database) : IHealthCheck
     {
         try
         {
-            return !(await database.Database.GetPendingMigrationsAsync(cancellationToken)).Any()
+            return !await DatabaseMaintenance.HasPendingMigrationsAsync(database, cancellationToken)
                 && await database.SystemStates.AnyAsync(x => x.Id == 1, cancellationToken)
                 ? HealthCheckResult.Healthy() : HealthCheckResult.Unhealthy();
         }
