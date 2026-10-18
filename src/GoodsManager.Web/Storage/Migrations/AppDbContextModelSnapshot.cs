@@ -167,6 +167,433 @@ namespace GoodsManager.Web.Storage.Migrations
                         });
                 });
 
+            modelBuilder.Entity("GoodsManager.Web.Masters.Category", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("CategoryId");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParentCategoryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName", "Id");
+
+                    b.HasIndex("ParentCategoryId", "SortOrder", "Id");
+
+                    b.ToTable("Categories", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Categories_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_Categories_Id_Storage", "typeof(\"CategoryId\") = 'text' AND length(\"CategoryId\") = 36 AND instr(\"CategoryId\", char(0)) = 0 AND substr(\"CategoryId\",9,1) = '-' AND substr(\"CategoryId\",14,1) = '-' AND substr(\"CategoryId\",19,1) = '-' AND substr(\"CategoryId\",24,1) = '-' AND length(replace(\"CategoryId\",'-','')) = 32 AND replace(\"CategoryId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_Categories_Name", "length(Name) BETWEEN 1 AND 200 AND length(trim(Name,char(9,10,11,12,13,32,133,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288)))>0");
+
+                            t.HasCheckConstraint("CK_Categories_Name_Storage", "typeof(\"Name\") = 'text' AND instr(\"Name\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Categories_NormalizedName_Storage", "typeof(\"NormalizedName\") = 'text' AND instr(\"NormalizedName\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Categories_ParentCategoryId_Storage", "\"ParentCategoryId\" IS NULL OR (typeof(\"ParentCategoryId\") = 'text' AND length(\"ParentCategoryId\") = 36 AND instr(\"ParentCategoryId\", char(0)) = 0 AND substr(\"ParentCategoryId\",9,1) = '-' AND substr(\"ParentCategoryId\",14,1) = '-' AND substr(\"ParentCategoryId\",19,1) = '-' AND substr(\"ParentCategoryId\",24,1) = '-' AND length(replace(\"ParentCategoryId\",'-','')) = 32 AND replace(\"ParentCategoryId\",'-','') NOT GLOB '*[^0-9a-f]*')");
+
+                            t.HasCheckConstraint("CK_Categories_Revision", "Revision>=1");
+
+                            t.HasCheckConstraint("CK_Categories_Revision_Storage", "typeof(\"Revision\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_Categories_SortOrder_Storage", "typeof(\"SortOrder\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_Categories_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_Category_Order", "SortOrder>=0");
+
+                            t.HasCheckConstraint("CK_Category_Parent", "ParentCategoryId IS NULL OR ParentCategoryId<>CategoryId");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.Character", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("CharacterId");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName", "Id");
+
+                    b.ToTable("Characters", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Characters_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_Characters_Id_Storage", "typeof(\"CharacterId\") = 'text' AND length(\"CharacterId\") = 36 AND instr(\"CharacterId\", char(0)) = 0 AND substr(\"CharacterId\",9,1) = '-' AND substr(\"CharacterId\",14,1) = '-' AND substr(\"CharacterId\",19,1) = '-' AND substr(\"CharacterId\",24,1) = '-' AND length(replace(\"CharacterId\",'-','')) = 32 AND replace(\"CharacterId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_Characters_Name", "length(Name) BETWEEN 1 AND 200 AND length(trim(Name,char(9,10,11,12,13,32,133,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288)))>0");
+
+                            t.HasCheckConstraint("CK_Characters_Name_Storage", "typeof(\"Name\") = 'text' AND instr(\"Name\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Characters_NormalizedName_Storage", "typeof(\"NormalizedName\") = 'text' AND instr(\"NormalizedName\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Characters_Revision", "Revision>=1");
+
+                            t.HasCheckConstraint("CK_Characters_Revision_Storage", "typeof(\"Revision\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_Characters_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.CharacterWork", b =>
+                {
+                    b.Property<string>("CharacterId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WorkId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("CharacterId", "WorkId");
+
+                    b.HasIndex("WorkId", "CharacterId");
+
+                    b.ToTable("CharacterWorks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CharacterWorks_CharacterId_Storage", "typeof(\"CharacterId\") = 'text' AND length(\"CharacterId\") = 36 AND instr(\"CharacterId\", char(0)) = 0 AND substr(\"CharacterId\",9,1) = '-' AND substr(\"CharacterId\",14,1) = '-' AND substr(\"CharacterId\",19,1) = '-' AND substr(\"CharacterId\",24,1) = '-' AND length(replace(\"CharacterId\",'-','')) = 32 AND replace(\"CharacterId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_CharacterWorks_WorkId_Storage", "typeof(\"WorkId\") = 'text' AND length(\"WorkId\") = 36 AND instr(\"WorkId\", char(0)) = 0 AND substr(\"WorkId\",9,1) = '-' AND substr(\"WorkId\",14,1) = '-' AND substr(\"WorkId\",19,1) = '-' AND substr(\"WorkId\",24,1) = '-' AND length(replace(\"WorkId\",'-','')) = 32 AND replace(\"WorkId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.IdempotencyRecord", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperationScope")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CompletedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ExpiresAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResponseEtag")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResponseJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ResponseStatus")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId", "OperationScope", "Key");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("IdempotencyRecords", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_IdempotencyRecords_CompletedAt_Storage", "typeof(\"CompletedAt\") = 'integer' AND \"CompletedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_IdempotencyRecords_ExpiresAt_Storage", "typeof(\"ExpiresAt\") = 'integer' AND \"ExpiresAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_IdempotencyRecords_Key_Storage", "typeof(\"Key\") = 'text' AND length(\"Key\") = 36 AND instr(\"Key\", char(0)) = 0 AND substr(\"Key\",9,1) = '-' AND substr(\"Key\",14,1) = '-' AND substr(\"Key\",19,1) = '-' AND substr(\"Key\",24,1) = '-' AND length(replace(\"Key\",'-','')) = 32 AND replace(\"Key\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_IdempotencyRecords_Location_Storage", "\"Location\" IS NULL OR (typeof(\"Location\") = 'text' AND instr(\"Location\", char(0)) = 0)");
+
+                            t.HasCheckConstraint("CK_IdempotencyRecords_OperationScope_Storage", "typeof(\"OperationScope\") = 'text' AND instr(\"OperationScope\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_IdempotencyRecords_RequestHash_Storage", "typeof(\"RequestHash\") = 'text' AND instr(\"RequestHash\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_IdempotencyRecords_ResponseEtag_Storage", "typeof(\"ResponseEtag\") = 'text' AND instr(\"ResponseEtag\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_IdempotencyRecords_ResponseJson_Storage", "typeof(\"ResponseJson\") = 'text' AND instr(\"ResponseJson\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_IdempotencyRecords_ResponseStatus_Storage", "typeof(\"ResponseStatus\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_IdempotencyRecords_UserId_Storage", "typeof(\"UserId\") = 'text' AND length(\"UserId\") = 36 AND instr(\"UserId\", char(0)) = 0 AND substr(\"UserId\",9,1) = '-' AND substr(\"UserId\",14,1) = '-' AND substr(\"UserId\",19,1) = '-' AND substr(\"UserId\",24,1) = '-' AND length(replace(\"UserId\",'-','')) = 32 AND replace(\"UserId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_Idempotency_Expiry", "ExpiresAt>CompletedAt");
+
+                            t.HasCheckConstraint("CK_Idempotency_Hash", "length(RequestHash)=64 AND RequestHash NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_Idempotency_Response", "ResponseStatus IN (200,201) AND json_valid(ResponseJson)=1 AND json_type(ResponseJson)='object'");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.Organization", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("OrganizationId");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Memo")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("WebsiteUrl")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName", "Id");
+
+                    b.ToTable("Organizations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Organization_Memo", "Memo IS NULL OR length(Memo)<=4000");
+
+                            t.HasCheckConstraint("CK_Organization_Url", "WebsiteUrl IS NULL OR (length(WebsiteUrl) BETWEEN 1 AND 2048 AND (lower(WebsiteUrl) GLOB 'https://?*' OR lower(WebsiteUrl) GLOB 'http://?*'))");
+
+                            t.HasCheckConstraint("CK_Organizations_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_Organizations_Id_Storage", "typeof(\"OrganizationId\") = 'text' AND length(\"OrganizationId\") = 36 AND instr(\"OrganizationId\", char(0)) = 0 AND substr(\"OrganizationId\",9,1) = '-' AND substr(\"OrganizationId\",14,1) = '-' AND substr(\"OrganizationId\",19,1) = '-' AND substr(\"OrganizationId\",24,1) = '-' AND length(replace(\"OrganizationId\",'-','')) = 32 AND replace(\"OrganizationId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_Organizations_Memo_Storage", "\"Memo\" IS NULL OR (typeof(\"Memo\") = 'text' AND instr(\"Memo\", char(0)) = 0)");
+
+                            t.HasCheckConstraint("CK_Organizations_Name", "length(Name) BETWEEN 1 AND 200 AND length(trim(Name,char(9,10,11,12,13,32,133,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288)))>0");
+
+                            t.HasCheckConstraint("CK_Organizations_Name_Storage", "typeof(\"Name\") = 'text' AND instr(\"Name\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Organizations_NormalizedName_Storage", "typeof(\"NormalizedName\") = 'text' AND instr(\"NormalizedName\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Organizations_Revision", "Revision>=1");
+
+                            t.HasCheckConstraint("CK_Organizations_Revision_Storage", "typeof(\"Revision\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_Organizations_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_Organizations_WebsiteUrl_Storage", "\"WebsiteUrl\" IS NULL OR (typeof(\"WebsiteUrl\") = 'text' AND instr(\"WebsiteUrl\", char(0)) = 0)");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.Series", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("SeriesId");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName", "Id");
+
+                    b.ToTable("Series", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Series_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_Series_Id_Storage", "typeof(\"SeriesId\") = 'text' AND length(\"SeriesId\") = 36 AND instr(\"SeriesId\", char(0)) = 0 AND substr(\"SeriesId\",9,1) = '-' AND substr(\"SeriesId\",14,1) = '-' AND substr(\"SeriesId\",19,1) = '-' AND substr(\"SeriesId\",24,1) = '-' AND length(replace(\"SeriesId\",'-','')) = 32 AND replace(\"SeriesId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_Series_Name", "length(Name) BETWEEN 1 AND 200 AND length(trim(Name,char(9,10,11,12,13,32,133,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288)))>0");
+
+                            t.HasCheckConstraint("CK_Series_Name_Storage", "typeof(\"Name\") = 'text' AND instr(\"Name\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Series_NormalizedName_Storage", "typeof(\"NormalizedName\") = 'text' AND instr(\"NormalizedName\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Series_Revision", "Revision>=1");
+
+                            t.HasCheckConstraint("CK_Series_Revision_Storage", "typeof(\"Revision\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_Series_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.Tag", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("TagId");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName", "Id");
+
+                    b.ToTable("Tags", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Tags_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_Tags_Id_Storage", "typeof(\"TagId\") = 'text' AND length(\"TagId\") = 36 AND instr(\"TagId\", char(0)) = 0 AND substr(\"TagId\",9,1) = '-' AND substr(\"TagId\",14,1) = '-' AND substr(\"TagId\",19,1) = '-' AND substr(\"TagId\",24,1) = '-' AND length(replace(\"TagId\",'-','')) = 32 AND replace(\"TagId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_Tags_Name", "length(Name) BETWEEN 1 AND 200 AND length(trim(Name,char(9,10,11,12,13,32,133,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288)))>0");
+
+                            t.HasCheckConstraint("CK_Tags_Name_Storage", "typeof(\"Name\") = 'text' AND instr(\"Name\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Tags_NormalizedName_Storage", "typeof(\"NormalizedName\") = 'text' AND instr(\"NormalizedName\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Tags_Revision", "Revision>=1");
+
+                            t.HasCheckConstraint("CK_Tags_Revision_Storage", "typeof(\"Revision\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_Tags_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.Work", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("WorkId");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName", "Id");
+
+                    b.ToTable("Works", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Works_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_Works_Id_Storage", "typeof(\"WorkId\") = 'text' AND length(\"WorkId\") = 36 AND instr(\"WorkId\", char(0)) = 0 AND substr(\"WorkId\",9,1) = '-' AND substr(\"WorkId\",14,1) = '-' AND substr(\"WorkId\",19,1) = '-' AND substr(\"WorkId\",24,1) = '-' AND length(replace(\"WorkId\",'-','')) = 32 AND replace(\"WorkId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_Works_Name", "length(Name) BETWEEN 1 AND 200 AND length(trim(Name,char(9,10,11,12,13,32,133,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288)))>0");
+
+                            t.HasCheckConstraint("CK_Works_Name_Storage", "typeof(\"Name\") = 'text' AND instr(\"Name\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Works_NormalizedName_Storage", "typeof(\"NormalizedName\") = 'text' AND instr(\"NormalizedName\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Works_Revision", "Revision>=1");
+
+                            t.HasCheckConstraint("CK_Works_Revision_Storage", "typeof(\"Revision\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_Works_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.WorkSeries", b =>
+                {
+                    b.Property<string>("WorkId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SeriesId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("WorkId", "SeriesId");
+
+                    b.HasIndex("SeriesId", "WorkId");
+
+                    b.ToTable("WorkSeries", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_WorkSeries_SeriesId_Storage", "typeof(\"SeriesId\") = 'text' AND length(\"SeriesId\") = 36 AND instr(\"SeriesId\", char(0)) = 0 AND substr(\"SeriesId\",9,1) = '-' AND substr(\"SeriesId\",14,1) = '-' AND substr(\"SeriesId\",19,1) = '-' AND substr(\"SeriesId\",24,1) = '-' AND length(replace(\"SeriesId\",'-','')) = 32 AND replace(\"SeriesId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_WorkSeries_WorkId_Storage", "typeof(\"WorkId\") = 'text' AND length(\"WorkId\") = 36 AND instr(\"WorkId\", char(0)) = 0 AND substr(\"WorkId\",9,1) = '-' AND substr(\"WorkId\",14,1) = '-' AND substr(\"WorkId\",19,1) = '-' AND substr(\"WorkId\",24,1) = '-' AND length(replace(\"WorkId\",'-','')) = 32 AND replace(\"WorkId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+                        });
+                });
+
             modelBuilder.Entity("GoodsManager.Web.Storage.SystemState", b =>
                 {
                     b.Property<int>("Id")
@@ -331,6 +758,53 @@ namespace GoodsManager.Web.Storage.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.Category", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Masters.Category", null)
+                        .WithMany()
+                        .HasForeignKey("ParentCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.CharacterWork", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Masters.Character", null)
+                        .WithMany()
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GoodsManager.Web.Masters.Work", null)
+                        .WithMany()
+                        .HasForeignKey("WorkId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.IdempotencyRecord", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Auth.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.WorkSeries", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Masters.Series", null)
+                        .WithMany()
+                        .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GoodsManager.Web.Masters.Work", null)
+                        .WithMany()
+                        .HasForeignKey("WorkId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

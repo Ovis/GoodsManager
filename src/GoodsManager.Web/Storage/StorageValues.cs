@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace GoodsManager.Web.Storage;
@@ -75,7 +76,7 @@ public static class StorageValues
             foreach (var property in entity.GetProperties())
             {
                 var type = Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType;
-                var column = $"\"{property.Name}\"";
+                var column = $"\"{property.GetColumnName(StoreObjectIdentifier.Table(entity.GetTableName()!, entity.GetSchema()))}\"";
                 string? rule = null;
                 if (type == typeof(Guid))
                 {

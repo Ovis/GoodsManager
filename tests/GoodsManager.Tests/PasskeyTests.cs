@@ -251,8 +251,7 @@ public sealed class PasskeyTests
         var connectionString = new DatabaseRuntime(directory).ConnectionString;
         await using (var previous = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connectionString).Options))
         {
-            var migrations = (await previous.Database.GetAppliedMigrationsAsync()).ToArray();
-            await previous.GetService<IMigrator>().MigrateAsync(migrations[^2]);
+            await previous.GetService<IMigrator>().MigrateAsync("20261018032938_IdentityPasswordAuthentication");
         }
 
         await using var upgraded = new TestApplication(directory);

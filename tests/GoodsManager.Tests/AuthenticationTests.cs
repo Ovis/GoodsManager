@@ -62,7 +62,7 @@ public sealed class AuthenticationTests
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.That(await db.Users.CountAsync(), Is.EqualTo(1));
-        Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(1));
+        Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(2)); // 初期カテゴリ投入 + アカウント作成
     }
 
     /// <summary>セッションクッキーと30日保持の差、無操作・操作時の絶対期限</summary>
@@ -157,7 +157,7 @@ public sealed class AuthenticationTests
         await using (var scope = app.Services.CreateAsyncScope())
         {
             Assert.That((await scope.ServiceProvider.GetRequiredService<AccountRecovery>().ResetAsync("recovered-password", false)).Succeeded, Is.True);
-            Assert.That((await scope.ServiceProvider.GetRequiredService<AppDbContext>().SystemStates.SingleAsync()).DataRevision, Is.EqualTo(2));
+            Assert.That((await scope.ServiceProvider.GetRequiredService<AppDbContext>().SystemStates.SingleAsync()).DataRevision, Is.EqualTo(3));
         }
 
         Assert.That((await client.GetAsync("/api/v1/auth/session")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
