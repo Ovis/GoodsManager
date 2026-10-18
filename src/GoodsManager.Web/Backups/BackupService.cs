@@ -30,8 +30,17 @@ public sealed class BackupService(AppDbContext db, DatabaseRuntime runtime, Back
                 foreach (var run in await db.Set<BackupRun>().Where(x => x.State == "running").ToArrayAsync(token))
                 { run.State = "failed"; run.CompletedAt = clock.GetUtcNow(); run.ErrorCode = "BACKUP_INTERRUPTED"; }
                 await db.SaveChangesAsync(token);
+                // 中断履歴と一致する自前の未完成ZIPだけを回収し、外部ファイルを残す。
+                foreach (var interrupted in await db.Set<BackupRun>().Where(x => x.ErrorCode == "BACKUP_INTERRUPTED").Select(x => x.Id).ToArrayAsync(token))
+                {
+                    var partial = Path.Combine(options.DirectoryPath, interrupted.ToString("N") + ".zip.partial");
+                    BackupPaths.RejectLinks(partial);
+                    try { File.Delete(partial); }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                    { logger.LogWarning("未完成ZIP整理待ち Id={Id} Code={Code}", interrupted, "BACKUP_CLEANUP_FAILED"); }
+                }
                 foreach (var run in await db.Set<BackupRun>().Where(x => x.State == "deleting").ToArrayAsync(token))
-                    try { await DeleteFileAsync(run, token); } catch (Exception error) when (error is IOException or UnauthorizedAccessException) { logger.LogWarning("バックアップ削除の再開待ち runId={Id}", run.Id); }
+                    try { await DeleteFileAsync(run, token); } catch (Exception error) when (error is IOException or UnauthorizedAccessException) { logger.LogWarning("バックアップ削除の再開待ち Id={Id} Code={Code}", run.Id, "BACKUP_DELETE_FAILED"); }
                 // 前回のプロセスが残した自前の準備領域だけを整理する。
                 if (Directory.Exists(WorkRoot)) foreach (var path in Directory.EnumerateDirectories(WorkRoot))
                     if (Guid.TryParseExact(Path.GetFileName(path), "N", out _)) BackupPaths.DeleteTree(WorkRoot, path);
@@ -69,7 +78,7 @@ public sealed class BackupService(AppDbContext db, DatabaseRuntime runtime, Back
                             await new ImageAlerts(db, clock).ResolveAsync("backup:archive:" + run.Id.ToString("D"), token);
                         }
                         catch (Exception error) when (error is not (OperationCanceledException or OutOfMemoryException))
-                        { archiveFailure = true; logger.LogWarning("バックアップ取込不可 file={File} type={Type}", Path.GetFileName(path), error.GetType().Name); }
+                        { archiveFailure = true; logger.LogWarning("バックアップ取込不可 Code={Code} Type={Type}", "BACKUP_ARCHIVE_UNAVAILABLE", error.GetType().Name); }
                     }
                 }
                 foreach (var run in await db.Set<BackupRun>().Where(x => x.State == "succeeded" || x.ErrorCode == "BACKUP_ARCHIVE_MISSING" && x.State == "failed").ToArrayAsync(token))
@@ -162,7 +171,7 @@ public sealed class BackupService(AppDbContext db, DatabaseRuntime runtime, Back
         }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
-            logger.LogWarning("バックアップ失敗 runId={Id} type={Type}", id, error.GetType().Name);
+            logger.LogWarning("バックアップ失敗 Id={Id} Code={Code} Type={Type}", id, "BACKUP_FAILED", error.GetType().Name);
             await writes.Semaphore.WaitAsync(CancellationToken.None);
             try
             {
@@ -175,7 +184,7 @@ public sealed class BackupService(AppDbContext db, DatabaseRuntime runtime, Back
         finally
         {
             try { BackupPaths.DeleteTree(WorkRoot, stage); }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { logger.LogWarning("バックアップ一時領域の整理待ち runId={Id}", id); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { logger.LogWarning("バックアップ一時領域の整理待ち Id={Id} Code={Code}", id, "BACKUP_CLEANUP_FAILED"); }
             finally { maintenance.Semaphore.Release(); }
         }
     }
@@ -221,7 +230,7 @@ public sealed class BackupService(AppDbContext db, DatabaseRuntime runtime, Back
                 foreach (var run in await db.Set<BackupRun>().Where(x => x.State == "deleting").ToArrayAsync(token))
                 {
                     try { await DeleteFileAsync(run, token); }
-                    catch (Exception error) when (error is IOException or UnauthorizedAccessException) { logger.LogWarning("バックアップ削除の再試行待ち runId={Id}", run.Id); }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException) { logger.LogWarning("バックアップ削除の再試行待ち Id={Id} Code={Code}", run.Id, "BACKUP_DELETE_FAILED"); }
                 }
             }
             finally { writes.Semaphore.Release(); }
@@ -291,7 +300,7 @@ public sealed class BackupWorker(IServiceScopeFactory scopes, BackupOptions opti
         {
             try { await using var scope = scopes.CreateAsyncScope(); await scope.ServiceProvider.GetRequiredService<BackupService>().TickAsync(token); }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { break; }
-            catch (Exception error) { logger.LogWarning("バックアップワーカー待機 type={Type}", error.GetType().Name); }
+            catch (Exception error) { logger.LogWarning("バックアップワーカー待機 Code={Code} Type={Type}", "BACKUP_WORKER_FAILED", error.GetType().Name); }
             try { await signal.Semaphore.WaitAsync(TimeSpan.FromSeconds(30), token); }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { break; }
         }

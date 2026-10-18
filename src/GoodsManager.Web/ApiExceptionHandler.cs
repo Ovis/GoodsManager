@@ -41,7 +41,7 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problems, ILogger
         }
 
         // 例外本文や要求本文には秘密が含まれ得るため、照合情報だけを残す
-        logger.LogError("処理失敗 code=INTERNAL_ERROR traceId={TraceId} exceptionType={ExceptionType}", context.TraceIdentifier, exception.GetType().Name);
+        logger.LogError("処理失敗 Code={Code} TraceId={TraceId} ExceptionType={ExceptionType}", "INTERNAL_ERROR", context.TraceIdentifier, exception.GetType().Name);
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         return await problems.TryWriteAsync(new ProblemDetailsContext
         {

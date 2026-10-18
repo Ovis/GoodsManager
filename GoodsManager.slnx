@@ -3,6 +3,7 @@
     <Project Path="src/GoodsManager.Web/GoodsManager.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/GoodsManager.FaultHost/GoodsManager.FaultHost.csproj" />
     <Project Path="tests/GoodsManager.Tests/GoodsManager.Tests.csproj" />
   </Folder>
 </Solution>

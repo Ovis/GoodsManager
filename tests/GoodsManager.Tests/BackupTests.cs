@@ -216,6 +216,85 @@ public sealed class BackupTests
         Assert.That(File.Exists(Path.Combine(app.DataDirectory, "goods-manager.db")), Is.True); app = new TestApplication(app.DataDirectory);
     }
 
+    /// <summary>子プロセスを実際に終了し、catch/finallyを通らない復元中断から復旧</summary>
+    [TestCase("prepared")]
+    [TestCase("old:goods-manager.db")]
+    [TestCase("new:goods-manager.db")]
+    [TestCase("old:images")]
+    [TestCase("new:images")]
+    [TestCase("old:keys")]
+    [TestCase("new:keys")]
+    [TestCase("committed")]
+    public async Task KilledRestoreRequiresExplicitRecoveryAndPreservesCompleteSet(string boundary)
+    {
+        var id = await Create(); await Run(id); var archive = await PathFor(id);
+        await using (var scope = app.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Set<InventoryLot>().ExecuteUpdateAsync(x => x.SetProperty(y => y.Quantity, 9));
+        }
+        app.PreserveData = true; await app.DisposeAsync();
+        await KillAtBoundary("restore", app.DataDirectory, archive, boundary);
+        using (var runtime = new DatabaseRuntime(app.DataDirectory))
+        {
+            Assert.Throws<InvalidOperationException>(runtime.AcquireLease);
+            runtime.AcquireLease(true); new BackupRestore(runtime, Options()).Rollback();
+        }
+        Assert.That(File.Exists(Path.Combine(app.DataDirectory, "restore-state.json")), Is.False);
+        await using (var connection = BackupArchive.OpenDatabase(app.DataDirectory, false))
+        {
+            await connection.OpenAsync(); await DatabaseMaintenance.VerifyAsync(connection);
+            Assert.That(Convert.ToInt64(await BackupArchive.ScalarAsync(connection, "SELECT sum(Quantity) FROM InventoryLots", default)), Is.EqualTo(boundary == "committed" ? 2 : 9));
+            Assert.That(Convert.ToInt64(await BackupArchive.ScalarAsync(connection, "SELECT count(*) FROM ProductImages", default)), Is.EqualTo(1));
+            Assert.That(Convert.ToInt64(await BackupArchive.ScalarAsync(connection, "SELECT count(*) FROM InventoryItemImages", default)), Is.EqualTo(1));
+        }
+        Assert.That(File.Exists(imagePath), Is.True);
+        app = new TestApplication(app.DataDirectory); owner.Dispose(); owner = Client(app);
+        Assert.That((await owner.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
+
+    /// <summary>WALの未コミット更新を含むプロセスを終了しても数量と変更番号を失わない</summary>
+    [Test]
+    public async Task KilledWriterDoesNotPublishUncommittedQuantityOrRevision()
+    {
+        var revision = await Revision(); app.PreserveData = true; await app.DisposeAsync();
+        await KillAtBoundary("transaction", app.DataDirectory);
+        app = new TestApplication(app.DataDirectory); owner.Dispose(); owner = Client(app);
+        Assert.That((await owner.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(await Revision(), Is.EqualTo(revision));
+        await using var scope = app.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.That(await db.Set<InventoryLot>().SumAsync(x => x.Quantity), Is.EqualTo(2));
+    }
+
+    /// <summary>再起動では履歴と一致する未完成ZIPだけ回収し、未知ファイルを保持</summary>
+    [Test]
+    public async Task RestartCleansOnlyKnownInterruptedArchive()
+    {
+        var id = await Create(); var root = Options().DirectoryPath;
+        var partial = Path.Combine(root, id.ToString("N") + ".zip.partial"); var unknown = Path.Combine(root, Guid.NewGuid().ToString("N") + ".zip.partial");
+        await File.WriteAllTextAsync(partial, "incomplete"); await File.WriteAllTextAsync(unknown, "external");
+        await using var scope = app.Services.CreateAsyncScope(); await scope.ServiceProvider.GetRequiredService<BackupService>().InitializeAsync(default);
+        Assert.That(File.Exists(partial), Is.False); Assert.That(File.ReadAllText(unknown), Is.EqualTo("external")); Assert.That(await State(id), Is.EqualTo("failed"));
+        Assert.That(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<SystemAlert>().AnyAsync(x => x.Code == "BACKUP_INTERRUPTED" && x.ResolvedAt == null), Is.True);
+    }
+
+    /// <summary>待機を確認した試験専用プロセスだけを終了。タイムアウト時も子を残さない</summary>
+    private static async Task KillAtBoundary(params string[] arguments)
+    {
+        var root = TestContext.CurrentContext.TestDirectory;
+        var start = new System.Diagnostics.ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
+        foreach (var argument in new[] { "exec", "--runtimeconfig", Path.Combine(root, "GoodsManager.Tests.runtimeconfig.json"), "--depsfile", Path.Combine(root, "GoodsManager.Tests.deps.json"), Path.Combine(root, "GoodsManager.FaultHost.dll") }.Concat(arguments)) start.ArgumentList.Add(argument);
+        using var child = System.Diagnostics.Process.Start(start)!;
+        var errors = child.StandardError.ReadToEndAsync();
+        try
+        {
+            var line = await child.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(30));
+            Assert.That(line, Is.EqualTo("BOUNDARY_REACHED"), child.HasExited ? await errors : "試験境界未到達");
+        }
+        finally { if (!child.HasExited) child.Kill(entireProcessTree: true); await child.WaitForExitAsync(); }
+        Assert.That(child.ExitCode, Is.Not.EqualTo(0));
+    }
+
     /// <summary>削除確認なしでは拒否し、受付と同じキーの再送でも対象を増やさない</summary>
     [Test]
     public async Task DeleteRequiresConfirmationAndIsResumable()

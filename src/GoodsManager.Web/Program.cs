@@ -1,15 +1,18 @@
+using GoodsManager.Web.Operations;
 using GoodsManager.Web;
 using GoodsManager.Web.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using GoodsManager.Web.Auth;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Text.Json.Serialization;
 using GoodsManager.Web.Development;
 using GoodsManager.Web.Products;
 using GoodsManager.Web.Search;
 using GoodsManager.Web.Images;
 
+if (args.FirstOrDefault() == "healthcheck") { Environment.ExitCode = await HealthCommand.RunAsync(); return; }
 if (args.FirstOrDefault() == "image-worker") { Environment.ExitCode = ImageConverter.RunCli(args); return; }
 if (args.FirstOrDefault() == "backup")
 {
@@ -35,6 +38,18 @@ builder.Services.AddSingleton<GoodsManager.Web.Backups.BackupSignal>();
 builder.Services.AddScoped<GoodsManager.Web.Backups.BackupService>();
 builder.Services.AddHostedService<GoodsManager.Web.Backups.BackupWorker>();
 builder.AddAppAuthentication();
+builder.Logging.ClearProviders();
+builder.Services.AddSingleton<OperationalLogging>();
+builder.Services.AddHostedService<OperationalLogWorker>();
+builder.Services.AddSingleton<ILoggerProvider>(services => services.GetRequiredService<OperationalLogging>());
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardLimit = 1;
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+    // 接続元の制限は配置側で担保し、直近のプロキシの転送情報を採用する。
+    options.KnownProxies.Clear(); options.KnownIPNetworks.Clear();
+    options.AllowedHosts.Add(new Uri(builder.Configuration["Authentication:Origin"] ?? "https://localhost:7443").Host);
+});
 builder.Services.AddScoped<OperationVerification>();
 builder.Services.AddScoped<AccountRecovery>();
 builder.Services.AddScoped<ProductOperations>();
@@ -59,6 +74,11 @@ var runtime = app.Services.GetRequiredService<DatabaseRuntime>();
 runtime.AcquireLease();
 try
 {
+    foreach (var directory in new[] { "images", "keys" })
+    {
+        var path = Path.Combine(runtime.DirectoryPath, directory);
+        GoodsManager.Web.Backups.BackupPaths.RejectLinks(path); Directory.CreateDirectory(path);
+    }
     await using var scope = app.Services.CreateAsyncScope();
     await DatabaseMaintenance.MigrateAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), runtime.DirectoryPath, app.Services.GetRequiredService<GoodsManager.Web.Backups.BackupOptions>(), app.Services.GetRequiredService<GoodsManager.Web.Backups.BackupGate>().KeyLock);
     await scope.ServiceProvider.GetRequiredService<SearchProjection>().RebuildAllAsync();
@@ -89,6 +109,7 @@ if (recovery)
     return;
 }
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.Use(async (context, next) =>
@@ -99,6 +120,20 @@ app.Use(async (context, next) =>
         context.Response.Headers.CacheControl = "private, no-store";
     }
 
+    await next(context);
+});
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/health")) { await next(context); return; }
+    if (!app.Environment.IsDevelopment())
+    {
+        var origin = new Uri(app.Configuration["Authentication:Origin"]!);
+        if (!context.Request.IsHttps || (!string.Equals(context.Request.Host.Host, origin.Host, StringComparison.OrdinalIgnoreCase) || (context.Request.Host.Port ?? 443) != origin.Port))
+        {
+            await Results.Problem(statusCode: 400, title: "公開HTTPSオリジンを確認してください", extensions: new Dictionary<string, object?> { ["code"] = "PUBLIC_ORIGIN_REQUIRED" }).ExecuteAsync(context);
+            return;
+        }
+    }
     await next(context);
 });
 app.UseAuthentication();
@@ -131,6 +166,7 @@ app.MapProductCheck();
 app.MapImageCheck();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
+app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("GoodsManager.Web.Operations").LogInformation(new EventId(1000), "運用開始 Code={Code}", "APPLICATION_READY");
 app.Run();
 
 /// <summary>HTTP統合試験からアプリの起動点を参照</summary>

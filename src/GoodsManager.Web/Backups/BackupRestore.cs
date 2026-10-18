@@ -71,6 +71,7 @@ public sealed class BackupRestore(DatabaseRuntime runtime, BackupOptions options
             }
             await using (var current = BackupArchive.OpenDatabase(runtime.DirectoryPath, true)) { await current.OpenAsync(token); await DatabaseMaintenance.VerifyAsync(current); }
             SaveJournal(new(id, "committed", existing));
+            boundary?.Invoke("committed");
             // 退避一式は成功後も残し、自動で破棄しない。
             File.Copy(Marker, Path.Combine(previous, "receipt.json"), overwrite: false);
             File.Delete(Marker); journalWritten = false;

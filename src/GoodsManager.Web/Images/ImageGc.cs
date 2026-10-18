@@ -56,7 +56,7 @@ public sealed class ImageGc(AppDbContext db, IImageFiles files, ImageActivity ac
                 else if (file.DeleteAfter <= now)
                 {
                     try { files.Delete(file.RelativePath); db.Remove(file); await alerts.ResolveAsync("image-gc:" + file.Id.ToString("D"), token); }
-                    catch (Exception error) when (error is IOException or UnauthorizedAccessException) { await alerts.SetAsync("image-gc:" + file.Id.ToString("D"), "IMAGE_GC_FAILED", file.Id, token); logger.LogWarning("画像GC削除失敗 fileId={Id} type={Type}", file.Id, error.GetType().Name); }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException) { await alerts.SetAsync("image-gc:" + file.Id.ToString("D"), "IMAGE_GC_FAILED", file.Id, token); logger.LogWarning("画像GC削除失敗 Id={Id} Code={Code} Type={Type}", file.Id, "IMAGE_GC_FAILED", error.GetType().Name); }
                 }
             }
             await db.SaveChangesAsync(token);
@@ -102,7 +102,7 @@ public sealed class ImageGc(AppDbContext db, IImageFiles files, ImageActivity ac
                 var relative = "staging/" + Path.GetFileName(path);
                 if (!live.Contains(relative) && File.GetLastWriteTimeUtc(path) <= now.Subtract(limits.GcGrace).UtcDateTime) Reclaim(() => files.Delete(relative));
             }
-            if (orphanFailed) { await alerts.SetAsync("image-gc:orphan", "IMAGE_GC_FAILED", Guid.Empty, token); logger.LogWarning("画像GCで一時・孤立ファイルの削除に失敗。次回再試行します。"); }
+            if (orphanFailed) { await alerts.SetAsync("image-gc:orphan", "IMAGE_GC_FAILED", Guid.Empty, token); logger.LogWarning("画像GCの整理待ち Code={Code}", "IMAGE_GC_FAILED"); }
             else await alerts.ResolveAsync("image-gc:orphan", token);
         }
         finally { gate.Semaphore.Release(); }

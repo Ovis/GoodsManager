@@ -26,7 +26,7 @@ public sealed class ImageWorker(IServiceScopeFactory scopes, IImageFiles files, 
                 if (id.HasValue) await ProcessAsync(id.Value, stoppingToken); else await Task.Delay(500, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
-            catch (Exception error) { logger.LogError("画像ワーカー失敗 type={Type}", error.GetType().Name); await Task.Delay(1000, stoppingToken); }
+            catch (Exception error) { logger.LogError("画像ワーカー失敗 Code={Code} Type={Type}", "IMAGE_WORKER_FAILED", error.GetType().Name); await Task.Delay(1000, stoppingToken); }
         }
     }
     public async Task ProcessAsync(Guid id, CancellationToken token)
