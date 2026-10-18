@@ -39,6 +39,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
         await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
         try
         {
+            db.ChangeTracker.Clear();
             var result = await AssertionAsync(request.Credential);
             if (result is null || !result.Succeeded || await users.IsLockedOutAsync(result.User)
                 || (ceremony.UserId.HasValue && (ceremony.UserId != result.User.Id || ceremony.SecurityStamp != result.User.SecurityStamp)))
@@ -48,17 +49,18 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
 
             user = result.User;
             AuthController.EnsureSuccess(await users.AddOrUpdatePasskeyAsync(user, PasskeyMetadata.RequireValid(result.Passkey)));
+
+            var now = clock.GetUtcNow();
+            var expires = now.AddDays(ceremony.RememberMe ? 30 : 7);
+            var properties = new AuthenticationProperties { IsPersistent = ceremony.RememberMe, IssuedUtc = now, ExpiresUtc = expires, AllowRefresh = false };
+            await signIn.SignInAsync(user, properties);
+            return Ok(new { user = AuthController.UserDto(user), expiresAt = properties.ExpiresUtc });
         }
         finally
         {
             gate.Semaphore.Release();
         }
 
-        var now = clock.GetUtcNow();
-        var expires = now.AddDays(ceremony.RememberMe ? 30 : 7);
-        var properties = new AuthenticationProperties { IsPersistent = ceremony.RememberMe, IssuedUtc = now, ExpiresUtc = expires, AllowRefresh = false };
-        await signIn.SignInAsync(user, properties);
-        return Ok(new { user = AuthController.UserDto(user), expiresAt = properties.ExpiresUtc });
     }
 
     /// <summary>パスワード変更・パスキー追加/削除の対象だけ本人確認選択肢を発行</summary>
@@ -94,7 +96,12 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
         await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
         try
         {
-            var user = (await users.GetUserAsync(User))!;
+            var user = await AuthenticationState.GetCurrentUserAsync(db, signIn, User);
+            if (user is null)
+            {
+                return Failure(401, "SESSION_EXPIRED");
+            }
+
             if (!await verification.VerifyAsync(user, request.Verification, "passkey-add", HttpContext))
             {
                 return Failure(403, "REAUTHENTICATION_REQUIRED");
@@ -117,7 +124,12 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
         await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
         try
         {
-            var user = (await users.GetUserAsync(User))!;
+            var user = await AuthenticationState.GetCurrentUserAsync(db, signIn, User);
+            if (user is null)
+            {
+                return Failure(401, "SESSION_EXPIRED");
+            }
+
             if (ceremonies.Consume(HttpContext, request.ChallengeId, "register", user) is null)
             {
                 return Failure(400, "PASSKEY_CHALLENGE_INVALID");
@@ -174,7 +186,12 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
         await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
         try
         {
-            var user = (await users.GetUserAsync(User))!;
+            var user = await AuthenticationState.GetCurrentUserAsync(db, signIn, User);
+            if (user is null)
+            {
+                return Failure(401, "SESSION_EXPIRED");
+            }
+
             var passkey = (await users.GetPasskeysAsync(user)).SingleOrDefault(x => PasskeyCeremonies.CredentialId(x.CredentialId) == id);
             if (passkey is null)
             {
@@ -203,7 +220,12 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
         await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
         try
         {
-            var user = (await users.GetUserAsync(User))!;
+            var user = await AuthenticationState.GetCurrentUserAsync(db, signIn, User);
+            if (user is null)
+            {
+                return Failure(401, "SESSION_EXPIRED");
+            }
+
             if (!await verification.VerifyAsync(user, request, "passkey-delete:" + id, HttpContext))
             {
                 return Failure(403, "REAUTHENTICATION_REQUIRED");

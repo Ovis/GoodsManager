@@ -16,12 +16,37 @@ public sealed class DatabaseTicketStore(IServiceScopeFactory scopes, IDataProtec
     public async Task<string> StoreAsync(AuthenticationTicket ticket)
     {
         var id = Guid.NewGuid();
-        await WriteAsync(id, ticket);
+        await using var scope = scopes.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.AuthTickets.Where(x => x.ExpiresAt <= clock.GetUtcNow()).ExecuteDeleteAsync();
+        db.AuthTickets.Add(new AuthTicket
+        {
+            Id = id,
+            UserId = Guid.Parse(ticket.Principal.FindFirstValue(ClaimTypes.NameIdentifier)!),
+            ExpiresAt = ticket.Properties.ExpiresUtc ?? throw new InvalidOperationException("認証期限の指定が必要"),
+            ProtectedTicket = protector.Protect(TicketSerializer.Default.Serialize(ticket))
+        });
+        await db.SaveChangesAsync();
         return id.ToString("D");
     }
 
-    /// <summary>標準ミドルウェアからの更新を保存。有効期限の自動延長は呼出側で禁止</summary>
-    public Task RenewAsync(string key, AuthenticationTicket ticket) => WriteAsync(StorageValues.ParseId(key), ticket);
+    /// <summary>有効な既存チケットだけを更新し、削除済み・期限切れのセッションを復活させない</summary>
+    public async Task RenewAsync(string key, AuthenticationTicket ticket)
+    {
+        var id = StorageValues.ParseId(key);
+        var userId = Guid.Parse(ticket.Principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var expires = ticket.Properties.ExpiresUtc ?? throw new InvalidOperationException("認証期限の指定が必要");
+        var bytes = protector.Protect(TicketSerializer.Default.Serialize(ticket));
+        await using var scope = scopes.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        // 読取後の失効との競合も、条件付きUPDATEの1文で判定する
+        var updated = await db.AuthTickets.Where(x => x.Id == id && x.UserId == userId && x.ExpiresAt > clock.GetUtcNow())
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.ExpiresAt, expires).SetProperty(x => x.ProtectedTicket, bytes));
+        if (updated != 1)
+        {
+            throw new AuthenticationFailureException("認証セッションが失効");
+        }
+    }
 
     /// <summary>削除済み・期限切れチケットを認証に使わない</summary>
     public async Task<AuthenticationTicket?> RetrieveAsync(string key)
@@ -54,22 +79,4 @@ public sealed class DatabaseTicketStore(IServiceScopeFactory scopes, IDataProtec
         await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuthTickets.Where(x => x.Id == id).ExecuteDeleteAsync();
     }
 
-    /// <summary>期限切れを掃除し、個別チケットを保存</summary>
-    private async Task WriteAsync(Guid id, AuthenticationTicket ticket)
-    {
-        await using var scope = scopes.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.AuthTickets.Where(x => x.ExpiresAt <= clock.GetUtcNow()).ExecuteDeleteAsync();
-        var row = await db.AuthTickets.FindAsync(id);
-        if (row is null)
-        {
-            row = new AuthTicket { Id = id };
-            db.AuthTickets.Add(row);
-        }
-
-        row.UserId = Guid.Parse(ticket.Principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        row.ExpiresAt = ticket.Properties.ExpiresUtc ?? throw new InvalidOperationException("認証期限の指定が必要");
-        row.ProtectedTicket = protector.Protect(TicketSerializer.Default.Serialize(ticket));
-        await db.SaveChangesAsync();
-    }
 }

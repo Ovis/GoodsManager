@@ -12,6 +12,7 @@ public sealed class TestApplication : WebApplicationFactory<Program>
     public string DataDirectory { get; }
     public bool PreserveData { get; set; }
     public TestClock Clock { get; } = new();
+    public Action<IServiceCollection>? ConfigureTestServices { get; init; }
 
     /// <summary>再起動試験だけ既存の一時領域を再利用</summary>
     public TestApplication(string? dataDirectory = null)
@@ -28,6 +29,7 @@ public sealed class TestApplication : WebApplicationFactory<Program>
         {
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
+            ConfigureTestServices?.Invoke(services);
         });
     }
 

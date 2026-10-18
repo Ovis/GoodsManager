@@ -49,14 +49,14 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
 
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
+            await IssueCookieAsync(user, false);
+            return Created("/api/v1/auth/session", new { user = UserDto(user) });
         }
         finally
         {
             gate.Semaphore.Release();
         }
 
-        await IssueCookieAsync(user, false);
-        return Created("/api/v1/auth/session", new { user = UserDto(user) });
     }
 
     /// <summary>失敗回数の更新を直列化し、存在しないIDと誤パスワードを同じ応答にする</summary>
@@ -67,6 +67,13 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
         await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
         try
         {
+            // 匿名ログインでも既存クッキーの検証で追跡された古いパスワードハッシュを破棄
+            db.ChangeTracker.Clear();
+            if (!StorageValues.IsValidText(request.Password, 0, 128))
+            {
+                return Failure(401, "INVALID_CREDENTIALS");
+            }
+
             user = ValidLoginId(request.LoginId) ? await users.FindByNameAsync(request.LoginId) : null;
             if (user is null)
             {
@@ -76,19 +83,20 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
                 return Failure(401, "INVALID_CREDENTIALS");
             }
 
-            if (!StorageValues.IsValidText(request.Password, 12, 128)
-                || !(await signIn.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true)).Succeeded)
+            if (!(await signIn.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true)).Succeeded)
             {
                 return Failure(401, "INVALID_CREDENTIALS");
             }
+
+            // 失効との順序を確定するため、認証確認からチケット保存まで同じゲートで保護
+            var expiresAt = await IssueCookieAsync(user, request.RememberMe);
+            return Ok(new { user = UserDto(user), expiresAt });
         }
         finally
         {
             gate.Semaphore.Release();
         }
 
-        var expiresAt = await IssueCookieAsync(user, request.RememberMe);
-        return Ok(new { user = UserDto(user), expiresAt });
     }
 
     /// <summary>標準認証チケットの期限と保持設定を返す</summary>
@@ -106,8 +114,16 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
     [HttpPost("auth/logout")]
     public async Task<IActionResult> Logout()
     {
-        await signIn.SignOutAsync();
-        return NoContent();
+        await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
+        try
+        {
+            await signIn.SignOutAsync();
+            return NoContent();
+        }
+        finally
+        {
+            gate.Semaphore.Release();
+        }
     }
 
     /// <summary>標準SecurityStampの更新で全端末を失効</summary>
@@ -118,20 +134,25 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
         await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
         try
         {
-            var user = (await users.GetUserAsync(User))!;
+            var user = await AuthenticationState.GetCurrentUserAsync(db, signIn, User);
+            if (user is null)
+            {
+                return Failure(401, "SESSION_EXPIRED");
+            }
+
             await using var transaction = await db.Database.BeginTransactionAsync();
             EnsureSuccess(await users.UpdateSecurityStampAsync(user));
             await db.AuthTickets.ExecuteDeleteAsync();
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
+            await signIn.SignOutAsync();
+            return NoContent();
         }
         finally
         {
             gate.Semaphore.Release();
         }
 
-        await signIn.SignOutAsync();
-        return NoContent();
     }
 
     /// <summary>同じ要求のパスワードまたは対象操作用の既存パスキーで本人確認して変更</summary>
@@ -142,7 +163,12 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
         await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
         try
         {
-            var user = (await users.GetUserAsync(User))!;
+            var user = await AuthenticationState.GetCurrentUserAsync(db, signIn, User);
+            if (user is null)
+            {
+                return Failure(401, "SESSION_EXPIRED");
+            }
+
             if (!await verification.VerifyAsync(user, request.Verification, "password", HttpContext))
             {
                 return Failure(403, "REAUTHENTICATION_REQUIRED");
@@ -160,14 +186,14 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
             await db.AuthTickets.ExecuteDeleteAsync();
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
+            await signIn.SignOutAsync();
+            return NoContent();
         }
         finally
         {
             gate.Semaphore.Release();
         }
 
-        await signIn.SignOutAsync();
-        return NoContent();
     }
 
     /// <summary>保持の有無による絶対期限を設定。自動延長は許可しない</summary>
