@@ -170,4 +170,25 @@ public sealed class AuthenticationTests
         Assert.That((await validator.ValidateAsync(null!, new AppUser(), new string('a', 129))).Succeeded, Is.False);
         Assert.That((await validator.ValidateAsync(null!, new AppUser(), "valid-password\0")).Succeeded, Is.False);
     }
+
+    /// <summary>再起動後も永続鍵・DBの標準チケットを復元できる</summary>
+    [Test]
+    public async Task PersistentTicketSurvivesHostRestart()
+    {
+        string directory;
+        string cookie;
+        await using (var first = new TestApplication { PreserveData = true })
+        {
+            directory = first.DataDirectory;
+            using var client = Client(first);
+            await SetupAsync(client);
+            var response = await SendAsync(client, "auth/password", new { loginId = "owner", password = Password, rememberMe = true });
+            cookie = response.Headers.GetValues("Set-Cookie").Single(x => x.StartsWith("__Host-GoodsManager=")).Split(';')[0];
+        }
+
+        await using var second = new TestApplication(directory);
+        using var restored = Client(second);
+        restored.DefaultRequestHeaders.Add("Cookie", cookie);
+        Assert.That((await restored.GetAsync("/api/v1/auth/session")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
 }

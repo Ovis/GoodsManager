@@ -175,8 +175,10 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
     {
         var now = clock.GetUtcNow();
         var expires = now.AddDays(rememberMe ? 30 : 7);
-        await signIn.SignInAsync(user, new AuthenticationProperties { IsPersistent = rememberMe, IssuedUtc = now, ExpiresUtc = expires, AllowRefresh = false });
-        return expires;
+        var properties = new AuthenticationProperties { IsPersistent = rememberMe, IssuedUtc = now, ExpiresUtc = expires, AllowRefresh = false };
+        await signIn.SignInAsync(user, properties);
+        // 標準チケットが採用した精度の期限を返し、表示上の期限と食い違わせない
+        return properties.ExpiresUtc!.Value;
     }
 
     /// <summary>保全対象の認証変更だけ変更番号を進める</summary>

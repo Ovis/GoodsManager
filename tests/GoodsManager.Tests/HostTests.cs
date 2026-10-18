@@ -13,6 +13,7 @@ public sealed class HostTests
         await using var factory = new TestApplication();
         using var client = factory.CreateClient();
         Assert.That((await client.GetAsync("/health/live")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await client.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     /// <summary>未定義のAPIをHTMLへ転送しない</summary>

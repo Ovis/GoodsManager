@@ -51,13 +51,22 @@ if (recovery)
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.Use(async (context, next) =>
+{
+    // 認証のチャレンジが短絡した場合もAPI応答をキャッシュさせない
+    if (context.Request.Path.StartsWithSegments("/api"))
+    {
+        context.Response.Headers.CacheControl = "private, no-store";
+    }
+
+    await next(context);
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.Use(async (context, next) =>
 {
     if (context.Request.Path.StartsWithSegments("/api"))
     {
-        context.Response.Headers.CacheControl = "private, no-store";
         if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method) && !HttpMethods.IsOptions(context.Request.Method))
         {
             try

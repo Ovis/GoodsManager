@@ -287,7 +287,11 @@ namespace GoodsManager.Web.Storage.Migrations
 
                             t.HasCheckConstraint("CK_AspNetUserPasskeys_UserId_Storage", "typeof(\"UserId\") = 'text' AND length(\"UserId\") = 36 AND instr(\"UserId\", char(0)) = 0 AND substr(\"UserId\",9,1) = '-' AND substr(\"UserId\",14,1) = '-' AND substr(\"UserId\",19,1) = '-' AND substr(\"UserId\",24,1) = '-' AND length(replace(\"UserId\",'-','')) = 32 AND replace(\"UserId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
+                            t.HasCheckConstraint("CK_Passkey_CredentialId_Length", "length(CredentialId) BETWEEN 1 AND 1023");
+
                             t.HasCheckConstraint("CK_Passkey_Data", "typeof(Data)='text' AND json_valid(Data)=1 AND json_type(Data)='object'");
+
+                            t.HasCheckConstraint("CK_Passkey_Name", "json_type(Data,'$.Name') IS 'text' AND length(json_extract(Data,'$.Name')) BETWEEN 1 AND 100 AND instr(json_extract(Data,'$.Name'),char(0))=0");
                         });
                 });
 

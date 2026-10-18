@@ -19,7 +19,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         modelBuilder.Entity<IdentityUserPasskey<Guid>>(entity =>
         {
             entity.HasKey(x => x.CredentialId);
-            entity.ToTable("AspNetUserPasskeys", table => table.HasCheckConstraint("CK_Passkey_Data", "typeof(Data)='text' AND json_valid(Data)=1 AND json_type(Data)='object'"));
+            entity.ToTable("AspNetUserPasskeys", table =>
+            {
+                table.HasCheckConstraint("CK_Passkey_Data", "typeof(Data)='text' AND json_valid(Data)=1 AND json_type(Data)='object'");
+                table.HasCheckConstraint("CK_Passkey_CredentialId_Length", "length(CredentialId) BETWEEN 1 AND 1023");
+                table.HasCheckConstraint("CK_Passkey_Name", "json_type(Data,'$.Name') IS 'text' AND length(json_extract(Data,'$.Name')) BETWEEN 1 AND 100 AND instr(json_extract(Data,'$.Name'),char(0))=0");
+            });
             entity.Property(x => x.CredentialId).HasMaxLength(1024);
             entity.OwnsOne(x => x.Data).ToJson();
             entity.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId);

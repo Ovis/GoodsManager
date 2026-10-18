@@ -38,3 +38,10 @@ dotnet run --project src/GoodsManager.Web -- recover-account --clear-passkeys
 ```
 
 新しいパスワードを非表示で2回入力。パスワードをコマンド引数や環境変数へ入れない。保持・削除の選択は必須。どちらも全端末を失効し、ロックアウトを解除する。HTTPの復旧APIは設けない。
+
+パスキーAPIは`/auth/passkey/options`、`/auth/passkey/verify`、`/auth/reauthenticate`、`/account/passkeys`、`/account/passkeys/options`、`/account/passkeys/{id}`。詳細な送受信と検証範囲は[実装・検証記録](IMPLEMENTATION.md)を参照。
+
+開発用は`dotnet run --project src/GoodsManager.Web --launch-profile https`で起動。オリジンは`https://localhost:7443`、RP IDは`localhost`。開発用HTTPS証明書の準備は利用端末で行う。
+本番では`Authentication__Origin`へ公開HTTPSオリジンを必ず指定する。`Authentication__RpId`はそのホストと一致させる。TraefikでHTTPSを終端してHTTPで接続する方針。公開URL、永続領域の権限、信頼するプロキシと転送ヘッダーの設定は配置時に確認する。開発用と本番用のパスキーを相互流用しない。
+
+現在はAPIとサーバー基盤だけを実装。Reactの画面、商品管理、画像処理、完成版バックアップは未着手。PCブラウザ・Android・Linux x64コンテナ・Proxmoxでの受入は未実施。

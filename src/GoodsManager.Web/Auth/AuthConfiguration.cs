@@ -14,6 +14,7 @@ public static class AuthConfiguration
     {
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<AuthWriteGate>();
+        builder.Services.AddSingleton<PasskeyCeremonies>();
         builder.Services.AddDataProtection().SetApplicationName("GoodsManager");
         builder.Services.AddOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>()
             .Configure<DatabaseRuntime, ILoggerFactory>((options, runtime, loggerFactory) =>
@@ -64,6 +65,34 @@ public static class AuthConfiguration
             options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         });
         builder.Services.AddAuthorization();
+        var origin = builder.Configuration["Authentication:Origin"] ?? (builder.Environment.IsDevelopment() ? "https://localhost:7443" : null);
+        if (!Uri.TryCreate(origin, UriKind.Absolute, out var originUri) || originUri.Scheme != "https" || originUri.AbsolutePath != "/" || originUri.Query.Length > 0 || originUri.Fragment.Length > 0 || originUri.UserInfo.Length > 0)
+        {
+            throw new InvalidOperationException("Authentication:Originに公開HTTPSオリジンを指定する必要がある");
+        }
+
+        var rpId = builder.Configuration["Authentication:RpId"] ?? originUri.Host;
+        if (rpId != originUri.Host)
+        {
+            throw new InvalidOperationException("RP IDと公開オリジンのホストを一致させる必要がある");
+        }
+
+        builder.Services.Configure<IdentityPasskeyOptions>(options =>
+        {
+            options.ServerDomain = rpId;
+            options.UserVerificationRequirement = "required";
+            options.AuthenticatorTimeout = TimeSpan.FromMinutes(5);
+            options.ValidateOrigin = context => ValueTask.FromResult(!context.CrossOrigin && context.Origin == originUri.GetLeftPart(UriPartial.Authority));
+        });
+        builder.Services.AddOptions<CookieAuthenticationOptions>(IdentityConstants.TwoFactorUserIdScheme).Configure<TimeProvider>((options, clock) =>
+        {
+            options.Cookie.Name = "__Host-GoodsManager-PasskeyState";
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.HttpOnly = true;
+            options.SlidingExpiration = false;
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+            options.TimeProvider = clock;
+        });
     }
 
     /// <summary>認証エラーをHTML転送せず共通形式で返す</summary>

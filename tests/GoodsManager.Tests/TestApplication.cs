@@ -9,8 +9,15 @@ namespace GoodsManager.Tests;
 /// <summary>試験ごとに実ファイルDBと鍵の保存先を分離</summary>
 public sealed class TestApplication : WebApplicationFactory<Program>
 {
-    public string DataDirectory { get; } = Path.Combine(Path.GetTempPath(), "GoodsManager.Tests", Guid.NewGuid().ToString("N"));
+    public string DataDirectory { get; }
+    public bool PreserveData { get; set; }
     public TestClock Clock { get; } = new();
+
+    /// <summary>再起動試験だけ既存の一時領域を再利用</summary>
+    public TestApplication(string? dataDirectory = null)
+    {
+        DataDirectory = dataDirectory ?? Path.Combine(Path.GetTempPath(), "GoodsManager.Tests", Guid.NewGuid().ToString("N"));
+    }
 
     /// <summary>他の試験や開発用DBを変更しない構成</summary>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -29,7 +36,7 @@ public sealed class TestApplication : WebApplicationFactory<Program>
     {
         await base.DisposeAsync();
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-        if (Directory.Exists(DataDirectory))
+        if (!PreserveData && Directory.Exists(DataDirectory))
         {
             Directory.Delete(DataDirectory, recursive: true);
         }
