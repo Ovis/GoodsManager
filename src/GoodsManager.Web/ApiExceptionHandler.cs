@@ -28,6 +28,7 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problems, ILogger
         if (failure is not null)
         {
             var extensions = new Dictionary<string, object?> { ["code"] = failure.Code, ["traceId"] = context.TraceIdentifier };
+            if (failure.Details is not null) extensions["details"] = failure.Details;
             if (failure.Field is not null) extensions["errors"] = new Dictionary<string, string[]> { [failure.Field] = ["入力の型・文字数・値を確認してください"] };
             await Results.Problem(statusCode: failure.Status, title: "要求を確認してください", extensions: extensions).ExecuteAsync(context);
             return true;

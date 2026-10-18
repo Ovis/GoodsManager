@@ -330,7 +330,7 @@ public sealed class ProductTests
         Assert.That((await Send("dev/products", CreateBody(), includeKey: false)).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         Assert.That((await Send("dev/products", new string(' ', ProductWrites.BodyLimit) + "{}")).StatusCode, Is.EqualTo(HttpStatusCode.RequestEntityTooLarge));
         Assert.That((await Send("dev/products", "{broken")).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-        Assert.That((await Send("products", CreateBody())).StatusCode, Is.EqualTo(HttpStatusCode.MethodNotAllowed));
+        Assert.That((await Send("products", CreateBody())).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest)); // 正式登録は画像配列等を含むP08契約で検証
     }
 
     [TestCase("1.0")]

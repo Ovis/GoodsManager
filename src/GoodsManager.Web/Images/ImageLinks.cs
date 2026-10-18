@@ -48,6 +48,14 @@ public sealed class ImageLinks(AppDbContext db, TimeProvider clock)
         var data = await (from link in db.Set<ProductImage>().AsNoTracking() join asset in db.Set<ImageAsset>() on link.ImageAssetId equals asset.Id where link.ProductId == productId orderby link.SortOrder, link.Id select new { Link = link, asset.KeepOriginal }).ToArrayAsync(token);
         return data.Select(x => Ref(x.Link, x.Link.IsPrimary, x.KeepOriginal)).ToArray();
     }
+    /// <summary>既存の関連と代表を保ち、新規アップロードだけを末尾へ追加</summary>
+    public async Task AppendProductAsync(Guid productId, Guid userId, Guid[] uploads, CancellationToken token)
+    {
+        if (uploads.Length == 0) return;
+        var existing = await ProductRefsAsync(db, productId, token);
+        var entries = existing.Select((x, i) => new ImageEditEntry(x.LinkId, null, null, i)).Concat(uploads.Select((id, i) => new ImageEditEntry(null, "append-" + i, id, checked(existing.Length + i)))).ToArray();
+        await ReplaceProductAsync(productId, userId, entries, null, token);
+    }
     public async Task<bool> ReplaceProductAsync(Guid productId, Guid userId, ImageEditEntry[] entries, string? primaryRef, CancellationToken token)
     {
         var old = await db.Set<ProductImage>().Where(x => x.ProductId == productId).ToListAsync(token);

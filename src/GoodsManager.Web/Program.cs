@@ -29,6 +29,7 @@ builder.Services.AddScoped<AccountRecovery>();
 builder.Services.AddScoped<ProductOperations>();
 builder.Services.AddScoped<InventoryOperations>();
 builder.Services.AddScoped<ProductWrites>();
+builder.Services.AddScoped<DuplicateChecks>();
 builder.Services.AddScoped<SearchProjection>();
 builder.Services.AddScoped<ProductSearch>();
 builder.Services.AddSingleton<ImageLimits>();

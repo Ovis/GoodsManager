@@ -113,9 +113,14 @@ public sealed class ProductSearch(AppDbContext db)
         var page = (int)Math.Min(query.Page, Math.Max(1, pages));
         var order = query.Sort switch
         {
-            "relevance" => "SearchRank ASC, CreatedAt DESC", "createdAsc" => "CreatedAt ASC", "updatedDesc" => "UpdatedAt DESC",
-            "nameAsc" => "NormalizedName COLLATE BINARY ASC", "nameDesc" => "NormalizedName COLLATE BINARY DESC",
-            "quantityDesc" => "TotalQuantity DESC", "quantityAsc" => "TotalQuantity ASC", _ => "CreatedAt DESC"
+            "relevance" => "SearchRank ASC, CreatedAt DESC",
+            "createdAsc" => "CreatedAt ASC",
+            "updatedDesc" => "UpdatedAt DESC",
+            "nameAsc" => "NormalizedName COLLATE BINARY ASC",
+            "nameDesc" => "NormalizedName COLLATE BINARY DESC",
+            "quantityDesc" => "TotalQuantity DESC",
+            "quantityAsc" => "TotalQuantity ASC",
+            _ => "CreatedAt DESC"
         };
         var parameters = new Dictionary<string, object>(plan.Parameters) { ["@limit"] = query.PageSize, ["@offset"] = ((long)page - 1) * query.PageSize };
         await using var command = Command(plan.From + plan.Where + " ORDER BY " + order + ", ProductId ASC LIMIT @limit OFFSET @offset", parameters);
@@ -125,6 +130,16 @@ public sealed class ProductSearch(AppDbContext db)
         var items = await Summaries(rows, token);
         var revision = (await db.SystemStates.AsNoTracking().SingleAsync(token)).DataRevision.ToString(CultureInfo.InvariantCulture);
         return new(items, page, query.PageSize, count, pages, revision);
+    }
+    /// <summary>重複候補用。通常一覧の所持範囲・削除フィルターを持ち込まない</summary>
+    public async Task<ProductSummary[]> ByIdsAsync(Guid[] ids, CancellationToken token)
+    {
+        var products = await (from p in db.Set<Product>().AsNoTracking() join c in db.Set<Category>() on p.CategoryId equals c.Id where ids.Contains(p.Id) select new { Product = p, Category = c }).ToArrayAsync(token);
+        var lots = await db.Set<InventoryLot>().AsNoTracking().Where(x => ids.Contains(x.ProductId)).Select(x => new { x.ProductId, x.Quantity }).ToArrayAsync(token);
+        var items = await db.Set<InventoryItem>().AsNoTracking().Where(x => ids.Contains(x.ProductId)).Select(x => x.ProductId).ToArrayAsync(token);
+        var lotQuantities = lots.ToLookup(x => x.ProductId, x => x.Quantity);
+        var itemCounts = items.GroupBy(x => x).ToDictionary(x => x.Key, x => x.LongCount());
+        return await Summaries(products.Select(x => new Row(x.Product.Id, x.Product.Name, new(x.Category.Id, x.Category.Name), x.Product.CreatedAt, x.Product.UpdatedAt, x.Product.Revision, QuantityTotals.Calculate(lotQuantities[x.Product.Id], itemCounts.GetValueOrDefault(x.Product.Id)))).ToList(), token);
     }
     private sealed record Row(Guid Id, string Name, NamedRef Category, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, long Revision, long Total);
     private async Task<ProductSummary[]> Summaries(List<Row> rows, CancellationToken token)

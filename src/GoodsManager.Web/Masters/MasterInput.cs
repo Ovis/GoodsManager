@@ -6,6 +6,8 @@ namespace GoodsManager.Web.Masters;
 
 public sealed class MasterProblem(int status, string code, string? field = null) : Exception(code)
 {
+    public object? Details { get; init; }
+
     public int Status { get; } = status;
     public string Code { get; } = code;
     public string? Field { get; } = field;
