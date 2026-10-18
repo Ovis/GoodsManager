@@ -1,5 +1,6 @@
 using System.Text.Json;
 using GoodsManager.Web.Storage;
+using GoodsManager.Web.Development;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -12,7 +13,7 @@ namespace GoodsManager.Web.Auth;
 /// <summary>Identity標準の暗号検証とストアを使用するパスキーAPI</summary>
 [ApiController]
 [Route("api/v1")]
-public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> users, SignInManager<AppUser> signIn, PasskeyCeremonies ceremonies, OperationVerification verification, AuthWriteGate gate, TimeProvider clock) : ControllerBase
+public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> users, SignInManager<AppUser> signIn, PasskeyCeremonies ceremonies, OperationVerification verification, AuthWriteGate gate, TimeProvider clock, IHostEnvironment environment) : ControllerBase
 {
     /// <summary>ログイン保持をチャレンジに結び付け、標準の認証選択肢を発行</summary>
     [HttpPost("auth/passkey/options")]
@@ -152,6 +153,17 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
 
             if (!result.Succeeded || result.UserEntity.Id != user.Id.ToString("D"))
             {
+                if (environment.IsDevelopment())
+                {
+                    // 例外本文には入力値が含まれ得るため、固定分類と型名だけを返す
+                    return Problem(statusCode: 400, title: "パスキーの操作を確認してください", extensions: new Dictionary<string, object?>
+                    {
+                        ["code"] = "PASSKEY_INVALID",
+                        ["reason"] = result.Succeeded ? "USER_MISMATCH" : PasskeyDiagnostics.Classify(result.Failure),
+                        ["failureType"] = result.Failure?.InnerException?.GetType().Name
+                    });
+                }
+
                 return Failure(400, "PASSKEY_INVALID");
             }
 

@@ -21,6 +21,8 @@ class ApiFailure extends Error {
     this.status = response.status;
     this.code = typeof body?.code === "string" ? body.code : "応答のコードなし";
     this.traceId = typeof body?.traceId === "string" ? body.traceId : "なし";
+    this.reason = typeof body?.reason === "string" ? body.reason : null;
+    this.failureType = typeof body?.failureType === "string" ? body.failureType : null;
   }
 }
 
@@ -37,7 +39,8 @@ async function api(path, { method = "GET", body, etag, allowAnonymous = false } 
     method, headers, credentials: "same-origin", cache: "no-store",
     body: body === undefined ? undefined : JSON.stringify(body)
   });
-  record(method + " /api/v1/" + path.split("/").slice(0, 2).join("/") + " → " + response.status);
+  const loggedPath = path.startsWith("account/passkeys/") && path !== "account/passkeys/options" ? "account/passkeys/{id}" : path;
+  record(method + " /api/v1/" + loggedPath + " → " + response.status);
   const data = response.status === 204 ? null : await response.json();
   if (!response.ok) {
     if (response.status === 401) {
@@ -72,7 +75,8 @@ async function run(label, action) {
   } catch (error) {
     if (error instanceof ApiFailure) {
       const hint = error.status === 412 ? "入力を確認し、状態・一覧を再取得してください。" : "自動再送は行っていません。";
-      record(error.message + " / " + error.code + " / traceId=" + error.traceId + "\n" + hint, true);
+      const reason = error.reason ? " / reason=" + error.reason + (error.failureType ? " (" + error.failureType + ")" : "") : "";
+      record(error.message + " / " + error.code + reason + " / traceId=" + error.traceId + "\n" + hint, true);
     } else if (error?.name === "NotAllowedError" || error?.name === "AbortError") {
       record("OSの本人確認が完了しませんでした（キャンセル・期限切れ等）。やり直す場合は再度ボタンを押してください。", true);
     } else {

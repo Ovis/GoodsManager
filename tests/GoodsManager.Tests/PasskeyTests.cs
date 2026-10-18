@@ -93,10 +93,20 @@ public sealed class PasskeyTests
         var credential = authenticator.Create(options.GetProperty("publicKeyOptions"),
             origin: invalid == "origin" ? "https://evil.localhost:7443" : "https://localhost:7443",
             rpId: invalid == "rp" ? "evil.localhost" : "localhost",
-            challenge: invalid == "challenge" ? "wrong-challenge" : null,
+            challenge: invalid == "challenge" ? Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlEncode("wrong-challenge"u8.ToArray()) : null,
             verified: invalid != "verification");
         var response = await SendAsync(client, "account/passkeys", new { challengeId = options.GetProperty("challengeId"), credential, displayName = "不正" });
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), await response.Content.ReadAsStringAsync());
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var expectedReason = invalid switch
+        {
+            "origin" => "ORIGIN_MISMATCH",
+            "rp" => "RP_ID_MISMATCH",
+            "challenge" => "CHALLENGE_MISMATCH",
+            _ => "USER_NOT_VERIFIED"
+        };
+        Assert.That(problem.GetProperty("reason").GetString(), Is.EqualTo(expectedReason));
+        Assert.That(problem.GetRawText(), Does.Not.Contain("evil.localhost").And.Not.Contain("wrong-challenge"));
         Assert.That((await client.GetFromJsonAsync<JsonElement>("/api/v1/account/passkeys")).GetArrayLength(), Is.Zero);
     }
 
