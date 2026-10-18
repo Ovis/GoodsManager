@@ -5,13 +5,13 @@ import type {ProductSummary,ProductDetail,NamedRef} from './types';
 export type RegistrationDraft={name:string;categoryId:string;quantity:string;workIds:string[];characterIds:string[];tagIds:string[];condition:string;storageLocation:string;purchasePlace:string;ownershipMemo:string;version:string;manufacturerId:string;sellerId:string;memo:string;identifiers:{scheme:string;value:string}[];links:string[]};
 export type Candidate={product:ProductSummary;strength:'strong'|'weak';reasons:string[];isTrashed:boolean};
 export type DuplicateResult={inputFingerprint:string;candidates:Candidate[];strongCandidateCount:number;weakCandidateCount:number};
-export type Confirmation={inputFingerprint:string;confirmedCandidates:{productId:string;reasons:string[]}[];decision:'createSeparate'|'addToExisting'|'update';targetProductId:string|null};
+export type Confirmation={inputFingerprint:string;confirmedCandidates:{productId:string;reasons:string[]}[];decision:'createSeparate'|'addToExisting'|'update'|'restore';targetProductId:string|null};
 export type UploadStatus={id:string;state:string;previewUrl:string|null;errorCode:string|null;progressStage:string};
 export type Photo={localId:string;file:File;url:string;key:string;state:string;progress:number;id?:string;previewUrl?:string;error?:string;xhr?:XMLHttpRequest;generation:number;sentAt?:number};
 export type SaveResult={product:ProductDetail;outcome:string;deduplicatedCount:number};
 export type SaveAttempt={draft:RegistrationDraft;mode:'next'|'finish';target:Candidate|null;confirmation:Confirmation|null;photoIds:string[]};
 export function mutation<T>(){return new FrozenMutation<T>({csrf:async()=>(await api<{token:string}>('/auth/csrf')).token,post:async(saved:FrozenRequest,csrf:string)=>{
-  const headers:Record<string,string>={'Content-Type':'application/json','X-CSRF-Token':csrf,'Idempotency-Key':saved.key};if(saved.etag)headers['If-Match']=saved.etag;
+  const headers:Record<string,string>={'Content-Type':'application/json','X-CSRF-Token':csrf,'Idempotency-Key':saved.key,...saved.headers};if(saved.etag)headers['If-Match']=saved.etag;
   const response=await fetch('/api/v1'+saved.path,{method:saved.method,headers,body:saved.body,credentials:'same-origin',cache:'no-store'});
   if(!response.ok){const b=await response.json().catch(()=>({}));if(response.status===401)window.dispatchEvent(new Event('app:session-expired'));throw new ApiError(response.status,b.code||'HTTP_ERROR',b.traceId,b.details,b.errors);}
   return response.status===204?undefined as T:response.json() as Promise<T>;

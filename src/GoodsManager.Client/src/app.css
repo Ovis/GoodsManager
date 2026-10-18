@@ -85,3 +85,22 @@
 .lightbox footer {justify-content:center}
 .lightbox p {text-align:center;color:#c1cfc5;font-size:13px}
 @media(max-width:800px){.product-workspace>.panel {padding:18px}.holding-edit {padding:16px}.lightbox {padding:12px}.lightbox-viewport {height:58vh}.latest-snapshot dl {grid-template-columns:90px 1fr}}
+
+.management>.panel {padding:24px;margin-bottom:24px}
+.management .tabs,.management-actions {display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.management fieldset {border:0;padding:0;min-width:0}
+.management .field {margin:14px 0}
+.master-id,.relation-row small {display:block;color:#65776a;font-size:12px;overflow-wrap:anywhere}
+.master-editor {margin-top:24px}
+.master-editor>fieldset {max-width:700px}
+.relation-row {display:block;padding:10px;border-bottom:1px solid #dce1d7}
+.relation-row input {width:auto;margin-right:10px}
+.management .editor-actions,.maintenance-dialog .editor-actions {display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;margin-top:20px}
+.btn.danger {background:#91493e;color:#fff}
+.note {background:#fff5df;padding:16px;border-radius:8px}
+.maintenance-dialog {width:min(850px,94vw);overflow-wrap:anywhere}
+.maintenance-dialog dl>div {display:flex;justify-content:space-between;gap:20px}
+.management pre {white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:800px){.management>.panel {padding:18px}.bottom-nav a {font-size:12px;padding:12px 4px}.management .search-row {flex-wrap:wrap}}
+
+.management .tabs .btn {padding:10px 14px;min-width:64px;min-height:44px}

@@ -1,4 +1,4 @@
-export type FrozenRequest = Readonly<{path:string;method:string;body:string;etag:string|null;key:string;sentAt:number}>;
+export type FrozenRequest = Readonly<{path:string;method:string;body:string;etag:string|null;key:string;sentAt:number;headers:Readonly<Record<string,string>>}>;
 export type MutationState = 'none'|'sending'|'success'|'failed'|'unknown';
 /** 送信内容をページ内に保持し、結果不明の間は別の保存要求へ切り替えない */
 export class FrozenMutation<T> {
@@ -8,9 +8,9 @@ export class FrozenMutation<T> {
   constructor(options:{csrf:()=>Promise<string>;post:(request:FrozenRequest,csrf:string)=>Promise<T>;key?:()=>string;now?:()=>number}){
     this.options={...options,key:options.key??(()=>crypto.randomUUID()),now:options.now??(()=>Date.now())};
   }
-  begin(path:string,body:unknown,etag:string|null=null,method='POST'){
+  begin(path:string,body:unknown,etag:string|null=null,method='POST',headers:Record<string,string>={}){
     if(this.state==='unknown'||this.state==='sending')throw new Error('前の保存結果を先に確認してください。');
-    this.last=Object.freeze({path,method,body:JSON.stringify(body),etag,key:this.options.key(),sentAt:this.options.now()});
+    this.last=Object.freeze({path,method,body:JSON.stringify(body),etag,key:this.options.key(),sentAt:this.options.now(),headers:Object.freeze({...headers})});
     return this.send();
   }
   replay(){
