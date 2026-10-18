@@ -98,7 +98,7 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
         return new { items, page, pageSize = size, totalCount = count, totalPages = (count + size - 1) / size, dataRevision = Number(state.DataRevision) };
     }
 
-    private async Task<IActionResult> WriteAsync(string kind, Guid? id, bool relations = false)
+    private async Task<IActionResult> WriteAsync(string kind, Guid? id, bool relations = false, string? maintenance = null)
     {
         if (!Request.HasJsonContentType()) throw new MasterProblem(415, "UNSUPPORTED_MEDIA_TYPE");
         // Content-Lengthがない要求も、JSONの外側の空白も含めて上限を適用。
@@ -112,7 +112,7 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
         }
         if (length > 65536) throw new MasterProblem(413, "REQUEST_TOO_LARGE");
         if (!Guid.TryParseExact(Request.Headers["Idempotency-Key"].ToString(), "D", out var key) || key == Guid.Empty) throw MasterInput.Invalid();
-        var scope = relations ? $"POST:/api/v1/masters/{kind}/{id:D}/relations" : id is null ? $"POST:/api/v1/masters/{kind}" : $"PUT:/api/v1/masters/{kind}/{id:D}";
+        var scope = maintenance == "merge" ? $"POST:/api/v1/masters/{kind}/merges" : maintenance == "delete" ? $"POST:/api/v1/masters/{kind}/{id:D}/deletion" : relations ? $"POST:/api/v1/masters/{kind}/{id:D}/relations" : id is null ? $"POST:/api/v1/masters/{kind}" : $"PUT:/api/v1/masters/{kind}/{id:D}";
         var condition = Request.Headers.IfMatch.ToString();
         var bodyHash = Convert.ToHexStringLower(SHA256.HashData(bytes.AsSpan(0, length)));
         var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new[] { bodyHash, condition }))));
@@ -141,7 +141,9 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
             var body = document.RootElement;
             var affectedBefore = await projection.AffectedAsync(kind, id, token);
             INamedMaster item;
-            if (relations) item = await ChangeRelationsAsync(kind, id!.Value, body, now, condition);
+            MaintenanceResult? maintained = null;
+            if (maintenance is not null) { maintained = await MaintainAsync(kind, id, body, now, condition, maintenance == "merge"); item = maintained.Item; }
+            else if (relations) item = await ChangeRelationsAsync(kind, id!.Value, body, now, condition);
             else
             {
                 var input = MasterInput.Parse(kind, body, id.HasValue);
@@ -158,7 +160,7 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
             }
             await db.SaveChangesAsync(token);
             var affectedAfter = await projection.AffectedAsync(kind, item.Id, token);
-            await projection.RebuildAsync(affectedBefore.Concat(affectedAfter).Distinct().ToArray(), token);
+            await projection.RebuildAsync(affectedBefore.Concat(affectedAfter).Concat(maintained?.Affected ?? []).Distinct().ToArray(), token);
             var completedAt = StorageValues.FromMilliseconds(StorageValues.ToMilliseconds(clock.GetUtcNow()));
             var response = new IdempotencyRecord
             {
@@ -166,10 +168,10 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
                 OperationScope = scope,
                 Key = key,
                 RequestHash = hash,
-                ResponseStatus = id.HasValue ? 200 : 201,
-                ResponseJson = JsonSerializer.Serialize(await Dto(kind, item), Json),
+                ResponseStatus = maintenance == "delete" ? 204 : maintenance == "merge" ? 200 : id.HasValue ? 200 : 201,
+                ResponseJson = JsonSerializer.Serialize(maintenance == "delete" ? null : maintenance == "merge" ? new { target = await Dto(kind, item), affectedProductCount = maintained!.Affected.LongLength } : await Dto(kind, item), Json),
                 ResponseEtag = Etag(kind, item),
-                Location = id.HasValue ? null : $"/api/v1/masters/{kind}/{item.Id:D}",
+                Location = id.HasValue || maintenance is not null ? null : $"/api/v1/masters/{kind}/{item.Id:D}",
                 CompletedAt = completedAt,
                 ExpiresAt = completedAt.AddDays(7)
             };
@@ -183,6 +185,7 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
 
     private IActionResult StoredResponse(IdempotencyRecord record)
     {
+        if (record.ResponseStatus == 204) return new StatusCodeResult(204);
         Response.Headers.ETag = record.ResponseEtag;
         if (record.Location is not null) Response.Headers.Location = record.Location;
         return new ContentResult { StatusCode = record.ResponseStatus, ContentType = "application/json; charset=utf-8", Content = record.ResponseJson };
