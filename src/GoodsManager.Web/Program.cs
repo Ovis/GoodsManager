@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using GoodsManager.Web.Auth;
 using Microsoft.AspNetCore.Antiforgery;
 using System.Text.Json.Serialization;
+using GoodsManager.Web.Development;
 
 var recovery = args.FirstOrDefault() == "recover-account";
 var builder = WebApplication.CreateBuilder(recovery ? [] : args);
@@ -84,6 +85,7 @@ app.Use(async (context, next) =>
     await next(context);
 });
 app.MapControllers();
+app.MapAuthenticationCheck();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 app.Run();

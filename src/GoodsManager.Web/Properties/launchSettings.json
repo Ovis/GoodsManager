@@ -1,5 +1,16 @@
 {
   "profiles": {
+    "auth-check": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "https://localhost:7443",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Authentication__Origin": "https://localhost:7443",
+        "Authentication__RpId": "localhost",
+        "Storage__Directory": "data/auth-browser-check"
+      }
+    },
     "https": {
       "commandName": "Project",
       "launchBrowser": false,

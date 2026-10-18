@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GoodsManager 認証検証</title>
+  <link rel="stylesheet" href="/dev/auth-check/auth-check.css">
+  <script src="/dev/auth-check/auth-check.js" defer></script>
+</head>
+<body>
+<main>
+  <header>
+    <p class="badge">Development 限定</p>
+    <h1>認証のブラウザ確認</h1>
+    <p>検証用アカウントを使用してください。操作は実際のDBに保存されます。</p>
+    <p id="environment">接続条件を確認中…</p>
+    <p id="capability"></p>
+  </header>
+  <section aria-labelledby="status-heading">
+    <h2 id="status-heading">状態と操作結果</h2>
+    <button id="refresh" type="button">状態・一覧を再取得</button>
+    <p id="status">未取得</p>
+    <pre id="session">未ログイン</pre>
+    <output id="result" role="status" aria-live="polite">準備中…</output>
+    <p class="hint">412 は他の操作による競合です。入力を確認し、再取得してから操作してください。自動再送は行いません。</p>
+  </section>
+  <section aria-labelledby="login-heading">
+    <h2 id="login-heading">1. セットアップ・ログイン</h2>
+    <form id="login-form">
+      <fieldset id="login-fields" disabled>
+        <label>ログインID <input id="login-id" name="username" autocomplete="username" required pattern="[A-Za-z0-9._\-]{1,64}" maxlength="64"></label>
+        <label>パスワード <input id="login-password" name="password" type="password" autocomplete="current-password"></label>
+        <p class="hint">初期パスワードは12～128文字（Unicodeコードポイント）、文字種の指定なし。</p>
+        <label class="check"><input id="remember" type="checkbox"> ログインを保持する（30日／未選択は7日、期限の自動延長なし）</label>
+        <div class="actions">
+          <button id="setup" type="button" disabled>初期アカウントを作成</button>
+          <button type="submit">パスワードでログイン</button>
+          <button id="passkey-login" type="button" data-passkey>パスキーでログイン</button>
+        </div>
+        <p class="hint">パスキーログインはIDを空欄にもできます。初期作成時の保持設定は7日です。</p>
+      </fieldset>
+    </form>
+  </section>
+  <section aria-labelledby="account-heading">
+    <h2 id="account-heading">2. ログイン後の操作</h2>
+    <fieldset id="account-fields" disabled>
+      <div class="actions">
+        <button id="logout" type="button">このブラウザをログアウト</button>
+        <button id="revoke" type="button">全端末をログアウト</button>
+      </div>
+      <form id="id-form">
+        <label>新しいログインID <input id="new-id" required pattern="[A-Za-z0-9._\-]{1,64}" maxlength="64" autocomplete="off"></label>
+        <button type="submit">取得済みETagでIDを変更</button>
+      </form>
+      <hr>
+      <h3>追加・削除・パスワード変更の本人確認</h3>
+      <label>本人確認方法 <select id="verification-method"><option value="password">現在のパスワード</option><option value="passkey" data-passkey>登録済みパスキー</option></select></label>
+      <label id="verification-password-label">現在のパスワード <input id="verification-password" type="password" autocomplete="current-password"></label>
+      <p class="hint">本人確認は操作ごとに実施します。パスキーで追加する場合は、本人確認と新規登録の2回、OSの画面が開きます。</p>
+      <form id="add-form">
+        <label>追加するパスキーの名前 <input id="passkey-name" required autocomplete="off"></label>
+        <button type="submit" data-passkey>パスキーを追加</button>
+      </form>
+      <div id="passkeys" aria-label="登録済みパスキー">未取得</div>
+      <form id="password-form">
+        <label>新しいパスワード <input id="new-password" type="password" required autocomplete="new-password"></label>
+        <button type="submit">パスワードを変更して全端末をログアウト</button>
+      </form>
+    </fieldset>
+  </section>
+  <section aria-labelledby="steps-heading">
+    <h2 id="steps-heading">確認の順番</h2>
+    <ol>
+      <li>初期アカウントを作成 → ログアウト → 誤った／正しいパスワードでログイン。入力した秘密は各操作後に消えます。</li>
+      <li>現在のパスワードで本人確認してパスキーを追加 → ログアウト → パスキーでログイン。OSのPIN・生体認証は手動で行ってください。</li>
+      <li>パスキーの名前変更、本人確認方法をパスキーにした追加・削除、OS画面のキャンセル後のやり直しを確認。</li>
+      <li>2つのタブで同じ状態を取得 → 片方でIDまたは名前を変更 → もう片方から変更して412を確認。入力は残り、再取得まで古いETagを使います。</li>
+      <li>別ブラウザまたは別プロファイルでもログイン → 全端末ログアウト → 両方で再取得して未ログイン（401）を確認。通常の別タブは同じセッションです。</li>
+      <li>再ログイン → パスワード変更 → 両方の失効、旧パスワードの拒否と新パスワードでのログインを確認。</li>
+    </ol>
+    <p class="hint">保持あり／なしの persistent と絶対期限は上部に表示します。5回失敗の5分停止は検証用アカウントで別途確認してください。localhost のこの画面はPC内だけの確認用です。</p>
+  </section>
+</main>
+</body>
+</html>
