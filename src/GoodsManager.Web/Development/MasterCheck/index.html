@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GoodsManager P04検証</title>
+  <link rel="stylesheet" href="/dev/master-check/master-check.css">
+  <script type="module" src="/dev/master-check/master-check.js"></script>
+</head>
+<body><main>
+  <header>
+    <p>Development限定・P04検証用</p>
+    <h1>マスター・カテゴリのブラウザ確認</h1>
+    <p>操作は実際のDBに保存されます。確認はチャットの案内に沿って一項目ずつ進めてください。</p>
+    <a href="/dev/auth-check" target="_blank" rel="noopener">認証確認画面でログインする</a>
+    <button id="session-refresh" type="button">ログイン状態を取得</button>
+    <pre id="session">準備中…</pre>
+  </header>
+  <fieldset id="controls" disabled>
+    <section>
+      <h2>一覧・検索</h2>
+      <form id="search-form">
+        <label>種類 <select id="kind"><option value="works">作品</option><option value="series">シリーズ</option><option value="characters">キャラクター</option><option value="tags">タグ</option><option value="organizations">組織</option><option value="categories">カテゴリ</option></select></label>
+        <label>検索語 <input id="query" autocomplete="off"></label>
+        <label>1ページの件数 <select id="page-size"><option>25</option><option selected>50</option><option>100</option></select></label>
+        <label id="priority-label" hidden>優先する作品ID（改行・空白・カンマ区切り）<textarea id="priority" rows="2"></textarea></label>
+        <button type="submit">一覧を取得</button>
+      </form>
+      <p id="list-status">未取得</p>
+      <div class="actions"><button id="previous" type="button" disabled>前のページ</button><button id="next" type="button" disabled>次のページ</button></div>
+      <div id="list"></div>
+    </section>
+    <section>
+      <h2>新規作成・選択対象の編集</h2>
+      <div class="actions"><button id="new" type="button">新規入力へ</button><button id="selected-refresh" type="button" disabled>選択対象を再取得</button></div>
+      <p>取得済みの保存内容（下の入力欄とは別です）</p>
+      <pre id="snapshot">新規入力</pre>
+      <form id="edit-form">
+        <label>名前 <input id="name" autocomplete="off" required></label>
+        <div id="organization-fields" hidden>
+          <label>組織URL（空欄はnull）<input id="website-url" autocomplete="off"></label>
+          <label>組織メモ（空欄はnull）<textarea id="memo" rows="3"></textarea></label>
+        </div>
+        <div id="category-fields" hidden>
+          <label>親カテゴリID（空欄はルート）<input id="parent-id" autocomplete="off"></label>
+          <label>並び順 <input id="sort-order" type="number" step="1" value="0" required></label>
+        </div>
+        <p>表示名は入力のまま保存します。名前の上限は200コードポイントです。</p>
+        <div class="actions"><button id="create" type="submit">新規作成</button><button id="save" type="button" disabled>取得済みETagで更新</button></div>
+      </form>
+    </section>
+    <section id="relation-section">
+      <h2>関連の追加・解除</h2>
+      <p id="relation-kind">作品からはシリーズ、シリーズ・キャラクターからは作品を指定します。</p>
+      <button id="relations-refresh" type="button" disabled>関連一覧を取得</button>
+      <pre id="relation-status">未取得</pre>
+      <div class="actions"><button id="relation-previous" type="button" disabled>関連の前ページ</button><button id="relation-next" type="button" disabled>関連の次ページ</button></div>
+      <div id="relations"></div>
+      <form id="relation-form">
+        <label>追加するID（最大100件）<textarea id="add-ids" rows="3"></textarea></label>
+        <label>解除するID（最大100件）<textarea id="remove-ids" rows="3"></textarea></label>
+        <p>IDは改行・空白・カンマ区切り。関連一覧取得時のETagを使います。名称編集用のETagは更新しません。</p>
+        <button id="delta" type="submit" disabled>取得済みETagで差分を保存</button>
+      </form>
+    </section>
+    <section>
+      <h2>カテゴリツリー</h2>
+      <button id="tree-refresh" type="button">カテゴリツリーを取得</button>
+      <p id="tree-status">未取得</p><div id="tree"></div>
+    </section>
+  </fieldset>
+  <section>
+    <h2>直前の変更要求と結果</h2>
+    <p>保存ごとにキーを発行します。再送ボタンは送信済みの本文・キー・If-Matchをそのまま使います。自動再送はしません。</p>
+    <pre id="request">変更要求なし</pre>
+    <button id="replay" type="button" disabled>直前の要求を同じキーで再送</button>
+    <pre id="response">保存応答なし</pre>
+    <output id="result" role="status" aria-live="polite">準備中…</output>
+    <p>412・入力エラー・通信失敗では入力を保持します。保存成功後の一覧・関連は、明示的に再取得してください。ページを閉じると送信情報は失われます。</p>
+  </section>
+</main></body></html>
