@@ -48,6 +48,8 @@ public abstract class Ownership
     public string? Condition { get; set; }
     public string? StorageLocation { get; set; }
     public string? PurchasePlace { get; set; }
+    public string? StorageLocationNormalized { get; set; }
+    public string? PurchasePlaceNormalized { get; set; }
     public string? Memo { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }

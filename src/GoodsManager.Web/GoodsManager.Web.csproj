@@ -18,4 +18,21 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- 生成アセットは発行直前に確定し、運用データと鍵を発行物へ混入させない。 -->
+    <Content Remove="wwwroot/**/*;data/**/*" />
+    <None Remove="data/**/*" />
+  </ItemGroup>
+  <Target Name="BuildCollectionClient" AfterTargets="ComputeFilesToPublish" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec WorkingDirectory="../GoodsManager.Client" Command="npm ci --ignore-scripts" />
+    <Exec WorkingDirectory="../GoodsManager.Client" Command="npm run build" />
+    <ItemGroup>
+      <_ClientFiles Include="wwwroot/**/*" />
+      <ResolvedFileToPublish Include="@(_ClientFiles->'%(FullPath)')">
+        <RelativePath>wwwroot/%(_ClientFiles.RecursiveDir)%(_ClientFiles.Filename)%(_ClientFiles.Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 </Project>

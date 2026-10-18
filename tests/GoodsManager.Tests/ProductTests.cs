@@ -330,7 +330,7 @@ public sealed class ProductTests
         Assert.That((await Send("dev/products", CreateBody(), includeKey: false)).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         Assert.That((await Send("dev/products", new string(' ', ProductWrites.BodyLimit) + "{}")).StatusCode, Is.EqualTo(HttpStatusCode.RequestEntityTooLarge));
         Assert.That((await Send("dev/products", "{broken")).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-        Assert.That((await Send("products", CreateBody())).StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That((await Send("products", CreateBody())).StatusCode, Is.EqualTo(HttpStatusCode.MethodNotAllowed));
     }
 
     [TestCase("1.0")]

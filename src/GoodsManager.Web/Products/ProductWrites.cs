@@ -4,6 +4,7 @@ using System.Text.Json;
 using GoodsManager.Web.Auth;
 using GoodsManager.Web.Masters;
 using GoodsManager.Web.Storage;
+using GoodsManager.Web.Search;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace GoodsManager.Web.Products;
 
 /// <summary>変更と成功応答記録を一括確定し、再送は古いETagの検査より先に照会する。</summary>
-public sealed class ProductWrites(AppDbContext db, SignInManager<AppUser> signIn, AuthWriteGate gate, TimeProvider clock, ProductOperations products)
+public sealed class ProductWrites(AppDbContext db, SignInManager<AppUser> signIn, AuthWriteGate gate, TimeProvider clock, ProductOperations products, SearchProjection projection)
 {
     public const int BodyLimit = 256 * 1024;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -55,6 +56,7 @@ public sealed class ProductWrites(AppDbContext db, SignInManager<AppUser> signIn
             using var parsed = document;
             var result = await action(document.RootElement, now, token);
             await db.SaveChangesAsync(token);
+            await projection.RebuildAsync([result.Product.Id], token);
             var body = create ? await products.DetailAsync(result.Product, token) : await products.InventoryAsync(result.Product, result.Refs, token);
             var completedAt = StorageValues.FromMilliseconds(clock.GetUtcNow().ToUnixTimeMilliseconds());
             var saved = new IdempotencyRecord

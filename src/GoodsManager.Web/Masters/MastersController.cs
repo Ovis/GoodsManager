@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using GoodsManager.Web.Auth;
 using GoodsManager.Web.Storage;
+using GoodsManager.Web.Search;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +16,7 @@ namespace GoodsManager.Web.Masters;
 /// <summary>認証・CSRFを共通基盤へ委ね、マスター変更と成功再送記録を同時に確定</summary>
 [Authorize]
 [Route("api/v1")]
-public sealed partial class MastersController(AppDbContext db, SignInManager<AppUser> signIn, AuthWriteGate gate, TimeProvider clock) : ControllerBase
+public sealed partial class MastersController(AppDbContext db, SignInManager<AppUser> signIn, AuthWriteGate gate, TimeProvider clock, SearchProjection projection) : ControllerBase
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -138,6 +139,7 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
             catch (JsonException) { throw MasterInput.Invalid(); }
             using var parsed = document;
             var body = document.RootElement;
+            var affectedBefore = await projection.AffectedAsync(kind, id, token);
             INamedMaster item;
             if (relations) item = await ChangeRelationsAsync(kind, id!.Value, body, now, condition);
             else
@@ -155,6 +157,8 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
                 };
             }
             await db.SaveChangesAsync(token);
+            var affectedAfter = await projection.AffectedAsync(kind, item.Id, token);
+            await projection.RebuildAsync(affectedBefore.Concat(affectedAfter).Distinct().ToArray(), token);
             var completedAt = StorageValues.FromMilliseconds(StorageValues.ToMilliseconds(clock.GetUtcNow()));
             var response = new IdempotencyRecord
             {

@@ -7,9 +7,12 @@ using Microsoft.AspNetCore.Antiforgery;
 using System.Text.Json.Serialization;
 using GoodsManager.Web.Development;
 using GoodsManager.Web.Products;
+using GoodsManager.Web.Search;
 
 var recovery = args.FirstOrDefault() == "recover-account";
 var builder = WebApplication.CreateBuilder(recovery ? [] : args);
+// 承認した7種各100件のID条件と200コードポイントの検索値をURLで扱う。
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestLineSize = 64 * 1024);
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
 {
     context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
@@ -24,6 +27,8 @@ builder.Services.AddScoped<AccountRecovery>();
 builder.Services.AddScoped<ProductOperations>();
 builder.Services.AddScoped<InventoryOperations>();
 builder.Services.AddScoped<ProductWrites>();
+builder.Services.AddScoped<SearchProjection>();
+builder.Services.AddScoped<ProductSearch>();
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict);
 
 var app = builder.Build();
@@ -33,6 +38,7 @@ try
 {
     await using var scope = app.Services.CreateAsyncScope();
     await DatabaseMaintenance.MigrateAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), runtime.DirectoryPath);
+    await scope.ServiceProvider.GetRequiredService<SearchProjection>().RebuildAllAsync();
 }
 catch
 {
@@ -88,6 +94,7 @@ app.Use(async (context, next) =>
 
     await next(context);
 });
+app.MapCollectionPages();
 app.MapControllers();
 app.MapAuthenticationCheck();
 app.MapMasterCheck();

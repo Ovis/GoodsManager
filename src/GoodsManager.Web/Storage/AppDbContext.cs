@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using GoodsManager.Web.Auth;
 using GoodsManager.Web.Masters;
 using GoodsManager.Web.Products;
+using GoodsManager.Web.Search;
 
 namespace GoodsManager.Web.Storage;
 
@@ -64,6 +65,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         });
         MasterSchema.Configure(modelBuilder);
         ProductSchema.Configure(modelBuilder);
+        SearchSchema.Configure(modelBuilder);
         StorageValues.ApplyConventions(modelBuilder);
     }
 }
