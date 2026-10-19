@@ -436,3 +436,7 @@ src/GoodsManager.Client/dist/
 # Application backup source (not Visual Studio upgrade backups)
 !src/GoodsManager.Web/Backups/
 !src/GoodsManager.Web/Backups/*.cs
+
+# Deployment-local configuration
+compose.yml
+.env

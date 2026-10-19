@@ -1,0 +1,16 @@
+**
+!global.json
+!src/
+!src/GoodsManager.Web/
+!src/GoodsManager.Web/**
+!src/GoodsManager.Client/
+!src/GoodsManager.Client/**
+**/bin/
+**/obj/
+**/data/
+**/node_modules/
+src/GoodsManager.Web/wwwroot/
+**/*.pfx
+**/*.pem
+**/*.key
+**/.env*

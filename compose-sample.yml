@@ -1,0 +1,38 @@
+name: goodsmanager
+services:
+  app:
+    image: ${GOODS_MANAGER_IMAGE:?固定タグまたはダイジェストを指定}
+    platform: linux/amd64
+    user: "${APP_UID:-1654}:${APP_GID:-1654}"
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: ${APP_MEMORY:-2g}
+    cpus: ${APP_CPUS:-2}
+    pids_limit: 128
+    stop_grace_period: 60s
+    environment:
+      Authentication__Origin: ${PUBLIC_ORIGIN:?公開HTTPSオリジンを指定}
+    expose: ["8080"]
+    volumes:
+      - type: bind
+        source: ${DATA_DIRECTORY:?ローカルDB・画像・鍵の保存先を指定}
+        target: /data
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${BACKUP_DIRECTORY:?バックアップ保存先を指定}
+        target: /backups
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${LOG_DIRECTORY:?ログ保存先を指定}
+        target: /logs
+        bind: {create_host_path: false}
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

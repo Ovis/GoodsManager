@@ -1,0 +1,10 @@
+# 実値を設定してリポジトリ直下の .env に保存。
+GOODS_MANAGER_IMAGE=goodsmanager:p13-local
+PUBLIC_ORIGIN=https://goods.example.invalid
+DATA_DIRECTORY=/srv/goodsmanager/data
+BACKUP_DIRECTORY=/srv/goodsmanager/backups
+LOG_DIRECTORY=/srv/goodsmanager/logs
+APP_UID=1654
+APP_GID=1654
+APP_MEMORY=2g
+APP_CPUS=2
