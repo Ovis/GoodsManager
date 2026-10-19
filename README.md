@@ -1,88 +1,143 @@
 # GoodsManager
 
-単一ユーザー向け所持管理アプリ。.NET 10 / ASP.NET Core、React + TypeScript + Vite、SQLite / EF Core、NUnitを使用。
+商品と所持品を管理する、単一ユーザー向けのWebアプリです。商品情報と写真を登録し、所持数・状態・保管場所や個体ごとのメモをまとめて管理できます。
 
-```text
-dotnet build GoodsManager.slnx
-dotnet test GoodsManager.slnx
-dotnet run --project src/GoodsManager.Web
+## できること
+
+- 商品の登録・検索・編集と写真の管理
+- カテゴリ・作品・キャラクター・タグ・組織による整理
+- 所持数、状態、保管場所、購入先、個体ごとのメモ・写真の管理
+- 重複候補の確認、マスターの整理、ゴミ箱への移動と復元
+- 自動・手動バックアップと、アプリ停止中の復元
+
+## 利用の流れ
+
+1. 公開HTTPS URLを開き、設定済みのログインIDとパスワードでログインします。登録済みのパスキーでもログインできます。
+2. 「商品を登録」で商品情報・所持数・写真を入力します。重複候補が出た場合は、別の商品として登録するか既存商品へ追加するかを確認します。
+3. 「コレクション」で検索・絞り込みを行い、商品詳細から商品情報や所持品を編集します。
+4. 分類や関連情報は「マスター管理」で整理します。ゴミ箱に移した商品は「ゴミ箱」から復元でき、完全削除すると元に戻せません。
+5. 「バックアップ」で自動実行の設定と履歴を確認し、必要に応じて手動実行・ダウンロードを行います。
+
+初期アカウントの作成はセットアップAPIによる管理者の作業が必要です。現在、初期登録画面はありません。
+
+ログインIDは英数字・`._-`の1～64文字で、大小文字を区別しません。パスワードは12～128文字で、NULは使えません。ログインを保持しない場合の認証上限は7日、保持する場合は30日です。5回連続でログインに失敗すると5分間停止します。
+
+## 導入と設定
+
+Linux x64のDocker・Docker Composeと、固定の公開HTTPS URLを用意します。単一コンテナ・単一インスタンスで利用します。
+
+### Composeの準備
+
+[compose-sample.yml](compose-sample.yml) を利用環境用の `compose.yml` へコピーし、プロキシのネットワークやラベルを設定します。[環境設定のサンプル](deploy/environment.example) は `.env` へコピーします。利用環境の `compose.yml` と `.env` はGit管理の対象外です。
+
+```sh
+cp compose-sample.yml compose.yml
+cp deploy/environment.example .env
 ```
 
-`/health/live`は生存確認、`/health/ready`は準備状態の確認。
-React + TypeScript + Viteの静的成果物とAPIをASP.NET Coreから同一オリジンで配信する。発行時にクライアントをビルドする。開発中の画面更新は npm --prefix src/GoodsManager.Client run build で生成する。
+使用するDockerイメージを用意し、`.env` の値を配置先に合わせます。
 
-設計資料はローカル`docs`ブランチの`d617627`を参照。承認済みモックは`2d8dcb23e5ca5838de261f5e5eddc3add3d1b543`。設計・モックのブランチは実装ブランチへマージしない。
-
-永続領域は`Storage:Directory`（環境変数`Storage__Directory`）で指定。既定はアプリの`data/`。
-DBをWALで開き、接続ごとに外部キーを有効化。起動前に整合性を検査し、既存DBに未適用の移行があれば`pre-migration/*.zip`へDB・正式画像・鍵を検証して退避してから移行する。移行や退避に失敗した場合は起動しない。自動復元は行わず、退避と対応版の実行ファイルを使って停止中に復旧する。
-
-P11以降の更新前退避は、正式画像・鍵・マニフェストを含む検証済みZIPを作成する。詳細は下記のバックアップ・復元手順を参照。
-
-```text
-dotnet tool restore
-dotnet ef migrations add 変更名 --project src/GoodsManager.Web --output-dir Storage/Migrations
-```
-
-SQLの保存型・制約・型変換・取消・移行失敗・プロセス排他を、試験ごとに分離した実ファイルSQLiteで検証する。試験専用の数量等のテーブルは本番DBには作成しない。Dapperは未導入。
-
-認証APIは`/api/v1/setup/status`、`/setup`、`/auth/csrf`、`/auth/password`、`/auth/session`、`/auth/logout`、`/auth/revoke-all`、`/account/password`。
-状態変更は匿名の初期登録・ログインを含め`GET /api/v1/auth/csrf`の`token`を`X-CSRF-Token`へ指定する。認証状態の変更後はトークンを取り直す。HTTPSの同一オリジンで接続する。
-
-ログインIDは英数字・`._-`の1～64文字、大小文字を区別しない。パスワードは12～128コードポイント、文字種の強制なし、NUL不可。5回の連続失敗で5分間停止。セッションクッキーは上限7日、保持ありはログインから30日。いずれも自動延長しない。標準IdentityのSecurityStampを毎要求で照合する。
-
-CLI復旧はアプリ停止後、永続領域を同じ設定にして対話端末で実行する。
-
-```text
-dotnet run --project src/GoodsManager.Web -- recover-account --keep-passkeys
-dotnet run --project src/GoodsManager.Web -- recover-account --clear-passkeys
-```
-
-新しいパスワードを非表示で2回入力。パスワードをコマンド引数や環境変数へ入れない。保持・削除の選択は必須。どちらも全端末を失効し、ロックアウトを解除する。HTTPの復旧APIは設けない。
-
-パスキーAPIは`/auth/passkey/options`、`/auth/passkey/verify`、`/auth/reauthenticate`、`/account/passkeys`、`/account/passkeys/options`、`/account/passkeys/{id}`。送受信の契約と検証範囲は認証コントローラーとNUnit試験を参照。
-
-開発用は`dotnet run --project src/GoodsManager.Web --launch-profile https`で起動。オリジンは`https://localhost:7443`、RP IDは`localhost`。開発用HTTPS証明書の準備は利用端末で行う。
-本番では`Authentication__Origin`へ公開HTTPSオリジンを必ず指定する。`Authentication__RpId`はそのホストと一致させる。TraefikでHTTPSを終端してHTTPで接続する方針。公開URL、永続領域の権限、信頼するプロキシと転送ヘッダーの設定は配置時に確認する。開発用と本番用のパスキーを相互流用しない。
-
-P11までの商品登録・検索・商品/所持/個体/画像編集・マスター整理・ゴミ箱・バックアップを実装。自動試験・PCブラウザ・ローカルLinux x64の検証と、Proxmox・Android実機の受入は分けて扱う。
-
-## バックアップと停止中の復元（P11）
-
-通常画面の「バックアップ」で、自動実行の有効・無効と日本時間の実行時刻を設定する。初期は有効・03:00（Asia/Tokyo）。当日の予定時刻を過ぎて起動した場合は、未実行分を1回処理する。失敗は当日中に自動で繰り返さず、翌日か手動実行で再試行する。
-
-初回は必ず作成し、その後は保全対象の変更番号が前回成功と同じなら自動ZIPを省略する。日曜は変更の有無にかかわらずDB整合性を検査する。履歴・アラート・一時アップロードでは変更番号を進めず、画像設定・バックアップ設定・認証情報・鍵変更は追跡する。
-
-自動の成功最新3世代を保持し、新しいZIPの検証・成功確定後にだけ旧世代を整理する。手動・更新前・外部配置のZIPは自動削除しない。削除失敗や処理中断は履歴と警告へ反映し、旧成功を保持する。ZIPの論理削除と実ファイル整理を分け、整理中の再起動でも再開できる。
-
-ZIPはDB・正式商品とゴミ箱・個体から参照される全画像・必要なDB設定・Data Protection鍵を含む。稼働DBはSQLiteバックアップAPIでコピーし、コピー側だけからログイン状態・認証チャレンジ・再送成功記録・一時アップロード・到達しない画像を除く。ZIP圧縮は業務書込を再開してから行う。マニフェスト、全ファイルの長さとSHA-256、DB整合性・外部キー、正式画像の参照、移行履歴とその版の実際の列構成を検証する。
-
-ZIPは暗号化しない。パスワードハッシュ・パスキー・鍵を含むため、保存先とダウンロード済みファイルは適切に保護し、外部への退避は運用側で行う。保存先は環境設定の参照表示のみで、Webから変更できない。
-
-| 環境変数 | 初期値・意味 |
+| 項目 | 設定内容 |
 | --- | --- |
-| `Backups__Directory` | `Storage__Directory/backups`。本番は専用マウントを指定する。DB・画像・鍵や準備領域そのものと重ねない |
-| `Backups__MaximumArchiveBytes` | 68,719,476,736（64 GiB） |
-| `Backups__MaximumExpandedBytes` | 137,438,953,472（128 GiB） |
-| `Backups__MaximumFiles` | 100,000（マニフェストを含む） |
-| `Backups__MaximumManifestBytes` | 16,777,216（16 MiB） |
+| `GOODS_MANAGER_IMAGE` | 使用するイメージの固定版タグ、またはダイジェスト |
+| `PUBLIC_ORIGIN` | 公開HTTPSオリジン。パス・クエリー・資格情報は含めない |
+| `DATA_DIRECTORY` | データの保存先。コンテナ内 `/data` に接続 |
+| `BACKUP_DIRECTORY` | バックアップの保存先。コンテナ内 `/backups` に接続 |
+| `LOG_DIRECTORY` | ログの保存先。コンテナ内 `/logs` に接続 |
+| `APP_UID` / `APP_GID` | 実行する非rootユーザーのUID/GID。初期値は各1654 |
+| `APP_MEMORY` / `APP_CPUS` | メモリ・CPU制限。初期値は `2g` / `2` |
 
-これらは検証・復元時の資源保護で、保存済みの商品・画像の総数上限ではない。ZIP64を含め、標準ZIP処理が一覧を確保する前にも中央ディレクトリの件数・メタデータを確認する。形式の技術参照は[PKWARE ZIP仕様](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT)。新しい依存は追加していない。
+データ・バックアップ・ログの3箇所は、指定したUID/GIDで読み書きできるよう事前に作成します。Linuxホストで初期値を使う例：
 
-発行先のディレクトリで、Webアプリと同じ `Storage__Directory` / `Backups__Directory` を指定して実行する。いずれもアプリ停止中の排他操作。検証や復元にWeb認証用の公開URL設定は不要。
-
-```text
-dotnet GoodsManager.Web.dll backup create
-dotnet GoodsManager.Web.dll backup verify /backups/実行ID.zip
-dotnet GoodsManager.Web.dll backup restore /backups/実行ID.zip --confirm-replace
-dotnet GoodsManager.Web.dll backup rollback --confirm-rollback
+```sh
+sudo install -d -m 0700 -o 1654 -g 1654 /srv/goodsmanager/data /srv/goodsmanager/backups /srv/goodsmanager/logs
 ```
 
-復元は、ZIPを別領域へ展開・検証し、対応する旧版ならその領域だけを現行スキーマへ移行してから切り替える。未知・不整合な移行履歴や列構成は拒否する。壊れた現DBからも復元できるよう、現DB・WAL・SHM・画像・鍵は変更せず `.rollback-退避ID/` へ退避する。成功した退避一式も自動削除しない。
+データ保存先にはDB・画像・認証鍵などが含まれます。コンテナを再作成しても同じ保存先を使い、`/data` 全体を永続化してください。稼働DBはローカルファイルシステムに置き、SMB/NFSで直接共有しない構成にします。
 
-複数の改名を一体の操作とは扱わず、`restore-state.json` に進行を記録する。処理途中の例外では旧一式へ戻し、進行記録が残る場合は通常起動を止める。停止したまま `backup rollback --confirm-rollback` で処理する。切替完了記録後の停止なら、退避を保持して完了状態を確定する。進行記録を手で削除して起動を強行しない。
+### HTTPS接続と起動
 
-復元ではセッションと再送記録を破棄し、認証のSecurityStampも更新する。全端末で再ログインし、画面を再読み込みする。復元前の結果不明要求を同じキーのまま再送しない。
+アプリのHTTP 8080へは、信頼するプロキシだけが接続できるよう配置側で制限します。サンプルはホストへポートを公開しません。プロキシでHTTPSを終端し、元の接続情報をアプリへ転送します。アプリ側にプロキシIP・ネットワークの登録は不要です。
 
-復元後の履歴は実在する検証済みマニフェストから再構成する。自動保持の対象を示す `.owner-id` と `.owned` はアプリが管理し、外部配置したZIPへ自動保持の権限を付けない。P02のマニフェストなし退避ZIPは削除せず残すが、新CLIの検証・復元対象には含めず、対応する旧版で復旧する。
+公開URLのホストがパスキーの認証先にもなるため、利用開始前にURLを固定します。
 
-P11では実SQLite・実ZIPの自動試験、専用データでのWindows CLI実復元と模擬中断のロールバック、PCブラウザでの設定競合・手動実行・ダウンロード・削除を確認する。Proxmox上の配置・電源断・実ストレージのI/O障害・Android実機受入はP13/P14で扱い、自動試験や模擬中断と区別する。
+```sh
+docker compose --env-file .env -f compose.yml config --quiet
+docker compose --env-file .env -f compose.yml up -d --no-deps app
+docker compose --env-file .env -f compose.yml ps
+```
+
+管理者による初期アカウントの作成後、公開HTTPS URLへ接続してログインします。
+
+## バックアップ
+
+自動バックアップは初期状態で有効で、日本時間の毎日03:00に実行します。「バックアップ」画面から有効・無効と実行時刻を変更できます。
+
+- 初回は作成し、その後は保全対象に変更がなければ自動ZIPの作成を省略します。
+- 実行時刻を過ぎて起動した場合は、その日の未実行分を1回処理します。失敗した場合は翌日、または手動で再実行します。
+- 自動バックアップは成功した最新3世代を保持します。手動・更新前のバックアップは自動削除しません。
+- バックアップには商品・所持品・ゴミ箱・参照中の写真・設定・認証鍵が含まれます。復元時には全端末のログイン状態が失効します。
+
+ZIPは暗号化されません。認証に関する情報も含まれるため、保存先とダウンロードしたZIPを適切に保護し、外部への退避も行ってください。保存先は配置時の設定で指定し、Web画面からは変更できません。
+
+## 更新
+
+現在のイメージと設定を保管し、アプリを停止してバックアップを作成します。
+
+```sh
+docker compose --env-file .env -f compose.yml stop app
+docker compose --env-file .env -f compose.yml run --rm --no-deps app backup create
+```
+
+作成成功と保存先を確認してから、`.env` のイメージを新しい固定版へ変更して取得・起動します。
+
+```sh
+docker compose --env-file .env -f compose.yml pull app
+docker compose --env-file .env -f compose.yml up -d --no-deps app
+```
+
+起動時にDBの更新が必要な場合は、更新前バックアップの作成・検証後に移行します。バックアップや移行に失敗した場合は起動しません。更新後はログイン、商品・写真・所持数、バックアップを確認してください。
+
+## バックアップからの復元
+
+復元はアプリ停止中に行います。ZIPと互換性のあるアプリ版を使い、検証に成功してから復元します。
+
+```sh
+docker compose --env-file .env -f compose.yml stop app
+docker compose --env-file .env -f compose.yml run --rm --no-deps app backup verify /backups/実行ID.zip
+docker compose --env-file .env -f compose.yml run --rm --no-deps app backup restore /backups/実行ID.zip --confirm-replace
+docker compose --env-file .env -f compose.yml up -d --no-deps app
+```
+
+復元後は全端末で再ログインし、画面を再読み込みします。復元前の結果不明な操作をそのまま再送せず、最新の内容を確認してから操作してください。
+
+復元前のデータは `.rollback-*` に退避し、成功後も自動削除しません。空き容量を確保し、正常性と外部退避を確認してから整理します。古いアプリ版へ戻す場合も、その版と互換性のあるバックアップを復元してください。
+
+復元途中の `restore-state.json` が残って起動できない場合は、停止したまま次を実行します。記録を手で削除しないでください。
+
+```sh
+docker compose --env-file .env -f compose.yml run --rm --no-deps app backup rollback --confirm-rollback
+```
+
+## ログインできない場合
+
+パスワードの復旧は、アプリを停止した管理者が対話端末で行います。
+
+```sh
+docker compose --env-file .env -f compose.yml stop app
+docker compose --env-file .env -f compose.yml run --rm --no-deps app recover-account --keep-passkeys
+docker compose --env-file .env -f compose.yml up -d --no-deps app
+```
+
+`--keep-passkeys` は登録済みパスキーを保持します。削除する場合は `--clear-passkeys` を指定します。新しいパスワードは非表示で2回入力し、引数や環境変数には入れません。いずれの場合も全端末のログインが失効し、ロックアウトが解除されます。
+
+## 状態とログの確認
+
+```sh
+docker compose --env-file .env -f compose.yml exec app dotnet GoodsManager.Web.dll healthcheck
+docker compose --env-file .env -f compose.yml logs --tail 100 app
+```
+
+ヘルス確認の終了コード0は準備完了、1は未準備です。Dockerの `unhealthy` 判定だけでは自動再起動しません。
+
+ログは標準出力と `/logs` に保存します。アプリのファイルログは日次分割・1ファイル50MB・30暦日保持です。ログ・手動バックアップ・更新前バックアップ・復元退避を含め、保存領域の空き容量を確認してください。
