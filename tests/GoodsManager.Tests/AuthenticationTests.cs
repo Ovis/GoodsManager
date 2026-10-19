@@ -65,6 +65,23 @@ public sealed class AuthenticationTests
         Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(2)); // 初期カテゴリ投入 + アカウント作成
     }
 
+    /// <summary>初期登録だけでセッションが発行され、登録済みなら別アカウントを作成できない</summary>
+    [Test]
+    public async Task SetupStartsSessionAndClosesRegistration()
+    {
+        await using var app = new TestApplication();
+        using var client = Client(app);
+        Assert.That((await SetupAsync(client)).StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        var session = await client.GetFromJsonAsync<JsonElement>("/api/v1/auth/session");
+        Assert.That(session.GetProperty("user").GetProperty("loginId").GetString(), Is.EqualTo("owner"));
+        Assert.That((await client.GetFromJsonAsync<JsonElement>("/api/v1/setup/status")).GetProperty("setupRequired").GetBoolean(), Is.False);
+        using var other = Client(app);
+        var repeated = await SendAsync(other, "setup", new { loginId = "another", password = Password });
+        Assert.That(repeated.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        Assert.That((await repeated.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString(), Is.EqualTo("SETUP_COMPLETED"));
+        Assert.That((await other.GetAsync("/api/v1/auth/session")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That((await client.GetAsync("/api/v1/auth/session")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
     /// <summary>セッションクッキーと30日保持の差、無操作・操作時の絶対期限</summary>
     [TestCase(false, 7)]
     [TestCase(true, 30)]
