@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using GoodsManager.Web.Operations;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace GoodsManager.Tests;
@@ -64,47 +65,54 @@ public sealed class OperationsTests
         finally { File.Delete(directory); }
     }
 
-    /// <summary>接続元IPの登録なしで転送情報を採用し、公開Hostの検証を維持</summary>
-    [TestCase("192.0.2.10", "localhost:7443", true)]
-    [TestCase("198.51.100.12", "localhost:7443", true)]
-    [TestCase("2001:db8::10", "localhost:7443", true)]
-    [TestCase("2001:db8::11", "evil.example.invalid", false)]
-    public async Task ForwardingReliesOnDeploymentNetworkAndAllowedHost(string peer, string host, bool accepted)
+    /// <summary>本番でも公開URLの制限は配置側へ委ね、HTTPS情報だけを接続元IPの登録なしで採用</summary>
+    [TestCase("192.0.2.10", "internal:8080")]
+    [TestCase("198.51.100.12", "localhost:7443")]
+    [TestCase("2001:db8::10", "other.example.invalid:8443")]
+    public async Task ForwardingOnlyChangesSchemeAndPreservesHostAndPeer(string peer, string host)
     {
-        await using var app = new TestApplication();
-        var context = await app.Server.SendAsync(request =>
+        await using var app = new TestApplication { AuthenticationOrigin = "https://localhost:7443" };
+        await using var production = app.WithWebHostBuilder(builder => builder.UseEnvironment("Production"));
+        var context = await production.Server.SendAsync(request =>
         {
-            request.Request.Method = "GET"; request.Request.Path = "/health/live";
-            request.Connection.RemoteIpAddress = IPAddress.Parse(peer); request.Request.Scheme = "http"; request.Request.Host = new HostString("internal:8080");
-            request.Request.Headers["X-Forwarded-For"] = "198.51.100.1"; request.Request.Headers["X-Forwarded-Proto"] = "https"; request.Request.Headers["X-Forwarded-Host"] = host;
+            request.Request.Method = "GET"; request.Request.Path = "/api/v1/setup/status";
+            request.Connection.RemoteIpAddress = IPAddress.Parse(peer); request.Request.Scheme = "http"; request.Request.Host = new HostString(host);
+            request.Request.Headers["X-Forwarded-For"] = "198.51.100.1";
+            request.Request.Headers["X-Forwarded-Proto"] = "https";
+            request.Request.Headers["X-Forwarded-Host"] = "forwarded.example.invalid:9443";
         });
         Assert.That(context.Response.StatusCode, Is.EqualTo(200));
-        Assert.That(context.Request.IsHttps && context.Request.Host.Host == "localhost", Is.EqualTo(accepted));
-        Assert.That(context.Connection.RemoteIpAddress, Is.EqualTo(IPAddress.Parse("198.51.100.1")));
+        Assert.That(context.Request.IsHttps, Is.True);
+        Assert.That(context.Request.Host.Value, Is.EqualTo(host));
+        Assert.That(context.Connection.RemoteIpAddress, Is.EqualTo(IPAddress.Parse(peer)));
+        Assert.That(context.Request.Headers["X-Forwarded-For"].ToString(), Is.EqualTo("198.51.100.1"));
+        Assert.That(context.Request.Headers["X-Forwarded-Host"].ToString(), Is.EqualTo("forwarded.example.invalid:9443"));
     }
 
-    /// <summary>転送情報がなければHTTPのまま、複数段なら直近の1段だけ反映</summary>
-    [TestCase(false)]
-    [TestCase(true)]
-    public async Task ForwardingDoesNotInventHttpsOrConsumeEarlierHops(bool chain)
+    /// <summary>本番でも転送情報なしではHTTPのまま、複数段なら直近のProtoだけ反映</summary>
+    [TestCase(null, false, "")]
+    [TestCase("https, http", false, "https")]
+    [TestCase("http, https", true, "http")]
+    public async Task ForwardingDoesNotInventHttpsOrConsumeEarlierHops(string? proto, bool https, string remaining)
     {
-        await using var app = new TestApplication();
-        var context = await app.Server.SendAsync(request =>
+        await using var app = new TestApplication { AuthenticationOrigin = "https://localhost:7443" };
+        await using var production = app.WithWebHostBuilder(builder => builder.UseEnvironment("Production"));
+        var context = await production.Server.SendAsync(request =>
         {
-            request.Request.Method = "GET"; request.Request.Path = "/health/live";
+            request.Request.Method = "GET"; request.Request.Path = "/api/v1/setup/status";
             request.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.10"); request.Request.Scheme = "http";
-            request.Request.Host = new HostString("localhost:7443");
-            if (chain)
-            {
-                request.Request.Headers["X-Forwarded-For"] = "198.51.100.1, 198.51.100.2";
-                request.Request.Headers["X-Forwarded-Proto"] = "https, http";
-                request.Request.Headers["X-Forwarded-Host"] = "localhost:7443, localhost:7443";
-            }
+            request.Request.Host = new HostString("internal:8080");
+            request.Request.Headers["X-Forwarded-For"] = "198.51.100.1, 198.51.100.2";
+            request.Request.Headers["X-Forwarded-Host"] = "earlier.example.invalid, latest.example.invalid";
+            if (proto is not null) request.Request.Headers["X-Forwarded-Proto"] = proto;
         });
         Assert.That(context.Response.StatusCode, Is.EqualTo(200));
-        Assert.That(context.Request.IsHttps, Is.False);
-        Assert.That(context.Connection.RemoteIpAddress, Is.EqualTo(IPAddress.Parse(chain ? "198.51.100.2" : "192.0.2.10")));
-        if (chain) Assert.That(context.Request.Headers["X-Forwarded-Proto"].ToString(), Is.EqualTo("https"));
+        Assert.That(context.Request.IsHttps, Is.EqualTo(https));
+        Assert.That(context.Request.Host.Value, Is.EqualTo("internal:8080"));
+        Assert.That(context.Connection.RemoteIpAddress, Is.EqualTo(IPAddress.Parse("192.0.2.10")));
+        Assert.That(context.Request.Headers["X-Forwarded-Proto"].ToString(), Is.EqualTo(remaining));
+        Assert.That(context.Request.Headers["X-Forwarded-For"].ToString(), Is.EqualTo("198.51.100.1, 198.51.100.2"));
+        Assert.That(context.Request.Headers["X-Forwarded-Host"].ToString(), Is.EqualTo("earlier.example.invalid, latest.example.invalid"));
     }
 
     /// <summary>主要領域が塞がれた間は準備未完了、復旧後に正常へ戻る</summary>

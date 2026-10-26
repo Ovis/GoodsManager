@@ -45,10 +45,9 @@ builder.Services.AddSingleton<ILoggerProvider>(services => services.GetRequiredS
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardLimit = 1;
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
-    // 接続元の制限は配置側で担保し、直近のプロキシの転送情報を採用する。
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
+    // HTTPS終端・Hostの振り分け・接続制限は配置側で担保し、Secure CookieとCSRFに必要な直近1段のHTTPS情報だけを採用する。
     options.KnownProxies.Clear(); options.KnownIPNetworks.Clear();
-    options.AllowedHosts.Add(new Uri(builder.Configuration["Authentication:Origin"] ?? "https://localhost:7443").Host);
 });
 builder.Services.AddScoped<OperationVerification>();
 builder.Services.AddScoped<AccountRecovery>();
@@ -120,20 +119,6 @@ app.Use(async (context, next) =>
         context.Response.Headers.CacheControl = "private, no-store";
     }
 
-    await next(context);
-});
-app.Use(async (context, next) =>
-{
-    if (context.Request.Path.StartsWithSegments("/health")) { await next(context); return; }
-    if (!app.Environment.IsDevelopment())
-    {
-        var origin = new Uri(app.Configuration["Authentication:Origin"]!);
-        if (!context.Request.IsHttps || (!string.Equals(context.Request.Host.Host, origin.Host, StringComparison.OrdinalIgnoreCase) || (context.Request.Host.Port ?? 443) != origin.Port))
-        {
-            await Results.Problem(statusCode: 400, title: "公開HTTPSオリジンを確認してください", extensions: new Dictionary<string, object?> { ["code"] = "PUBLIC_ORIGIN_REQUIRED" }).ExecuteAsync(context);
-            return;
-        }
-    }
     await next(context);
 });
 app.UseAuthentication();

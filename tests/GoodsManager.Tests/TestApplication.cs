@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace GoodsManager.Tests;
 
@@ -11,6 +12,7 @@ public sealed class TestApplication : WebApplicationFactory<Program>
 {
     public string DataDirectory { get; }
     public bool PreserveData { get; set; }
+    public string? AuthenticationOrigin { get; init; }
     public TestClock Clock { get; } = new();
     public Action<IServiceCollection>? ConfigureTestServices { get; init; }
 
@@ -18,6 +20,17 @@ public sealed class TestApplication : WebApplicationFactory<Program>
     public TestApplication(string? dataDirectory = null)
     {
         DataDirectory = dataDirectory ?? Path.Combine(Path.GetTempPath(), "GoodsManager.Tests", Guid.NewGuid().ToString("N"));
+    }
+
+    /// <summary>認証構成はProgramのサービス登録時に読むため、起動前のホスト構成で指定</summary>
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        if (AuthenticationOrigin is not null)
+        {
+            builder.ConfigureHostConfiguration(configuration => configuration.AddInMemoryCollection(
+                new Dictionary<string, string?> { ["Authentication:Origin"] = AuthenticationOrigin }));
+        }
+        return base.CreateHost(builder);
     }
 
     /// <summary>他の試験や開発用DBを変更しない構成</summary>

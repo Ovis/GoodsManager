@@ -40,7 +40,7 @@ cp deploy/environment.example .env
 | 項目 | 設定内容 |
 | --- | --- |
 | `GOODS_MANAGER_IMAGE` | 使用するイメージの固定版タグ、またはダイジェスト |
-| `PUBLIC_ORIGIN` | 公開HTTPSオリジン。パス・クエリー・資格情報は含めない |
+| `PUBLIC_ORIGIN` | パスキーの認証先サイトを指定する公開HTTPSオリジン。パス・クエリー・資格情報は含めない |
 | `DATA_DIRECTORY` | データの保存先。コンテナ内 `/data` に接続 |
 | `BACKUP_DIRECTORY` | バックアップの保存先。コンテナ内 `/backups` に接続 |
 | `LOG_DIRECTORY` | ログの保存先。コンテナ内 `/logs` に接続 |
@@ -57,9 +57,11 @@ sudo install -d -m 0700 -o 1654 -g 1654 /srv/goodsmanager/data /srv/goodsmanager
 
 ### HTTPS接続と起動
 
-アプリのHTTP 8080へは、信頼するプロキシだけが接続できるよう配置側で制限します。サンプルはホストへポートを公開しません。プロキシでHTTPSを終端し、元の接続情報をアプリへ転送します。アプリ側にプロキシIP・ネットワークの登録は不要です。
+HTTPS終端、公開ホストによる振り分け、アプリのHTTP 8080への接続制限は配置側で設定します。アプリ側では公開URLのHTTPS・Host・ポートの一致を検査せず、プロキシIP・ネットワークの登録も行いません。サンプルはホストへポートを公開しません。共有ネットワークを使う場合は、接続済みの他のコンテナからも到達できるため、そのネットワーク内を信頼する構成で利用します。
 
-公開URLのホストがパスキーの認証先にもなるため、利用開始前にURLを固定します。
+プロキシは元のHostを保持し、`X-Forwarded-Proto: https` を付けて転送してください。アプリは直近1段のHTTPS情報だけを取り込みます。この情報はSecure CookieとCSRF保護に必要です。クライアントIP・Hostの転送ヘッダーは取り込みません。
+
+`PUBLIC_ORIGIN` はプロキシの接続元を指定する設定ではなく、パスキーの認証先サイトを指定する設定です。公開URLのホストが固定のRP IDになるため、利用開始前にURLを固定します。Secure Cookie・CSRF保護と、パスキーの認証先の検証は引き続き有効です。
 
 ```sh
 docker compose --env-file .env -f compose.yml config --quiet
