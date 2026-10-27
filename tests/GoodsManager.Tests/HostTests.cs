@@ -17,9 +17,10 @@ public sealed class HostTests
         Assert.That((await client.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
-    /// <summary>初期登録URLを直接開いても認証前にキャッシュ不可のSPAを返す</summary>
-    [Test]
-    public async Task SetupPageCanBeOpenedDirectly()
+    /// <summary>初期登録・アカウント設定のURLを直接開いても認証前にキャッシュ不可のSPAを返す</summary>
+    [TestCase("/setup")]
+    [TestCase("/account")]
+    public async Task AccountPagesCanBeOpenedDirectly(string path)
     {
         await using var factory = new TestApplication();
         var webRoot = Path.Combine(factory.DataDirectory, "webroot");
@@ -27,7 +28,7 @@ public sealed class HostTests
         await File.WriteAllTextAsync(Path.Combine(webRoot, "index.html"), "<!doctype html><title>Setup page</title>");
         await using var configured = factory.WithWebHostBuilder(builder => builder.UseWebRoot(webRoot));
         using var client = configured.CreateClient();
-        var response = await client.GetAsync("/setup");
+        var response = await client.GetAsync(path);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/html"));
         Assert.That(response.Headers.CacheControl?.NoStore, Is.True);
