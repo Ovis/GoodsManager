@@ -14,7 +14,7 @@ export class BookLookupStore{
   busy=false;error='';notice='';candidates:BookMetadata[]=[];publisherBook:BookMetadata|null=null;
   private generation=0;private controller:AbortController|null=null;private inputKey:string;
   private active=true;private version=0;private listeners=new Set<()=>void>();
-  constructor(private store:RegistrationStore,private index:number,private disabled:()=>boolean=()=>false,private transport:Transport=api){this.inputKey=keyOf(store,index);}
+  constructor(private store:RegistrationStore,private index:number,private disabled:()=>boolean=()=>false,private transport:Transport=store.request){this.inputKey=keyOf(store,index);}
   subscribe=(fn:()=>void)=>{this.listeners.add(fn);return()=>this.listeners.delete(fn);};snapshot=()=>this.version;
   private notify(){this.version++;for(const fn of this.listeners)fn();}
   private blocked(){return this.store.blocked||this.disabled();}

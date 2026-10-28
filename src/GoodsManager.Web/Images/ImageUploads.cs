@@ -30,16 +30,20 @@ public sealed class ImageActivity
 }
 public sealed class ImageUploads(AppDbContext db, SignInManager<AppUser> signIn, AuthWriteGate gate, IImageFiles files, ImageLimits limits, ImageActivity activity, TimeProvider clock)
 {
-    public static object Status(TemporaryUpload upload, DateTimeOffset now)
+    public static object Status(TemporaryUpload upload, DateTimeOffset now, Guid? collectionId = null)
     {
         var expired = upload.State is not ("consumed" or "cancelled") && upload.ExpiresAt <= now;
         var state = expired ? "cancelled" : upload.State;
         return new
-    {
-        id = upload.Id, state, upload.ExpiresAt,
-        previewUrl = state == "ready" ? $"/api/v1/temporary-uploads/{upload.Id:D}/preview" : null,
-        errorCode = expired ? "UPLOAD_EXPIRED" : upload.ErrorCode, progressStage = state switch { "pending" => "queued", "processing" => "converting", "ready" => "complete", _ => state }, retryAfterSeconds = state is "pending" or "processing" ? 2 : (int?)null
-    };
+        {
+            id = upload.Id,
+            state,
+            upload.ExpiresAt,
+            previewUrl = state == "ready" ? $"/api/v1/temporary-uploads/{upload.Id:D}/preview?collectionId={collectionId:D}" : null,
+            errorCode = expired ? "UPLOAD_EXPIRED" : upload.ErrorCode,
+            progressStage = state switch { "pending" => "queued", "processing" => "converting", "ready" => "complete", _ => state },
+            retryAfterSeconds = state is "pending" or "processing" ? 2 : (int?)null
+        };
     }
     public async Task<TemporaryUpload> OwnedAsync(Guid id, System.Security.Claims.ClaimsPrincipal principal, CancellationToken token)
     {
@@ -63,7 +67,8 @@ public sealed class ImageUploads(AppDbContext db, SignInManager<AppUser> signIn,
             var prior = await db.Set<TemporaryUpload>().AsNoTracking().SingleOrDefaultAsync(x => x.UserId == userId && x.ClientUploadKey == key && x.ReplayUntil > now, token);
             if (prior is null)
             {
-                if (await db.Set<TemporaryUpload>().CountAsync(x => x.State != "consumed" && x.State != "cancelled" && x.ExpiresAt > now, token) >= limits.TemporaryMaxCount) throw new Masters.MasterProblem(429, "UPLOAD_COUNT_LIMIT");
+                // 一時領域の資源制限はアプリ全体で共有する。所有者の照会・再送は上の所属フィルターを維持する。
+                if (await db.Set<TemporaryUpload>().IgnoreQueryFilters().CountAsync(x => x.State != "consumed" && x.State != "cancelled" && x.ExpiresAt > now, token) >= limits.TemporaryMaxCount) throw new Masters.MasterProblem(429, "UPLOAD_COUNT_LIMIT");
                 if (activity.TemporaryBytes(files.Root) + Interlocked.Read(ref activity.ReservedBytes) + limits.UploadMaxBytes > limits.TemporaryMaxBytes) throw new Masters.MasterProblem(507, "TEMPORARY_STORAGE_LIMIT");
                 staging = files.NewStagingPath(); lock (activity.Receiving) activity.Receiving.Add(staging);
             }
@@ -95,7 +100,7 @@ public sealed class ImageUploads(AppDbContext db, SignInManager<AppUser> signIn,
                 if (old is not null && old.ReplayUntil > now)
                 {
                     if (old.SourceSha256 != source || old.ByteLength != length) throw new Masters.MasterProblem(409, "CLIENT_UPLOAD_KEY_REUSED");
-                    return Status(old, now);
+                    return Status(old, now, db.CollectionId);
                 }
                 if (old is not null) { db.Remove(old); await db.SaveChangesAsync(token); }
                 if (staging is null) throw new Masters.MasterProblem(409, "UPLOAD_REPLAY_EXPIRED");
@@ -103,7 +108,7 @@ public sealed class ImageUploads(AppDbContext db, SignInManager<AppUser> signIn,
                 var upload = new TemporaryUpload { Id = Guid.NewGuid(), UserId = user.Id, ClientUploadKey = key, StagingPath = staging, SourceSha256 = source, ByteLength = length, PolicyHash = policy.Hash, PolicyJson = policy.Json, CreatedAt = now, UpdatedAt = now, ExpiresAt = now.Add(limits.UploadLifetime), ReplayUntil = now.Add(limits.ReplayLifetime) };
                 db.Add(upload); await db.SaveChangesAsync(token); await transaction.CommitAsync(token);
                 lock (activity.Receiving) activity.Receiving.Remove(staging); staging = null;
-                return Status(upload, now);
+                return Status(upload, now, db.CollectionId);
             }
             finally { gate.Semaphore.Release(); }
         }

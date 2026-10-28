@@ -44,7 +44,7 @@ function adopt(value, id) {
 }
 async function session() {
   loggedIn = false; selected = null;
-  try { const value = await api.read("auth/session"); loggedIn = true; show("session", value); }
+  try { const value = await api.connect(); loggedIn = true; show("session", value); }
   catch (error) { show("session", error instanceof ApiFailure ? { status: error.status, code: error.code } : error.message); }
 }
 $("session-refresh").addEventListener("click", () => run(session));

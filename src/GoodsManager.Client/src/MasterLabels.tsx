@@ -1,15 +1,17 @@
+import {useCollectionApi} from './CollectionContext';
 import {useEffect,useState} from 'react';
 import {loadPickerNames} from './master-picker-data';
 
 /** 表示用の名前だけを取得し、送信や選択には元のIDを使う。 */
 export function useMasterLabels(kind:string,ids:string[],version=''){
+ const request=useCollectionApi();
   const key=kind+'|'+ids.join('|')+'|'+version;
   const [result,setResult]=useState<{key:string;names:Record<string,string>;failed:boolean}>({key:'',names:{},failed:false});
   const [retry,setRetry]=useState(0);
   useEffect(()=>{
     const abort=new AbortController();
     setResult({key,names:{},failed:false});
-    if(ids.length)void loadPickerNames(kind,ids,abort.signal).then(names=>{
+    if(ids.length)void loadPickerNames(kind,ids,abort.signal,request).then(names=>{
       if(!abort.signal.aborted)setResult({key,names,failed:false});
     }).catch(()=>{if(!abort.signal.aborted)setResult({key,names:{},failed:true});});
     return()=>abort.abort();

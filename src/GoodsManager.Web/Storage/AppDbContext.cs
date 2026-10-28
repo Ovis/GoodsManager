@@ -12,6 +12,8 @@ namespace GoodsManager.Web.Storage;
 /// <summary>現在の工程で必要な永続データ</summary>
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityUserContext<AppUser, Guid>(options)
 {
+    // nullは起動処理・CLI・ワーカー専用。HTTPの業務APIでは参加確認後に必ず設定する。
+    public Guid? CollectionId { get; set; }
     public DbSet<SystemState> SystemStates => Set<SystemState>();
     public DbSet<AuthTicket> AuthTickets => Set<AuthTicket>();
 
@@ -35,14 +37,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         });
         modelBuilder.Entity<AppUser>(entity =>
         {
-            entity.HasIndex(x => x.Singleton).IsUnique();
             entity.Property(x => x.UserName).IsRequired();
             entity.Property(x => x.NormalizedUserName).IsRequired();
             entity.Property(x => x.PasswordHash).IsRequired();
             entity.Property(x => x.SecurityStamp).IsRequired();
             entity.ToTable("AspNetUsers", table =>
             {
-                table.HasCheckConstraint("CK_User_Singleton", "Singleton=1");
                 table.HasCheckConstraint("CK_User_Name", "length(UserName) BETWEEN 1 AND 64 AND UserName NOT GLOB '*[^a-zA-Z0-9._-]*'");
                 table.HasCheckConstraint("CK_User_Failures", "AccessFailedCount>=0");
             });
@@ -69,8 +69,25 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         SearchSchema.Configure(modelBuilder);
         ImageSchema.Configure(modelBuilder);
         GoodsManager.Web.Backups.BackupSchema.Configure(modelBuilder);
+        Collections.CollectionSchema.Configure(modelBuilder);
+        foreach (var type in Collections.CollectionSchema.ScopedTypes)
+            typeof(AppDbContext).GetMethod(nameof(ApplyCollectionFilter), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.MakeGenericMethod(type).Invoke(this, [modelBuilder]);
         StorageValues.ApplyConventions(modelBuilder);
     }
+
+    private void ApplyCollectionFilter<T>(ModelBuilder model) where T : class => model.Entity<T>().HasQueryFilter(entity => !CollectionId.HasValue || EF.Property<Guid>(entity, "CollectionId") == CollectionId.GetValueOrDefault());
+    private void ApplyCollectionWrites()
+    {
+        foreach (var entry in ChangeTracker.Entries().Where(e => Collections.CollectionSchema.ScopedTypes.Contains(e.Metadata.ClrType) && e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+        {
+            var property = entry.Property("CollectionId");
+            if (entry.State == EntityState.Added && (Guid)property.CurrentValue! == Guid.Empty) property.CurrentValue = CollectionId ?? Collections.CollectionSchema.DefaultId;
+            if (CollectionId.HasValue && (Guid)property.CurrentValue! != CollectionId.Value || entry.State != EntityState.Added && property.IsModified)
+                throw new Masters.MasterProblem(403, "COLLECTION_ACCESS_DENIED");
+        }
+    }
+    public override int SaveChanges(bool acceptAllChangesOnSuccess) { ApplyCollectionWrites(); return base.SaveChanges(acceptAllChangesOnSuccess); }
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) { ApplyCollectionWrites(); return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken); }
 }
 
 /// <summary>保全対象データの変更番号。運用履歴だけの更新では増やさない</summary>

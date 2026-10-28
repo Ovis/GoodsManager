@@ -5,8 +5,6 @@ using GoodsManager.Web.Auth;
 using GoodsManager.Web.Storage;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using static GoodsManager.Tests.AuthenticationTests;
@@ -234,9 +232,9 @@ public sealed class PasskeyTests
         Assert.That((await SendAsync(replay, "auth/passkey/verify", request)).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
-    /// <summary>SQ08/SQ10: データ入り旧スキーマの再構築でBLOB・JSON・制約と認証を維持</summary>
+    /// <summary>再起動後もパスキーのBLOB・JSON・制約と認証を維持</summary>
     [Test]
-    public async Task MetadataMigrationPreservesExistingPasskeyAndRejectsInvalidJsonContent()
+    public async Task RestartPreservesExistingPasskeyAndRejectsInvalidJsonContent()
     {
         string directory;
         using var authenticator = new TestAuthenticator();
@@ -248,12 +246,6 @@ public sealed class PasskeyTests
             await RegisterAsync(owner, authenticator, "移行前😀");
         }
 
-        var connectionString = new DatabaseRuntime(directory).ConnectionString;
-        await using (var previous = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connectionString).Options))
-        {
-            await previous.GetService<IMigrator>().MigrateAsync("20261018032938_IdentityPasswordAuthentication");
-        }
-
         await using var upgraded = new TestApplication(directory);
         using var login = Client(upgraded);
         var response = await SendAsync(login, "auth/passkey/options", new { rememberMe = false });
@@ -261,7 +253,7 @@ public sealed class PasskeyTests
         response = await SendAsync(login, "auth/passkey/verify", new { challengeId = options.GetProperty("challengeId"), credential = authenticator.Get(options.GetProperty("publicKeyOptions")) });
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That((await login.GetFromJsonAsync<JsonElement>("/api/v1/account/passkeys"))[0].GetProperty("displayName").GetString(), Is.EqualTo("移行前😀"));
-        Assert.That(Directory.GetFiles(Path.Combine(directory, "pre-migration"), "*.zip"), Is.Not.Empty);
+        Assert.That(Directory.Exists(Path.Combine(directory, "pre-migration")), Is.False);
         await using var scope = upgraded.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         foreach (var sql in new[]
@@ -282,4 +274,15 @@ public sealed class PasskeyTests
         passkey.Name = "\0";
         Assert.Throws<InvalidDataException>(() => PasskeyMetadata.RequireValid(passkey));
     }
+    [TestCase("owner", HttpStatusCode.Unauthorized)]
+    [TestCase("second.owner", HttpStatusCode.OK)]
+    public async Task DiscoverablePasskeyBindsRecoveredUserGenerationIndependently(string recoveredLogin, HttpStatusCode expected)
+    {
+        await using var app = new TestApplication(); using var owner = Client(app); await SetupAsync(owner); using var authenticator = new TestAuthenticator(); await RegisterAsync(owner, authenticator, "所有者の端末");
+        await using (var scope = app.Services.CreateAsyncScope()) Assert.That((await scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>().CreateAsync(new AppUser { Id = Guid.NewGuid(), UserName = "second.owner", LockoutEnabled = true }, Password)).Succeeded, Is.True);
+        using var anonymous = Client(app); var optionsResponse = await SendAsync(anonymous, "auth/passkey/options", new { rememberMe = false }); Assert.That(optionsResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK)); var options = await optionsResponse.Content.ReadFromJsonAsync<JsonElement>(); var credential = authenticator.Get(options.GetProperty("publicKeyOptions"));
+        await using (var scope = app.Services.CreateAsyncScope()) Assert.That((await scope.ServiceProvider.GetRequiredService<AccountRecovery>().ResetAsync("recovered-test-password", false, recoveredLogin)).Succeeded, Is.True);
+        var response = await SendAsync(anonymous, "auth/passkey/verify", new { challengeId = options.GetProperty("challengeId"), credential }); Assert.That(response.StatusCode, Is.EqualTo(expected), await response.Content.ReadAsStringAsync());
+    }
+
 }

@@ -18,13 +18,14 @@ public sealed record SearchPage(ProductSummary[] Items, int Page, int PageSize, 
 public sealed class ProductSearch(AppDbContext db)
 {
     internal sealed record Plan(string From, string Where, string Rank, Dictionary<string, object> Parameters);
-    internal static Plan Build(SearchQuery query, bool trash = false)
+    internal static Plan Build(SearchQuery query, bool trash = false, Guid? collectionId = null)
     {
         var values = new Dictionary<string, object>();
         string Param(object value) { var key = "@v" + values.Count; values.Add(key, value); return key; }
         string In(IEnumerable<string> source) => string.Join(',', source.Select(x => Param(x)));
         string Ids(string key) => In(query.Ids.GetValueOrDefault(key, []).Select(StorageValues.FormatId));
         var where = new List<string> { trash ? "p.DeletedAt IS NOT NULL" : "p.DeletedAt IS NULL" };
+        if (collectionId.HasValue) where.Add("p.CollectionId=" + Param(StorageValues.FormatId(collectionId.Value)));
         var cte = "";
         if (query.Ids.GetValueOrDefault("categoryIds", []).Length > 0)
         {
@@ -106,7 +107,7 @@ public sealed class ProductSearch(AppDbContext db)
     }
     public async Task<SearchPage> PageAsync(SearchQuery query, CancellationToken token, bool trash = false)
     {
-        var plan = Build(query, trash);
+        var plan = Build(query, trash, db.CollectionId);
         await using var countCommand = Command("SELECT COUNT(*) FROM (" + plan.From + plan.Where + ")", plan.Parameters);
         var count = Convert.ToInt64(await countCommand.ExecuteScalarAsync(token), CultureInfo.InvariantCulture);
         var pages = (count + query.PageSize - 1) / query.PageSize;
@@ -152,12 +153,12 @@ public sealed class ProductSearch(AppDbContext db)
         var images = await (from link in db.Set<ProductImage>().AsNoTracking() join asset in db.Set<ImageAsset>() on link.ImageAssetId equals asset.Id where ids.Contains(link.ProductId) && link.IsPrimary select new { Link = link, asset.KeepOriginal }).ToArrayAsync(token);
         return rows.Select(r => new ProductSummary(r.Id, r.Name, r.Category, works.Where(w => w.ProductId == r.Id).Select(w => new NamedRef(w.Id, w.Name)).ToArray(), r.Total,
             own.Where(x => x.ProductId == r.Id).Select(x => x.Condition).Distinct().Order(StringComparer.Ordinal).ToArray(),
-            own.Where(x => x.ProductId == r.Id && x.StorageLocation is not null).Select(x => x.StorageLocation!).Distinct().Order(StringComparer.Ordinal).ToArray(), images.Where(x => x.Link.ProductId == r.Id).Select(x => ImageLinks.Ref(x.Link, true, x.KeepOriginal)).FirstOrDefault(), r.CreatedAt, r.UpdatedAt, r.Revision.ToString(CultureInfo.InvariantCulture), r.DeletedAt)).ToArray();
+            own.Where(x => x.ProductId == r.Id && x.StorageLocation is not null).Select(x => x.StorageLocation!).Distinct().Order(StringComparer.Ordinal).ToArray(), images.Where(x => x.Link.ProductId == r.Id).Select(x => ImageLinks.Ref(x.Link, true, x.KeepOriginal, db.CollectionId)).FirstOrDefault(), r.CreatedAt, r.UpdatedAt, r.Revision.ToString(CultureInfo.InvariantCulture), r.DeletedAt)).ToArray();
     }
     public async Task<object> SummaryAsync(string inventory, CancellationToken token)
     {
         var query = new SearchQuery { Inventory = inventory, PageSize = 25 };
-        var plan = Build(query);
+        var plan = Build(query, false, db.CollectionId);
         await using var command = Command("SELECT COUNT(*), COALESCE(SUM(TotalQuantity),0) FROM (" + plan.From + plan.Where + ")", plan.Parameters);
         long count, total;
         await using (var reader = await command.ExecuteReaderAsync(token)) { await reader.ReadAsync(token); count = reader.GetInt64(0); total = StorageValues.RequireSafeTotal(reader.GetInt64(1)); }

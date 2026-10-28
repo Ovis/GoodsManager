@@ -153,7 +153,7 @@ public sealed partial class ProductOperations(AppDbContext db)
         var itemIds = items.Select(x => x.Id).ToArray();
         var itemImages = await (from link in db.Set<InventoryItemImage>().AsNoTracking() join asset in db.Set<ImageAsset>() on link.ImageAssetId equals asset.Id where itemIds.Contains(link.InventoryItemId) orderby link.SortOrder, link.Id select new { Link = link, asset.KeepOriginal }).ToArrayAsync(token);
         return new(product.Revision.ToString(CultureInfo.InvariantCulture), Etag(product), Total(lots, items), lots.Select(x => new LotView(x.Id, x.Quantity, x.Condition, x.StorageLocation, x.PurchasePlace, x.Memo, x.CreatedAt, x.UpdatedAt)).ToArray(),
-            items.Select(x => new ItemView(x.Id, x.Condition, x.StorageLocation, x.PurchasePlace, x.Memo, x.CreatedAt, x.UpdatedAt, itemImages.Where(i => i.Link.InventoryItemId == x.Id).Select(i => ImageLinks.Ref(i.Link, false, i.KeepOriginal)).ToArray())).ToArray(), refs);
+            items.Select(x => new ItemView(x.Id, x.Condition, x.StorageLocation, x.PurchasePlace, x.Memo, x.CreatedAt, x.UpdatedAt, itemImages.Where(i => i.Link.InventoryItemId == x.Id).Select(i => ImageLinks.Ref(i.Link, false, i.KeepOriginal, db.CollectionId)).ToArray())).ToArray(), refs);
     }
 
     internal static long Total(IEnumerable<InventoryLot> lots, IEnumerable<InventoryItem> items)

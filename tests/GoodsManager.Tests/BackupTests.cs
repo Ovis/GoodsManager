@@ -400,10 +400,15 @@ public sealed class BackupTests
     }
 
 
-    /// <summary>P10の正規スキーマを含むZIPは、準備領域だけを現行版へ移行して復元</summary>
+    /// <summary>正規スキーマを含むZIPを検証し、準備領域から復元</summary>
     [Test]
-    public async Task RestoreMigratesAnOlderSupportedSchemaBeforeSwitching()
+    public async Task RestorePreservesCurrentSchemaAndImagesBeforeSwitching()
     {
+        var created = await Write("collections", new { name = "バックアップに含める別コレクション" }, Guid.NewGuid()); Assert.That(created.StatusCode, Is.EqualTo(HttpStatusCode.Created)); var collectionId = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        await using (var seedScope = app.Services.CreateAsyncScope())
+        {
+            var seedDb = seedScope.ServiceProvider.GetRequiredService<AppDbContext>(); seedDb.CollectionId = collectionId; var now = app.Clock.GetUtcNow(); var category = new Category { Id = Guid.NewGuid(), Name = "別カテゴリ", NormalizedName = "別カテゴリ", CreatedAt = now, UpdatedAt = now }; seedDb.Add(category); seedDb.Add(new Product { Id = Guid.NewGuid(), Name = "別コレクションの商品", NormalizedName = "別コレクションの商品", CategoryId = category.Id, CreatedAt = now, UpdatedAt = now }); await seedDb.SaveChangesAsync();
+        }
         app.PreserveData = true; await app.DisposeAsync();
         using (var runtime = new DatabaseRuntime(app.DataDirectory))
         {
@@ -412,7 +417,6 @@ public sealed class BackupTests
             {
                 await old.Database.OpenConnectionAsync();
                 await BackupSnapshot.SanitizeAsync((SqliteConnection)old.Database.GetDbConnection(), default);
-                await old.GetService<Microsoft.EntityFrameworkCore.Migrations.IMigrator>().MigrateAsync("20261018122826_TrashAndDeletionResponses");
                 DatabaseMaintenance.CreateFullSnapshot((SqliteConnection)old.Database.GetDbConnection(), app.DataDirectory, Options(), new object());
             }
             SqliteConnection.ClearAllPools();
@@ -423,6 +427,8 @@ public sealed class BackupTests
         Assert.That((await owner.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await using var scope = app.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.That(await db.Set<BackupSettings>().CountAsync(), Is.EqualTo(1)); Assert.That(await db.Set<ProductImage>().CountAsync(), Is.EqualTo(1)); Assert.That(db.Database.HasPendingModelChanges(), Is.False);
+        Assert.That(await db.Set<GoodsManager.Web.Collections.CollectionSpace>().CountAsync(), Is.EqualTo(2)); Assert.That(await db.Set<GoodsManager.Web.Collections.CollectionMember>().CountAsync(), Is.EqualTo(2)); Assert.That((await db.Users.SingleAsync()).IsAdministrator, Is.True);
+        db.CollectionId = collectionId; Assert.That((await db.Set<Product>().SingleAsync()).Name, Is.EqualTo("別コレクションの商品"));
     }
 
     /// <summary>移行履歴が正しくても実テーブルを欠くZIPは、現DBを置き換える前に拒否</summary>

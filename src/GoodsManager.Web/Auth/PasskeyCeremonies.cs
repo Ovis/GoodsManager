@@ -10,7 +10,7 @@ public sealed class PasskeyCeremonies(TimeProvider clock)
     private readonly ConcurrentDictionary<Guid, Ceremony> pending = new();
 
     /// <summary>ブラウザの前回の処理を破棄し、5分間だけ保持</summary>
-    public Guid Begin(HttpContext context, string purpose, AppUser? user, bool rememberMe = false)
+    public Guid Begin(HttpContext context, string purpose, AppUser? user, bool rememberMe = false, IReadOnlyDictionary<Guid, string?>? userStamps = null)
     {
         foreach (var item in pending.Where(x => x.Value.ExpiresAt <= clock.GetUtcNow()))
         {
@@ -24,7 +24,7 @@ public sealed class PasskeyCeremonies(TimeProvider clock)
 
         var id = Guid.NewGuid();
         var expires = clock.GetUtcNow().AddMinutes(5);
-        pending[id] = new Ceremony(purpose, user?.Id, user?.SecurityStamp, expires, rememberMe);
+        pending[id] = new Ceremony(purpose, user?.Id, user?.SecurityStamp, expires, rememberMe, userStamps);
         context.Response.Cookies.Append(CookieName, id.ToString("D"), new CookieOptions { Secure = true, HttpOnly = true, SameSite = SameSiteMode.Strict, Path = "/", MaxAge = TimeSpan.FromMinutes(5) });
         return id;
     }
@@ -56,4 +56,4 @@ public sealed class PasskeyCeremonies(TimeProvider clock)
 }
 
 /// <summary>暗号検証の状態はIdentityが保持し、この記録には重複保存しない</summary>
-public sealed record Ceremony(string Purpose, Guid? UserId, string? SecurityStamp, DateTimeOffset ExpiresAt, bool RememberMe);
+public sealed record Ceremony(string Purpose, Guid? UserId, string? SecurityStamp, DateTimeOffset ExpiresAt, bool RememberMe, IReadOnlyDictionary<Guid, string?>? UserStamps = null);

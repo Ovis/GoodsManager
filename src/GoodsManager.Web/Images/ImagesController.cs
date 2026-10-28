@@ -20,7 +20,7 @@ public sealed class ImagesController(AppDbContext db, ImageUploads uploads, Prod
     [DisableRequestSizeLimit]
     public async Task<IActionResult> Upload() { var status = await uploads.AcceptAsync(HttpContext); Response.Headers.RetryAfter = "2"; return Accepted(status); }
     [HttpGet("temporary-uploads/{id:guid}")]
-    public async Task<IActionResult> Status(Guid id) { Response.Headers.RetryAfter = "2"; return Ok(ImageUploads.Status(await uploads.OwnedAsync(id, User, HttpContext.RequestAborted), clock.GetUtcNow())); }
+    public async Task<IActionResult> Status(Guid id) { Response.Headers.RetryAfter = "2"; return Ok(ImageUploads.Status(await uploads.OwnedAsync(id, User, HttpContext.RequestAborted), clock.GetUtcNow(), db.CollectionId)); }
     [HttpDelete("temporary-uploads/{id:guid}")]
     public async Task<IActionResult> Cancel(Guid id) { await uploads.CancelAsync(HttpContext, id); return NoContent(); }
     [HttpGet("products/{id:guid}/images")]

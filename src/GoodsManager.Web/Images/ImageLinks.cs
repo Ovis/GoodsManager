@@ -42,12 +42,12 @@ public sealed record ImageEditEntry(Guid? LinkId, string? ClientRef, Guid? Tempo
 public sealed class ImageLinks(AppDbContext db, TimeProvider clock)
 {
     public int DeduplicatedCount { get; private set; }
-    public static ImageRef Ref(IImageLink link, bool primary, bool original) => new(link.Id, link.ImageAssetId, link.SortOrder, primary,
-        $"/media/assets/{link.ImageAssetId:D}/thumbnail", $"/media/assets/{link.ImageAssetId:D}/display", original ? $"/media/assets/{link.ImageAssetId:D}/original" : null);
+    public static ImageRef Ref(IImageLink link, bool primary, bool original, Guid? collectionId = null) => new(link.Id, link.ImageAssetId, link.SortOrder, primary,
+        $"/media/assets/{link.ImageAssetId:D}/thumbnail?collectionId={collectionId:D}", $"/media/assets/{link.ImageAssetId:D}/display?collectionId={collectionId:D}", original ? $"/media/assets/{link.ImageAssetId:D}/original?collectionId={collectionId:D}" : null);
     public static async Task<ImageRef[]> ProductRefsAsync(AppDbContext db, Guid productId, CancellationToken token)
     {
         var data = await (from link in db.Set<ProductImage>().AsNoTracking() join asset in db.Set<ImageAsset>() on link.ImageAssetId equals asset.Id where link.ProductId == productId orderby link.SortOrder, link.Id select new { Link = link, asset.KeepOriginal }).ToArrayAsync(token);
-        return data.Select(x => Ref(x.Link, x.Link.IsPrimary, x.KeepOriginal)).ToArray();
+        return data.Select(x => Ref(x.Link, x.Link.IsPrimary, x.KeepOriginal, db.CollectionId)).ToArray();
     }
     /// <summary>既存の関連と代表を保ち、新規アップロードだけを末尾へ追加</summary>
     public async Task AppendProductAsync(Guid productId, Guid userId, Guid[] uploads, CancellationToken token)

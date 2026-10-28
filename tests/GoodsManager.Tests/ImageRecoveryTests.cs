@@ -9,8 +9,6 @@ using GoodsManager.Web.Products;
 using GoodsManager.Web.Storage;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using static GoodsManager.Tests.AuthenticationTests;
@@ -66,7 +64,7 @@ public sealed class ImageRecoveryTests
         var error = Assert.ThrowsAsync<ImageProblem>(async () => await new IsolatedImageConverter(new ImageLimits { WorkerMemoryBytes = 1 }).ConvertAsync(job, default)); Assert.That(error!.Message, Is.EqualTo("IMAGE_MEMORY_LIMIT"));
     }
     [Test]
-    public async Task P06UpgradePreservesBusinessRevisionKeysAndTicket()
+    public async Task RestartPreservesImageSettingsRevisionKeysAndTicket()
     {
         string directory, cookie; long revision;
         await using (var first = new TestApplication { PreserveData = true })
@@ -74,13 +72,11 @@ public sealed class ImageRecoveryTests
             directory = first.DataDirectory; using var client = Client(first); var setup = await SetupAsync(client); cookie = setup.Headers.GetValues("Set-Cookie").Single(x => x.StartsWith("__Host-GoodsManager=")).Split(';')[0];
             await using var scope = first.Services.CreateAsyncScope(); revision = (await scope.ServiceProvider.GetRequiredService<AppDbContext>().SystemStates.SingleAsync()).DataRevision;
         }
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(new DatabaseRuntime(directory).ConnectionString).Options;
-        await using (var previous = new AppDbContext(options)) await previous.GetService<IMigrator>().MigrateAsync("20261018072500_SearchFoundation");
         var keys = Directory.GetFiles(Path.Combine(directory, "keys")).ToDictionary(x => Path.GetFileName(x)!, File.ReadAllText);
         await using var upgraded = new TestApplication(directory); using var restored = Client(upgraded); restored.DefaultRequestHeaders.Add("Cookie", cookie); Assert.That((await restored.GetAsync("/api/v1/auth/session")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await using var afterScope = upgraded.Services.CreateAsyncScope(); var db = afterScope.ServiceProvider.GetRequiredService<AppDbContext>(); Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(revision)); Assert.That((await db.Set<ImageSettings>().SingleAsync()).KeepOriginal, Is.False); Assert.That(db.Database.HasPendingModelChanges(), Is.False);
         foreach (var key in keys) Assert.That(File.ReadAllText(Path.Combine(directory, "keys", key.Key!)), Is.EqualTo(key.Value));
-        using var zip = ZipFile.OpenRead(Directory.GetFiles(Path.Combine(directory, "pre-migration"), "*.zip").Single()); Assert.That(zip.GetEntry("goods-manager.db"), Is.Not.Null);
+        Assert.That(Directory.Exists(Path.Combine(directory, "pre-migration")), Is.False);
     }
     [Test]
     public async Task OrphanGcReclaimsOnlyManagedExpiredPathsAndLeavesActiveJobs()

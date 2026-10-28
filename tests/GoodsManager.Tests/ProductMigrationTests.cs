@@ -1,11 +1,8 @@
-using System.IO.Compression;
 using System.Net;
 using GoodsManager.Web.Masters;
 using GoodsManager.Web.Products;
 using GoodsManager.Web.Storage;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using static GoodsManager.Tests.AuthenticationTests;
 
@@ -14,7 +11,7 @@ namespace GoodsManager.Tests;
 public sealed class ProductMigrationTests
 {
     [Test]
-    public async Task P04DataKeysAndTicketSurviveSchemaOnlyUpgradeWithBackup()
+    public async Task RestartPreservesMastersBusinessRevisionAndAuthentication()
     {
         string directory, cookie;
         var workId = Guid.NewGuid();
@@ -33,7 +30,6 @@ public sealed class ProductMigrationTests
         var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(new DatabaseRuntime(directory).ConnectionString).Options;
         await using (var previous = new AppDbContext(options))
         {
-            await previous.GetService<IMigrator>().MigrateAsync("20261018051908_MasterFoundation");
             await previous.Database.ExecuteSqlRawAsync("UPDATE SystemState SET DataRevision=77");
         }
         var keys = Directory.GetFiles(Path.Combine(directory, "keys")).ToDictionary(x => Path.GetFileName(x)!, File.ReadAllText);
@@ -49,12 +45,6 @@ public sealed class ProductMigrationTests
         Assert.That(await after.Set<Product>().CountAsync(), Is.Zero);
         Assert.That(after.Database.HasPendingModelChanges(), Is.False);
         foreach (var key in keys) Assert.That(File.ReadAllText(Path.Combine(directory, "keys", key.Key!)), Is.EqualTo(key.Value));
-        using var zip = ZipFile.OpenRead(Directory.GetFiles(Path.Combine(directory, "pre-migration"), "*.zip").Single());
-        var file = Path.Combine(directory, "before.db");
-        zip.GetEntry("goods-manager.db")!.ExtractToFile(file);
-        await using var snapshot = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite($"Data Source={file};Pooling=False").Options);
-        Assert.That((await snapshot.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(77));
-        Assert.That(await snapshot.Set<Work>().AnyAsync(x => x.Id == workId), Is.True);
-        Assert.That((await snapshot.Database.GetAppliedMigrationsAsync()).Last(), Is.EqualTo("20261018051908_MasterFoundation"));
+        Assert.That(Directory.Exists(Path.Combine(directory, "pre-migration")), Is.False);
     }
 }

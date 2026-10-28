@@ -20,6 +20,6 @@ public static class CollectionPages
             context.Response.Headers[HeaderNames.XContentTypeOptions] = "nosniff";
             await Results.File(file, "text/html; charset=utf-8").ExecuteAsync(context);
         }
-        foreach (var path in new[] { "/", "/collection", "/login", "/setup", "/account", "/register", "/masters", "/backups", "/trash", "/trash/products/{id:guid}", "/products/{id:guid}", "/products/{id:guid}/items/{itemId:guid}" }) app.MapGet(path, Index);
+        foreach (var path in new[] { "/", "/collection", "/collections", "/login", "/setup", "/account", "/register", "/masters", "/backups", "/trash", "/trash/products/{id:guid}", "/products/{id:guid}", "/products/{id:guid}/items/{itemId:guid}" }) app.MapGet(path, Index);
     }
 }

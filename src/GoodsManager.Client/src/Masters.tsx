@@ -1,3 +1,4 @@
+import {useCollectionApi} from './CollectionContext';
 import {MasterNames,useMasterLabels} from './MasterLabels';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {MasterFilter} from './Filters';
@@ -9,8 +10,8 @@ const keys:Record<string,string>={works:'workIds',series:'seriesIds',characters:
 const roleNames:Record<string,string>={products:'商品への関連',series:'シリーズ',works:'作品',characters:'キャラクター',manufacturer:'製造元',seller:'販売元',children:'子カテゴリ'};
 /** 候補のIDを使い、同名の項目も検索・ページ送りで選択 */
 export function MasterChoice({kind,label,value,onChange}:{kind:string;label:string;value:NamedRef|null;onChange:(value:NamedRef|null)=>void}){
- const [names,setNames]=useState<Record<string,string>>({});const version=useRef(0);useEffect(()=>()=>{++version.current;},[]);const [error,setError]=useState('');
- return <><MasterFilter kind={kind} label={label} selected={value?[value.id]:[]} onResolved={found=>setNames(old=>({...old,...found}))} onChange={ids=>{const request=++version.current;const id=ids.filter(x=>x!==value?.id).at(-1);if(!id){onChange(null);return;}if(names[id])onChange({id,name:names[id]});else void api<NamedRef>(`/masters/${kind}/${id}`).then(value=>{if(request===version.current)onChange(value);}).catch(e=>{if(request===version.current)setError(errorText(e));});}}/>{value&&<p>{names[value.id]||value.name}</p>}{error&&<p role="alert">{error}</p>}</>;
+ const client=useCollectionApi();const [names,setNames]=useState<Record<string,string>>({});const version=useRef(0);useEffect(()=>()=>{++version.current;},[]);const [error,setError]=useState('');
+ return <><MasterFilter kind={kind} label={label} selected={value?[value.id]:[]} onResolved={found=>setNames(old=>({...old,...found}))} onChange={ids=>{const request=++version.current;const id=ids.filter(x=>x!==value?.id).at(-1);if(!id){onChange(null);return;}if(names[id])onChange({id,name:names[id]});else void client<NamedRef>(`/masters/${kind}/${id}`).then(value=>{if(request===version.current)onChange(value);}).catch(e=>{if(request===version.current)setError(errorText(e));});}}/>{value&&<p>{names[value.id]||value.name}</p>}{error&&<p role="alert">{error}</p>}</>;
 }
 export function Masters({store,location:route}:{store:MasterStore;location:Location}){
  useSyncExternalStore(store.subscribe,store.snapshot);const p=new URLSearchParams(route.search),kind=p.get('kind')||'works',q=p.get('q')||'',page=Number(p.get('page')||1),size=Number(p.get('pageSize')||50);const [draft,setDraft]=useState(q);const editor=store.editor,action=store.action,dialog=useRef<HTMLDialogElement>(null);
@@ -32,7 +33,8 @@ export function Masters({store,location:route}:{store:MasterStore;location:Locat
  </div>;
 }
 function CategoryTree(){
+ const request=useCollectionApi();
  const [nodes,setNodes]=useState<{id:string;parentId:string|null;name:string;sortOrder:number}[]|null>(null),[error,setError]=useState('');
  const branch=(parent:string|null,visited:string[]=[]):React.ReactNode=><ul>{nodes?.filter(x=>x.parentId===parent&&!visited.includes(x.id)).map(x=><li key={x.id}>{x.name} <small>／ 並び順 {x.sortOrder}</small>{branch(x.id,[...visited,x.id])}</li>)}</ul>;
- return <section className="panel"><h2>カテゴリツリー</h2><button className="btn" onClick={()=>void api<{nodes:NonNullable<typeof nodes>}>('/categories/tree').then(x=>{setNodes(x.nodes);setError('');}).catch(e=>setError(errorText(e)))}>カテゴリツリーを取得</button>{error&&<p role="alert">{error}</p>}{nodes&&branch(null)}</section>;
+ return <section className="panel"><h2>カテゴリツリー</h2><button className="btn" onClick={()=>void request<{nodes:NonNullable<typeof nodes>}>('/categories/tree').then(x=>{setNodes(x.nodes);setError('');}).catch(e=>setError(errorText(e)))}>カテゴリツリーを取得</button>{error&&<p role="alert">{error}</p>}{nodes&&branch(null)}</section>;
 }

@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GoodsManager.Web.Storage.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261018134901_BackupFoundation")]
-    partial class BackupFoundation
+    [Migration("20261028152309_CollectionFoundation")]
+    partial class CollectionFoundation
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -38,6 +38,9 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<long>("EmailConfirmed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("IsAdministrator")
                         .HasColumnType("INTEGER");
 
                     b.Property<long>("LockoutEnabled")
@@ -70,9 +73,6 @@ namespace GoodsManager.Web.Storage.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Singleton")
-                        .HasColumnType("INTEGER");
-
                     b.Property<long>("TwoFactorEnabled")
                         .HasColumnType("INTEGER");
 
@@ -90,9 +90,6 @@ namespace GoodsManager.Web.Storage.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
-                    b.HasIndex("Singleton")
-                        .IsUnique();
-
                     b.ToTable("AspNetUsers", null, t =>
                         {
                             t.HasCheckConstraint("CK_AspNetUsers_AccessFailedCount_Storage", "typeof(\"AccessFailedCount\") = 'integer'");
@@ -104,6 +101,8 @@ namespace GoodsManager.Web.Storage.Migrations
                             t.HasCheckConstraint("CK_AspNetUsers_Email_Storage", "\"Email\" IS NULL OR (typeof(\"Email\") = 'text' AND instr(\"Email\", char(0)) = 0)");
 
                             t.HasCheckConstraint("CK_AspNetUsers_Id_Storage", "typeof(\"Id\") = 'text' AND length(\"Id\") = 36 AND instr(\"Id\", char(0)) = 0 AND substr(\"Id\",9,1) = '-' AND substr(\"Id\",14,1) = '-' AND substr(\"Id\",19,1) = '-' AND substr(\"Id\",24,1) = '-' AND length(replace(\"Id\",'-','')) = 32 AND replace(\"Id\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_AspNetUsers_IsAdministrator_Storage", "typeof(\"IsAdministrator\") = 'integer' AND \"IsAdministrator\" IN (0,1)");
 
                             t.HasCheckConstraint("CK_AspNetUsers_LockoutEnabled_Storage", "typeof(\"LockoutEnabled\") = 'integer' AND \"LockoutEnabled\" IN (0,1)");
 
@@ -121,8 +120,6 @@ namespace GoodsManager.Web.Storage.Migrations
 
                             t.HasCheckConstraint("CK_AspNetUsers_SecurityStamp_Storage", "typeof(\"SecurityStamp\") = 'text' AND instr(\"SecurityStamp\", char(0)) = 0");
 
-                            t.HasCheckConstraint("CK_AspNetUsers_Singleton_Storage", "typeof(\"Singleton\") = 'integer'");
-
                             t.HasCheckConstraint("CK_AspNetUsers_TwoFactorEnabled_Storage", "typeof(\"TwoFactorEnabled\") = 'integer' AND \"TwoFactorEnabled\" IN (0,1)");
 
                             t.HasCheckConstraint("CK_AspNetUsers_UserName_Storage", "typeof(\"UserName\") = 'text' AND instr(\"UserName\", char(0)) = 0");
@@ -130,8 +127,6 @@ namespace GoodsManager.Web.Storage.Migrations
                             t.HasCheckConstraint("CK_User_Failures", "AccessFailedCount>=0");
 
                             t.HasCheckConstraint("CK_User_Name", "length(UserName) BETWEEN 1 AND 64 AND UserName NOT GLOB '*[^a-zA-Z0-9._-]*'");
-
-                            t.HasCheckConstraint("CK_User_Singleton", "Singleton=1");
                         });
                 });
 
@@ -313,11 +308,93 @@ namespace GoodsManager.Web.Storage.Migrations
                         });
                 });
 
+            modelBuilder.Entity("GoodsManager.Web.Collections.CollectionMember", b =>
+                {
+                    b.Property<string>("CollectionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("CollectionId", "UserId");
+
+                    b.HasIndex("UserId", "CollectionId");
+
+                    b.ToTable("CollectionMembers", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CollectionMember_Role", "Role IN ('manager','editor')");
+
+                            t.HasCheckConstraint("CK_CollectionMembers_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_CollectionMembers_Role_Storage", "typeof(\"Role\") = 'text' AND instr(\"Role\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_CollectionMembers_UserId_Storage", "typeof(\"UserId\") = 'text' AND length(\"UserId\") = 36 AND instr(\"UserId\", char(0)) = 0 AND substr(\"UserId\",9,1) = '-' AND substr(\"UserId\",14,1) = '-' AND substr(\"UserId\",19,1) = '-' AND substr(\"UserId\",24,1) = '-' AND length(replace(\"UserId\",'-','')) = 32 AND replace(\"UserId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+                        });
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Collections.CollectionSpace", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Collections", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Collection_Name", "length(Name) BETWEEN 1 AND 200 AND length(trim(Name,char(9,10,11,12,13,32,133,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288)))>0");
+
+                            t.HasCheckConstraint("CK_Collection_Revision", "Revision>=1");
+
+                            t.HasCheckConstraint("CK_Collections_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_Collections_Id_Storage", "typeof(\"Id\") = 'text' AND length(\"Id\") = 36 AND instr(\"Id\", char(0)) = 0 AND substr(\"Id\",9,1) = '-' AND substr(\"Id\",14,1) = '-' AND substr(\"Id\",19,1) = '-' AND substr(\"Id\",24,1) = '-' AND length(replace(\"Id\",'-','')) = 32 AND replace(\"Id\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_Collections_Name_Storage", "typeof(\"Name\") = 'text' AND instr(\"Name\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_Collections_Revision_Storage", "typeof(\"Revision\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_Collections_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "マイコレクション",
+                            Revision = 1L,
+                            UpdatedAt = 0L
+                        });
+                });
+
             modelBuilder.Entity("GoodsManager.Web.Images.ImageAsset", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT")
                         .HasColumnName("ImageAssetId");
+
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
 
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
@@ -350,13 +427,15 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CollectionId");
+
                     b.HasIndex("DisplayFileId");
 
                     b.HasIndex("OriginalFileId");
 
                     b.HasIndex("ThumbnailFileId");
 
-                    b.HasIndex("SourceSha256", "PolicyHash")
+                    b.HasIndex("CollectionId", "SourceSha256", "PolicyHash")
                         .IsUnique();
 
                     b.ToTable("ImageAssets", null, t =>
@@ -364,6 +443,8 @@ namespace GoodsManager.Web.Storage.Migrations
                             t.HasCheckConstraint("CK_ImageAsset_Original", "(KeepOriginal=1 AND OriginalFileId IS NOT NULL) OR (KeepOriginal=0 AND OriginalFileId IS NULL)");
 
                             t.HasCheckConstraint("CK_ImageAsset_PolicyJson", "json_valid(PolicyJson)");
+
+                            t.HasCheckConstraint("CK_ImageAssets_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_ImageAssets_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
@@ -471,8 +552,9 @@ namespace GoodsManager.Web.Storage.Migrations
 
             modelBuilder.Entity("GoodsManager.Web.Images.ImageSettings", b =>
                 {
-                    b.Property<int>("Id")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("CollectionId")
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
 
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
@@ -481,6 +563,9 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("DisplayQuality")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Id")
                         .HasColumnType("INTEGER");
 
                     b.Property<long>("KeepOriginal")
@@ -499,10 +584,14 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<long>("UpdatedAt")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("Id");
+                    b.HasKey("CollectionId");
+
+                    b.HasIndex("CollectionId");
 
                     b.ToTable("ImageSettings", null, t =>
                         {
+                            t.HasCheckConstraint("CK_ImageSettings_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_ImageSettings_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
                             t.HasCheckConstraint("CK_ImageSettings_DisplayMaxEdge_Storage", "typeof(\"DisplayMaxEdge\") = 'integer'");
@@ -533,6 +622,11 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("InventoryItemImageId");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
 
@@ -552,7 +646,11 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ImageAssetId");
+                    b.HasIndex("CollectionId");
+
+                    b.HasIndex("CollectionId", "ImageAssetId");
+
+                    b.HasIndex("CollectionId", "InventoryItemId");
 
                     b.HasIndex("InventoryItemId", "ImageAssetId")
                         .IsUnique();
@@ -561,6 +659,8 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.ToTable("InventoryItemImages", null, t =>
                         {
+                            t.HasCheckConstraint("CK_InventoryItemImages_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_InventoryItemImages_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
                             t.HasCheckConstraint("CK_InventoryItemImages_Id_Storage", "typeof(\"InventoryItemImageId\") = 'text' AND length(\"InventoryItemImageId\") = 36 AND instr(\"InventoryItemImageId\", char(0)) = 0 AND substr(\"InventoryItemImageId\",9,1) = '-' AND substr(\"InventoryItemImageId\",14,1) = '-' AND substr(\"InventoryItemImageId\",19,1) = '-' AND substr(\"InventoryItemImageId\",24,1) = '-' AND length(replace(\"InventoryItemImageId\",'-','')) = 32 AND replace(\"InventoryItemImageId\",'-','') NOT GLOB '*[^0-9a-f]*'");
@@ -582,6 +682,11 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT")
                         .HasColumnName("ProductImageId");
+
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
 
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
@@ -605,11 +710,15 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ImageAssetId");
+                    b.HasIndex("CollectionId");
 
                     b.HasIndex("ProductId")
                         .IsUnique()
                         .HasFilter("IsPrimary=1");
+
+                    b.HasIndex("CollectionId", "ImageAssetId");
+
+                    b.HasIndex("CollectionId", "ProductId");
 
                     b.HasIndex("ProductId", "ImageAssetId")
                         .IsUnique();
@@ -619,6 +728,8 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.ToTable("ProductImages", null, t =>
                         {
                             t.HasCheckConstraint("CK_ProductImage_Sort", "SortOrder>=0");
+
+                            t.HasCheckConstraint("CK_ProductImages_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_ProductImages_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
@@ -709,6 +820,11 @@ namespace GoodsManager.Web.Storage.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.Property<long?>("ConsumedAt")
                         .HasColumnType("INTEGER");
 
@@ -755,13 +871,17 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ImageAssetId");
+                    b.HasIndex("CollectionId");
 
                     b.HasIndex("ReplayUntil");
 
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("CollectionId", "ImageAssetId");
+
                     b.HasIndex("State", "ExpiresAt");
 
-                    b.HasIndex("UserId", "ClientUploadKey")
+                    b.HasIndex("CollectionId", "UserId", "ClientUploadKey")
                         .IsUnique();
 
                     b.ToTable("TemporaryUploads", null, t =>
@@ -769,6 +889,8 @@ namespace GoodsManager.Web.Storage.Migrations
                             t.HasCheckConstraint("CK_TemporaryUploads_ByteLength_Storage", "typeof(\"ByteLength\") = 'integer'");
 
                             t.HasCheckConstraint("CK_TemporaryUploads_ClientUploadKey_Storage", "typeof(\"ClientUploadKey\") = 'text' AND length(\"ClientUploadKey\") = 36 AND instr(\"ClientUploadKey\", char(0)) = 0 AND substr(\"ClientUploadKey\",9,1) = '-' AND substr(\"ClientUploadKey\",14,1) = '-' AND substr(\"ClientUploadKey\",19,1) = '-' AND substr(\"ClientUploadKey\",24,1) = '-' AND length(replace(\"ClientUploadKey\",'-','')) = 32 AND replace(\"ClientUploadKey\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_TemporaryUploads_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_TemporaryUploads_ConsumedAt_Storage", "\"ConsumedAt\" IS NULL OR (typeof(\"ConsumedAt\") = 'integer' AND \"ConsumedAt\" BETWEEN -62135596800000 AND 253402300799999)");
 
@@ -814,6 +936,11 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("CategoryId");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
 
@@ -840,12 +967,18 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CollectionId");
+
+                    b.HasIndex("CollectionId", "ParentCategoryId");
+
                     b.HasIndex("NormalizedName", "Id");
 
                     b.HasIndex("ParentCategoryId", "SortOrder", "Id");
 
                     b.ToTable("Categories", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Categories_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_Categories_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
                             t.HasCheckConstraint("CK_Categories_Id_Storage", "typeof(\"CategoryId\") = 'text' AND length(\"CategoryId\") = 36 AND instr(\"CategoryId\", char(0)) = 0 AND substr(\"CategoryId\",9,1) = '-' AND substr(\"CategoryId\",14,1) = '-' AND substr(\"CategoryId\",19,1) = '-' AND substr(\"CategoryId\",24,1) = '-' AND length(replace(\"CategoryId\",'-','')) = 32 AND replace(\"CategoryId\",'-','') NOT GLOB '*[^0-9a-f]*'");
@@ -870,6 +1003,563 @@ namespace GoodsManager.Web.Storage.Migrations
 
                             t.HasCheckConstraint("CK_Category_Parent", "ParentCategoryId IS NULL OR ParentCategoryId<>CategoryId");
                         });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000100",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "アクリル・キーホルダー類",
+                            NormalizedName = "アクリル・キーホルダー類",
+                            Revision = 1L,
+                            SortOrder = 0,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000101",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "アクリルスタンド",
+                            NormalizedName = "アクリルスタンド",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000100",
+                            Revision = 1L,
+                            SortOrder = 0,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000102",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "アクリルキーホルダー",
+                            NormalizedName = "アクリルキーホルダー",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000100",
+                            Revision = 1L,
+                            SortOrder = 1,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000103",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "ラバーキーホルダー",
+                            NormalizedName = "ラバーキーホルダー",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000100",
+                            Revision = 1L,
+                            SortOrder = 2,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000104",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "メタルキーホルダー",
+                            NormalizedName = "メタルキーホルダー",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000100",
+                            Revision = 1L,
+                            SortOrder = 3,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000105",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "その他",
+                            NormalizedName = "その他",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000100",
+                            Revision = 1L,
+                            SortOrder = 4,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000200",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "バッジ類",
+                            NormalizedName = "バッジ類",
+                            Revision = 1L,
+                            SortOrder = 1,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000201",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "缶バッジ",
+                            NormalizedName = "缶バッジ",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000200",
+                            Revision = 1L,
+                            SortOrder = 0,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000202",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "ピンバッジ",
+                            NormalizedName = "ピンバッジ",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000200",
+                            Revision = 1L,
+                            SortOrder = 1,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000203",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "その他",
+                            NormalizedName = "その他",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000200",
+                            Revision = 1L,
+                            SortOrder = 2,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000300",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "紙・印刷物",
+                            NormalizedName = "紙・印刷物",
+                            Revision = 1L,
+                            SortOrder = 2,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000301",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "クリアファイル",
+                            NormalizedName = "クリアファイル",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000300",
+                            Revision = 1L,
+                            SortOrder = 0,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000302",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "ポスター",
+                            NormalizedName = "ポスター",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000300",
+                            Revision = 1L,
+                            SortOrder = 1,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000303",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "タペストリー",
+                            NormalizedName = "タペストリー",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000300",
+                            Revision = 1L,
+                            SortOrder = 2,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000304",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "ポストカード",
+                            NormalizedName = "ポストカード",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000300",
+                            Revision = 1L,
+                            SortOrder = 3,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000305",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "ブロマイド",
+                            NormalizedName = "ブロマイド",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000300",
+                            Revision = 1L,
+                            SortOrder = 4,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000306",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "色紙",
+                            NormalizedName = "色紙",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000300",
+                            Revision = 1L,
+                            SortOrder = 5,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000307",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "ステッカー・シール",
+                            NormalizedName = "ステッカー・シール",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000300",
+                            Revision = 1L,
+                            SortOrder = 6,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000308",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "その他",
+                            NormalizedName = "その他",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000300",
+                            Revision = 1L,
+                            SortOrder = 7,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000400",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "フィギュア・立体物",
+                            NormalizedName = "フィギュア・立体物",
+                            Revision = 1L,
+                            SortOrder = 3,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000401",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "フィギュア",
+                            NormalizedName = "フィギュア",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000400",
+                            Revision = 1L,
+                            SortOrder = 0,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000402",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "ぬいぐるみ",
+                            NormalizedName = "ぬいぐるみ",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000400",
+                            Revision = 1L,
+                            SortOrder = 1,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000403",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "その他",
+                            NormalizedName = "その他",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000400",
+                            Revision = 1L,
+                            SortOrder = 2,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000500",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "書籍",
+                            NormalizedName = "書籍",
+                            Revision = 1L,
+                            SortOrder = 4,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000501",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "書籍",
+                            NormalizedName = "書籍",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000500",
+                            Revision = 1L,
+                            SortOrder = 0,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000502",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "雑誌",
+                            NormalizedName = "雑誌",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000500",
+                            Revision = 1L,
+                            SortOrder = 1,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000503",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "漫画",
+                            NormalizedName = "漫画",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000500",
+                            Revision = 1L,
+                            SortOrder = 2,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000504",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "同人誌",
+                            NormalizedName = "同人誌",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000500",
+                            Revision = 1L,
+                            SortOrder = 3,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000505",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "パンフレット",
+                            NormalizedName = "パンフレット",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000500",
+                            Revision = 1L,
+                            SortOrder = 4,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000506",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "その他",
+                            NormalizedName = "その他",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000500",
+                            Revision = 1L,
+                            SortOrder = 5,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000600",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "音楽・映像",
+                            NormalizedName = "音楽・映像",
+                            Revision = 1L,
+                            SortOrder = 5,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000601",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "CD",
+                            NormalizedName = "cd",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000600",
+                            Revision = 1L,
+                            SortOrder = 0,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000602",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "DVD",
+                            NormalizedName = "dvd",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000600",
+                            Revision = 1L,
+                            SortOrder = 1,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000603",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "Blu-ray",
+                            NormalizedName = "blu-ray",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000600",
+                            Revision = 1L,
+                            SortOrder = 2,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000604",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "その他",
+                            NormalizedName = "その他",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000600",
+                            Revision = 1L,
+                            SortOrder = 3,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000700",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "衣類・布製品",
+                            NormalizedName = "衣類・布製品",
+                            Revision = 1L,
+                            SortOrder = 6,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000701",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "Tシャツ",
+                            NormalizedName = "tシャツ",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000700",
+                            Revision = 1L,
+                            SortOrder = 0,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000702",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "その他衣類",
+                            NormalizedName = "その他衣類",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000700",
+                            Revision = 1L,
+                            SortOrder = 1,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000703",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "タオル",
+                            NormalizedName = "タオル",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000700",
+                            Revision = 1L,
+                            SortOrder = 2,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000704",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "バッグ",
+                            NormalizedName = "バッグ",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000700",
+                            Revision = 1L,
+                            SortOrder = 3,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000705",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "その他",
+                            NormalizedName = "その他",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000700",
+                            Revision = 1L,
+                            SortOrder = 4,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000800",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "食器・生活雑貨",
+                            NormalizedName = "食器・生活雑貨",
+                            Revision = 1L,
+                            SortOrder = 7,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000801",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "マグカップ・グラス",
+                            NormalizedName = "マグカップ・グラス",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000800",
+                            Revision = 1L,
+                            SortOrder = 0,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000802",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "食器",
+                            NormalizedName = "食器",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000800",
+                            Revision = 1L,
+                            SortOrder = 1,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000803",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "文房具",
+                            NormalizedName = "文房具",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000800",
+                            Revision = 1L,
+                            SortOrder = 2,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000804",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "その他",
+                            NormalizedName = "その他",
+                            ParentCategoryId = "b390a000-7024-4c01-a000-000000000800",
+                            Revision = 1L,
+                            SortOrder = 3,
+                            UpdatedAt = 0L
+                        },
+                        new
+                        {
+                            Id = "b390a000-7024-4c01-a000-000000000900",
+                            CollectionId = "c011ec70-0000-4000-8000-000000000001",
+                            CreatedAt = 0L,
+                            Name = "その他",
+                            NormalizedName = "その他",
+                            Revision = 1L,
+                            SortOrder = 8,
+                            UpdatedAt = 0L
+                        });
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Masters.Character", b =>
@@ -877,6 +1567,11 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT")
                         .HasColumnName("CharacterId");
+
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
 
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
@@ -898,10 +1593,14 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CollectionId");
+
                     b.HasIndex("NormalizedName", "Id");
 
                     b.ToTable("Characters", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Characters_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_Characters_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
                             t.HasCheckConstraint("CK_Characters_Id_Storage", "typeof(\"CharacterId\") = 'text' AND length(\"CharacterId\") = 36 AND instr(\"CharacterId\", char(0)) = 0 AND substr(\"CharacterId\",9,1) = '-' AND substr(\"CharacterId\",14,1) = '-' AND substr(\"CharacterId\",19,1) = '-' AND substr(\"CharacterId\",24,1) = '-' AND length(replace(\"CharacterId\",'-','')) = 32 AND replace(\"CharacterId\",'-','') NOT GLOB '*[^0-9a-f]*'");
@@ -928,7 +1627,18 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<string>("WorkId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.HasKey("CharacterId", "WorkId");
+
+                    b.HasIndex("CollectionId");
+
+                    b.HasIndex("CollectionId", "CharacterId");
+
+                    b.HasIndex("CollectionId", "WorkId");
 
                     b.HasIndex("WorkId", "CharacterId");
 
@@ -936,12 +1646,18 @@ namespace GoodsManager.Web.Storage.Migrations
                         {
                             t.HasCheckConstraint("CK_CharacterWorks_CharacterId_Storage", "typeof(\"CharacterId\") = 'text' AND length(\"CharacterId\") = 36 AND instr(\"CharacterId\", char(0)) = 0 AND substr(\"CharacterId\",9,1) = '-' AND substr(\"CharacterId\",14,1) = '-' AND substr(\"CharacterId\",19,1) = '-' AND substr(\"CharacterId\",24,1) = '-' AND length(replace(\"CharacterId\",'-','')) = 32 AND replace(\"CharacterId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
+                            t.HasCheckConstraint("CK_CharacterWorks_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_CharacterWorks_WorkId_Storage", "typeof(\"WorkId\") = 'text' AND length(\"WorkId\") = 36 AND instr(\"WorkId\", char(0)) = 0 AND substr(\"WorkId\",9,1) = '-' AND substr(\"WorkId\",14,1) = '-' AND substr(\"WorkId\",19,1) = '-' AND substr(\"WorkId\",24,1) = '-' AND length(replace(\"WorkId\",'-','')) = 32 AND replace(\"WorkId\",'-','') NOT GLOB '*[^0-9a-f]*'");
                         });
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Masters.IdempotencyRecord", b =>
                 {
+                    b.Property<string>("CollectionId")
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.Property<string>("UserId")
                         .HasColumnType("TEXT");
 
@@ -975,12 +1691,18 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<int>("ResponseStatus")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("UserId", "OperationScope", "Key");
+                    b.HasKey("CollectionId", "UserId", "OperationScope", "Key");
+
+                    b.HasIndex("CollectionId");
 
                     b.HasIndex("ExpiresAt");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("IdempotencyRecords", null, t =>
                         {
+                            t.HasCheckConstraint("CK_IdempotencyRecords_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_IdempotencyRecords_CompletedAt_Storage", "typeof(\"CompletedAt\") = 'integer' AND \"CompletedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
                             t.HasCheckConstraint("CK_IdempotencyRecords_ExpiresAt_Storage", "typeof(\"ExpiresAt\") = 'integer' AND \"ExpiresAt\" BETWEEN -62135596800000 AND 253402300799999");
@@ -1015,6 +1737,11 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("OrganizationId");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
 
@@ -1041,6 +1768,8 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CollectionId");
+
                     b.HasIndex("NormalizedName", "Id");
 
                     b.ToTable("Organizations", null, t =>
@@ -1048,6 +1777,8 @@ namespace GoodsManager.Web.Storage.Migrations
                             t.HasCheckConstraint("CK_Organization_Memo", "Memo IS NULL OR length(Memo)<=4000");
 
                             t.HasCheckConstraint("CK_Organization_Url", "WebsiteUrl IS NULL OR (length(WebsiteUrl) BETWEEN 1 AND 2048 AND (lower(WebsiteUrl) GLOB 'https://?*' OR lower(WebsiteUrl) GLOB 'http://?*'))");
+
+                            t.HasCheckConstraint("CK_Organizations_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_Organizations_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
@@ -1077,6 +1808,11 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("SeriesId");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
 
@@ -1097,10 +1833,14 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CollectionId");
+
                     b.HasIndex("NormalizedName", "Id");
 
                     b.ToTable("Series", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Series_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_Series_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
                             t.HasCheckConstraint("CK_Series_Id_Storage", "typeof(\"SeriesId\") = 'text' AND length(\"SeriesId\") = 36 AND instr(\"SeriesId\", char(0)) = 0 AND substr(\"SeriesId\",9,1) = '-' AND substr(\"SeriesId\",14,1) = '-' AND substr(\"SeriesId\",19,1) = '-' AND substr(\"SeriesId\",24,1) = '-' AND length(replace(\"SeriesId\",'-','')) = 32 AND replace(\"SeriesId\",'-','') NOT GLOB '*[^0-9a-f]*'");
@@ -1125,6 +1865,11 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("TagId");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
 
@@ -1145,10 +1890,14 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CollectionId");
+
                     b.HasIndex("NormalizedName", "Id");
 
                     b.ToTable("Tags", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Tags_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_Tags_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
                             t.HasCheckConstraint("CK_Tags_Id_Storage", "typeof(\"TagId\") = 'text' AND length(\"TagId\") = 36 AND instr(\"TagId\", char(0)) = 0 AND substr(\"TagId\",9,1) = '-' AND substr(\"TagId\",14,1) = '-' AND substr(\"TagId\",19,1) = '-' AND substr(\"TagId\",24,1) = '-' AND length(replace(\"TagId\",'-','')) = 32 AND replace(\"TagId\",'-','') NOT GLOB '*[^0-9a-f]*'");
@@ -1173,6 +1922,11 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("WorkId");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
 
@@ -1193,10 +1947,14 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CollectionId");
+
                     b.HasIndex("NormalizedName", "Id");
 
                     b.ToTable("Works", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Works_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_Works_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
                             t.HasCheckConstraint("CK_Works_Id_Storage", "typeof(\"WorkId\") = 'text' AND length(\"WorkId\") = 36 AND instr(\"WorkId\", char(0)) = 0 AND substr(\"WorkId\",9,1) = '-' AND substr(\"WorkId\",14,1) = '-' AND substr(\"WorkId\",19,1) = '-' AND substr(\"WorkId\",24,1) = '-' AND length(replace(\"WorkId\",'-','')) = 32 AND replace(\"WorkId\",'-','') NOT GLOB '*[^0-9a-f]*'");
@@ -1223,12 +1981,25 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<string>("SeriesId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.HasKey("WorkId", "SeriesId");
+
+                    b.HasIndex("CollectionId");
+
+                    b.HasIndex("CollectionId", "SeriesId");
+
+                    b.HasIndex("CollectionId", "WorkId");
 
                     b.HasIndex("SeriesId", "WorkId");
 
                     b.ToTable("WorkSeries", null, t =>
                         {
+                            t.HasCheckConstraint("CK_WorkSeries_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_WorkSeries_SeriesId_Storage", "typeof(\"SeriesId\") = 'text' AND length(\"SeriesId\") = 36 AND instr(\"SeriesId\", char(0)) = 0 AND substr(\"SeriesId\",9,1) = '-' AND substr(\"SeriesId\",14,1) = '-' AND substr(\"SeriesId\",19,1) = '-' AND substr(\"SeriesId\",24,1) = '-' AND length(replace(\"SeriesId\",'-','')) = 32 AND replace(\"SeriesId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_WorkSeries_WorkId_Storage", "typeof(\"WorkId\") = 'text' AND length(\"WorkId\") = 36 AND instr(\"WorkId\", char(0)) = 0 AND substr(\"WorkId\",9,1) = '-' AND substr(\"WorkId\",14,1) = '-' AND substr(\"WorkId\",19,1) = '-' AND substr(\"WorkId\",24,1) = '-' AND length(replace(\"WorkId\",'-','')) = 32 AND replace(\"WorkId\",'-','') NOT GLOB '*[^0-9a-f]*'");
@@ -1240,6 +2011,11 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT")
                         .HasColumnName("InventoryItemId");
+
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
 
                     b.Property<string>("Condition")
                         .HasColumnType("TEXT");
@@ -1271,10 +2047,16 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CollectionId");
+
+                    b.HasIndex("CollectionId", "ProductId");
+
                     b.HasIndex("ProductId", "Id");
 
                     b.ToTable("InventoryItems", null, t =>
                         {
+                            t.HasCheckConstraint("CK_InventoryItems_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_InventoryItems_Condition", "Condition IS NULL OR Condition IN ('unopened','opened','inUse')");
 
                             t.HasCheckConstraint("CK_InventoryItems_Condition_Storage", "\"Condition\" IS NULL OR (typeof(\"Condition\") = 'text' AND instr(\"Condition\", char(0)) = 0)");
@@ -1311,6 +2093,11 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("InventoryLotId");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.Property<string>("Condition")
                         .HasColumnType("TEXT");
 
@@ -1344,10 +2131,16 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CollectionId");
+
+                    b.HasIndex("CollectionId", "ProductId");
+
                     b.HasIndex("ProductId", "Id");
 
                     b.ToTable("InventoryLots", null, t =>
                         {
+                            t.HasCheckConstraint("CK_InventoryLots_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_InventoryLots_Condition", "Condition IS NULL OR Condition IN ('unopened','opened','inUse')");
 
                             t.HasCheckConstraint("CK_InventoryLots_Condition_Storage", "\"Condition\" IS NULL OR (typeof(\"Condition\") = 'text' AND instr(\"Condition\", char(0)) = 0)");
@@ -1392,6 +2185,11 @@ namespace GoodsManager.Web.Storage.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
 
@@ -1427,11 +2225,13 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CategoryId");
+                    b.HasIndex("CollectionId");
 
-                    b.HasIndex("ManufacturerId");
+                    b.HasIndex("CollectionId", "CategoryId");
 
-                    b.HasIndex("SellerId");
+                    b.HasIndex("CollectionId", "ManufacturerId");
+
+                    b.HasIndex("CollectionId", "SellerId");
 
                     b.HasIndex("CreatedAt", "Id")
                         .IsDescending(true, false)
@@ -1457,6 +2257,8 @@ namespace GoodsManager.Web.Storage.Migrations
                             t.HasCheckConstraint("CK_Product_Version", "Version IS NULL OR length(Version)<=200");
 
                             t.HasCheckConstraint("CK_Products_CategoryId_Storage", "typeof(\"CategoryId\") = 'text' AND length(\"CategoryId\") = 36 AND instr(\"CategoryId\", char(0)) = 0 AND substr(\"CategoryId\",9,1) = '-' AND substr(\"CategoryId\",14,1) = '-' AND substr(\"CategoryId\",19,1) = '-' AND substr(\"CategoryId\",24,1) = '-' AND length(replace(\"CategoryId\",'-','')) = 32 AND replace(\"CategoryId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_Products_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_Products_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
@@ -1487,6 +2289,11 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -1503,6 +2310,8 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CollectionId");
+
                     b.HasIndex("ProductId", "OccurredAt");
 
                     b.ToTable("ProductChanges", null, t =>
@@ -1510,6 +2319,8 @@ namespace GoodsManager.Web.Storage.Migrations
                             t.HasCheckConstraint("CK_ProductChange_Kind", "Kind IN ('created','updated','trashed','restored','purged')");
 
                             t.HasCheckConstraint("CK_ProductChange_Revision", "Revision>=1");
+
+                            t.HasCheckConstraint("CK_ProductChanges_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_ProductChanges_Id_Storage", "typeof(\"Id\") = 'text' AND length(\"Id\") = 36 AND instr(\"Id\", char(0)) = 0 AND substr(\"Id\",9,1) = '-' AND substr(\"Id\",14,1) = '-' AND substr(\"Id\",19,1) = '-' AND substr(\"Id\",24,1) = '-' AND length(replace(\"Id\",'-','')) = 32 AND replace(\"Id\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
@@ -1531,13 +2342,26 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<string>("CharacterId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.HasKey("ProductId", "CharacterId");
 
+                    b.HasIndex("CollectionId");
+
                     b.HasIndex("CharacterId", "ProductId");
+
+                    b.HasIndex("CollectionId", "CharacterId");
+
+                    b.HasIndex("CollectionId", "ProductId");
 
                     b.ToTable("ProductCharacters", null, t =>
                         {
                             t.HasCheckConstraint("CK_ProductCharacters_CharacterId_Storage", "typeof(\"CharacterId\") = 'text' AND length(\"CharacterId\") = 36 AND instr(\"CharacterId\", char(0)) = 0 AND substr(\"CharacterId\",9,1) = '-' AND substr(\"CharacterId\",14,1) = '-' AND substr(\"CharacterId\",19,1) = '-' AND substr(\"CharacterId\",24,1) = '-' AND length(replace(\"CharacterId\",'-','')) = 32 AND replace(\"CharacterId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_ProductCharacters_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_ProductCharacters_ProductId_Storage", "typeof(\"ProductId\") = 'text' AND length(\"ProductId\") = 36 AND instr(\"ProductId\", char(0)) = 0 AND substr(\"ProductId\",9,1) = '-' AND substr(\"ProductId\",14,1) = '-' AND substr(\"ProductId\",19,1) = '-' AND substr(\"ProductId\",24,1) = '-' AND length(replace(\"ProductId\",'-','')) = 32 AND replace(\"ProductId\",'-','') NOT GLOB '*[^0-9a-f]*'");
                         });
@@ -1548,6 +2372,11 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT")
                         .HasColumnName("ProductIdentifierId");
+
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
 
                     b.Property<string>("ComparisonValue")
                         .IsRequired()
@@ -1577,6 +2406,10 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CollectionId");
+
+                    b.HasIndex("CollectionId", "ProductId");
+
                     b.HasIndex("ComparisonValue", "ProductId");
 
                     b.HasIndex("ProductId", "Scheme", "NormalizedValue")
@@ -1589,6 +2422,8 @@ namespace GoodsManager.Web.Storage.Migrations
                             t.HasCheckConstraint("CK_Identifier_Normalized", "(Scheme='ean8' AND length(NormalizedValue)=8 AND NormalizedValue NOT GLOB '*[^0-9]*') OR (Scheme='upca' AND length(NormalizedValue)=12 AND NormalizedValue NOT GLOB '*[^0-9]*') OR (Scheme IN ('ean13','isbn13') AND length(NormalizedValue)=13 AND NormalizedValue NOT GLOB '*[^0-9]*') OR (Scheme='isbn10' AND length(NormalizedValue)=10 AND substr(NormalizedValue,1,9) NOT GLOB '*[^0-9]*' AND substr(NormalizedValue,10,1) GLOB '[0-9X]')");
 
                             t.HasCheckConstraint("CK_Identifier_Raw", "length(RawValue) BETWEEN 1 AND 200");
+
+                            t.HasCheckConstraint("CK_ProductIdentifiers_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_ProductIdentifiers_ComparisonValue_Storage", "typeof(\"ComparisonValue\") = 'text' AND instr(\"ComparisonValue\", char(0)) = 0");
 
@@ -1614,6 +2449,11 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("ProductLinkId");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
 
@@ -1630,11 +2470,17 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CollectionId");
+
+                    b.HasIndex("CollectionId", "ProductId");
+
                     b.HasIndex("ProductId", "Id");
 
                     b.ToTable("ProductLinks", null, t =>
                         {
                             t.HasCheckConstraint("CK_ProductLink_Url", "length(Url) BETWEEN 1 AND 2048 AND (lower(Url) GLOB 'https://?*' OR lower(Url) GLOB 'http://?*')");
+
+                            t.HasCheckConstraint("CK_ProductLinks_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_ProductLinks_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
@@ -1656,12 +2502,25 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<string>("TagId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.HasKey("ProductId", "TagId");
+
+                    b.HasIndex("CollectionId");
+
+                    b.HasIndex("CollectionId", "ProductId");
+
+                    b.HasIndex("CollectionId", "TagId");
 
                     b.HasIndex("TagId", "ProductId");
 
                     b.ToTable("ProductTags", null, t =>
                         {
+                            t.HasCheckConstraint("CK_ProductTags_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_ProductTags_ProductId_Storage", "typeof(\"ProductId\") = 'text' AND length(\"ProductId\") = 36 AND instr(\"ProductId\", char(0)) = 0 AND substr(\"ProductId\",9,1) = '-' AND substr(\"ProductId\",14,1) = '-' AND substr(\"ProductId\",19,1) = '-' AND substr(\"ProductId\",24,1) = '-' AND length(replace(\"ProductId\",'-','')) = 32 AND replace(\"ProductId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_ProductTags_TagId_Storage", "typeof(\"TagId\") = 'text' AND length(\"TagId\") = 36 AND instr(\"TagId\", char(0)) = 0 AND substr(\"TagId\",9,1) = '-' AND substr(\"TagId\",14,1) = '-' AND substr(\"TagId\",19,1) = '-' AND substr(\"TagId\",24,1) = '-' AND length(replace(\"TagId\",'-','')) = 32 AND replace(\"TagId\",'-','') NOT GLOB '*[^0-9a-f]*'");
@@ -1676,12 +2535,25 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<string>("WorkId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
+
                     b.HasKey("ProductId", "WorkId");
+
+                    b.HasIndex("CollectionId");
+
+                    b.HasIndex("CollectionId", "ProductId");
+
+                    b.HasIndex("CollectionId", "WorkId");
 
                     b.HasIndex("WorkId", "ProductId");
 
                     b.ToTable("ProductWorks", null, t =>
                         {
+                            t.HasCheckConstraint("CK_ProductWorks_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
                             t.HasCheckConstraint("CK_ProductWorks_ProductId_Storage", "typeof(\"ProductId\") = 'text' AND length(\"ProductId\") = 36 AND instr(\"ProductId\", char(0)) = 0 AND substr(\"ProductId\",9,1) = '-' AND substr(\"ProductId\",14,1) = '-' AND substr(\"ProductId\",19,1) = '-' AND substr(\"ProductId\",24,1) = '-' AND length(replace(\"ProductId\",'-','')) = 32 AND replace(\"ProductId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_ProductWorks_WorkId_Storage", "typeof(\"WorkId\") = 'text' AND length(\"WorkId\") = 36 AND instr(\"WorkId\", char(0)) = 0 AND substr(\"WorkId\",9,1) = '-' AND substr(\"WorkId\",14,1) = '-' AND substr(\"WorkId\",19,1) = '-' AND substr(\"WorkId\",24,1) = '-' AND length(replace(\"WorkId\",'-','')) = 32 AND replace(\"WorkId\",'-','') NOT GLOB '*[^0-9a-f]*'");
@@ -1696,6 +2568,11 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<string>("CharactersNormalized")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("CollectionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
 
                     b.Property<string>("NameNormalized")
                         .IsRequired()
@@ -1717,9 +2594,15 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("ProductId");
 
+                    b.HasIndex("CollectionId");
+
+                    b.HasIndex("CollectionId", "ProductId");
+
                     b.ToTable("ProductSearchDocuments", null, t =>
                         {
                             t.HasCheckConstraint("CK_ProductSearchDocuments_CharactersNormalized_Storage", "typeof(\"CharactersNormalized\") = 'text' AND instr(\"CharactersNormalized\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_ProductSearchDocuments_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
 
                             t.HasCheckConstraint("CK_ProductSearchDocuments_NameNormalized_Storage", "typeof(\"NameNormalized\") = 'text' AND instr(\"NameNormalized\", char(0)) = 0");
 
@@ -1904,8 +2787,29 @@ namespace GoodsManager.Web.Storage.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("GoodsManager.Web.Collections.CollectionMember", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GoodsManager.Web.Auth.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("GoodsManager.Web.Images.ImageAsset", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Images.ImageFile", null)
                         .WithMany()
                         .HasForeignKey("DisplayFileId")
@@ -1924,75 +2828,137 @@ namespace GoodsManager.Web.Storage.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("GoodsManager.Web.Images.ImageSettings", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("GoodsManager.Web.Images.InventoryItemImage", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Images.ImageAsset", null)
                         .WithMany()
-                        .HasForeignKey("ImageAssetId")
+                        .HasForeignKey("CollectionId", "ImageAssetId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("GoodsManager.Web.Products.InventoryItem", null)
                         .WithMany()
-                        .HasForeignKey("InventoryItemId")
+                        .HasForeignKey("CollectionId", "InventoryItemId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Images.ProductImage", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Images.ImageAsset", null)
                         .WithMany()
-                        .HasForeignKey("ImageAssetId")
+                        .HasForeignKey("CollectionId", "ImageAssetId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("GoodsManager.Web.Products.Product", null)
                         .WithMany()
-                        .HasForeignKey("ProductId")
+                        .HasForeignKey("CollectionId", "ProductId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Images.TemporaryUpload", b =>
                 {
-                    b.HasOne("GoodsManager.Web.Images.ImageAsset", null)
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
                         .WithMany()
-                        .HasForeignKey("ImageAssetId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("GoodsManager.Web.Auth.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("GoodsManager.Web.Images.ImageAsset", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId", "ImageAssetId")
+                        .HasPrincipalKey("CollectionId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Masters.Category", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Masters.Category", null)
                         .WithMany()
-                        .HasForeignKey("ParentCategoryId")
+                        .HasForeignKey("CollectionId", "ParentCategoryId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.Character", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Masters.CharacterWork", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Masters.Character", null)
                         .WithMany()
-                        .HasForeignKey("CharacterId")
+                        .HasForeignKey("CollectionId", "CharacterId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("GoodsManager.Web.Masters.Work", null)
                         .WithMany()
-                        .HasForeignKey("WorkId")
+                        .HasForeignKey("CollectionId", "WorkId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Masters.IdempotencyRecord", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Auth.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -2000,126 +2966,247 @@ namespace GoodsManager.Web.Storage.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("GoodsManager.Web.Masters.Organization", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.Series", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.Tag", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Masters.Work", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("GoodsManager.Web.Masters.WorkSeries", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Masters.Series", null)
                         .WithMany()
-                        .HasForeignKey("SeriesId")
+                        .HasForeignKey("CollectionId", "SeriesId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("GoodsManager.Web.Masters.Work", null)
                         .WithMany()
-                        .HasForeignKey("WorkId")
+                        .HasForeignKey("CollectionId", "WorkId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Products.InventoryItem", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Products.Product", null)
                         .WithMany()
-                        .HasForeignKey("ProductId")
+                        .HasForeignKey("CollectionId", "ProductId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Products.InventoryLot", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Products.Product", null)
                         .WithMany()
-                        .HasForeignKey("ProductId")
+                        .HasForeignKey("CollectionId", "ProductId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Products.Product", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Masters.Category", null)
                         .WithMany()
-                        .HasForeignKey("CategoryId")
+                        .HasForeignKey("CollectionId", "CategoryId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("GoodsManager.Web.Masters.Organization", null)
                         .WithMany()
-                        .HasForeignKey("ManufacturerId")
+                        .HasForeignKey("CollectionId", "ManufacturerId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GoodsManager.Web.Masters.Organization", null)
                         .WithMany()
-                        .HasForeignKey("SellerId")
+                        .HasForeignKey("CollectionId", "SellerId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Products.ProductChange", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Products.ProductCharacter", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Masters.Character", null)
                         .WithMany()
-                        .HasForeignKey("CharacterId")
+                        .HasForeignKey("CollectionId", "CharacterId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("GoodsManager.Web.Products.Product", null)
                         .WithMany()
-                        .HasForeignKey("ProductId")
+                        .HasForeignKey("CollectionId", "ProductId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Products.ProductIdentifier", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Products.Product", null)
                         .WithMany()
-                        .HasForeignKey("ProductId")
+                        .HasForeignKey("CollectionId", "ProductId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Products.ProductLink", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Products.Product", null)
                         .WithMany()
-                        .HasForeignKey("ProductId")
+                        .HasForeignKey("CollectionId", "ProductId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Products.ProductTag", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Products.Product", null)
                         .WithMany()
-                        .HasForeignKey("ProductId")
+                        .HasForeignKey("CollectionId", "ProductId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("GoodsManager.Web.Masters.Tag", null)
                         .WithMany()
-                        .HasForeignKey("TagId")
+                        .HasForeignKey("CollectionId", "TagId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Products.ProductWork", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Products.Product", null)
                         .WithMany()
-                        .HasForeignKey("ProductId")
+                        .HasForeignKey("CollectionId", "ProductId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("GoodsManager.Web.Masters.Work", null)
                         .WithMany()
-                        .HasForeignKey("WorkId")
+                        .HasForeignKey("CollectionId", "WorkId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("GoodsManager.Web.Search.ProductSearchDocument", b =>
                 {
+                    b.HasOne("GoodsManager.Web.Collections.CollectionSpace", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GoodsManager.Web.Products.Product", null)
                         .WithMany()
-                        .HasForeignKey("ProductId")
+                        .HasForeignKey("CollectionId", "ProductId")
+                        .HasPrincipalKey("CollectionId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

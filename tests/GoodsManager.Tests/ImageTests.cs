@@ -35,7 +35,7 @@ public sealed class ImageTests
     private static string Etag(JsonElement x) => x.GetProperty("etag").GetString()!;
     private async Task<JsonElement> Product()
     {
-        var category = await Db(async db => await db.Set<Category>().Select(x => x.Id).FirstAsync());
+        var category = await Db(async db => { db.CollectionId = Guid.Parse(client.DefaultRequestHeaders.GetValues("X-Collection-Id").Single()); return await db.Set<Category>().Select(x => x.Id).FirstAsync(); });
         return await Ok(await Write("dev/products", new { product = new { name = "写真試験", categoryId = category, workIds = Array.Empty<Guid>(), characterIds = Array.Empty<Guid>(), tagIds = Array.Empty<Guid>(), identifiers = Array.Empty<object>(), links = Array.Empty<object>() }, initialLot = new { quantity = 2, fields = new { condition = "unopened", storageLocation = (string?)null, purchasePlace = (string?)null, memo = (string?)null } } }, method: HttpMethod.Post), HttpStatusCode.Created);
     }
     private async Task<HttpResponseMessage> UploadResponse(byte[] bytes, Guid? key = null, bool csrf = true)
@@ -177,4 +177,33 @@ public sealed class ImageTests
         var alerts = await client.GetFromJsonAsync<JsonElement>("/api/v1/system/alerts"); Assert.That(alerts.GetProperty("entries").GetArrayLength(), Is.EqualTo(1)); Assert.That(alerts.ToString(), Does.Not.Contain(app.DataDirectory));
         await File.WriteAllBytesAsync(files.Resolve(stored.RelativePath), bytes); Assert.That((await client.GetAsync(entry.GetProperty("displayUrl").GetString())).StatusCode, Is.EqualTo(HttpStatusCode.OK)); Assert.That((await client.GetFromJsonAsync<JsonElement>("/api/v1/system/alerts")).GetProperty("entries").GetArrayLength(), Is.Zero);
     }
+    [Test]
+    public async Task SameImageUsesCollectionOwnedAssetsAndGcKeepsAnotherCollectionsFormalPhoto()
+    {
+        var uploadKey = Guid.NewGuid(); var originalUpload = await Upload(key: uploadKey); var originalId = Id(originalUpload);
+        var originalSettings = await client.GetFromJsonAsync<JsonElement>("/api/v1/settings/images");
+        var space = await Ok(await Write("collections", new { name = "画像を分離", importFrom = GoodsManager.Web.Collections.CollectionSchema.DefaultId }, method: HttpMethod.Post), HttpStatusCode.Created);
+        var collectionId = Id(space); client.DefaultRequestHeaders.Remove("X-Collection-Id"); client.DefaultRequestHeaders.Add("X-Collection-Id", collectionId.ToString());
+        var copiedSettings = await client.GetFromJsonAsync<JsonElement>("/api/v1/settings/images"); Assert.That(copiedSettings.GetProperty("displayQuality").GetInt32(), Is.EqualTo(originalSettings.GetProperty("displayQuality").GetInt32()));
+        var upload = await Upload(key: uploadKey); Assert.That(Id(upload), Is.Not.EqualTo(originalId));
+        Guid originalAsset, targetAsset;
+        await using (var scope = app.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var first = await db.Set<TemporaryUpload>().SingleAsync(x => x.Id == originalId); var second = await db.Set<TemporaryUpload>().SingleAsync(x => x.Id == Id(upload)); originalAsset = first.ImageAssetId!.Value; targetAsset = second.ImageAssetId!.Value;
+            Assert.That(targetAsset, Is.Not.EqualTo(originalAsset));
+            var a = await db.Set<ImageAsset>().SingleAsync(x => x.Id == originalAsset); var b = await db.Set<ImageAsset>().SingleAsync(x => x.Id == targetAsset); Assert.That(a.DisplayFileId, Is.EqualTo(b.DisplayFileId)); Assert.That((Guid)db.Entry(b).Property("CollectionId").CurrentValue!, Is.EqualTo(collectionId));
+        }
+        var p = await Product();
+        Assert.That((await Replace(Id(p), [New(originalUpload)], Etag(p))).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var linked = await Ok(await Replace(Id(p), [New(upload)], Etag(p))); var url = linked.GetProperty("entries")[0].GetProperty("displayUrl").GetString();
+        Assert.That(url, Does.Contain("collectionId=" + collectionId));
+        await Ok(await Write("settings/images", new { keepOriginal = true, displayMaxEdge = 2048, displayQuality = 81, thumbMaxEdge = 320, thumbQuality = 75 }, Etag(copiedSettings)));
+        client.DefaultRequestHeaders.Remove("X-Collection-Id"); client.DefaultRequestHeaders.Add("X-Collection-Id", GoodsManager.Web.Collections.CollectionSchema.DefaultId.ToString());
+        Assert.That((await client.GetFromJsonAsync<JsonElement>("/api/v1/settings/images")).GetProperty("keepOriginal").GetBoolean(), Is.False);
+        Assert.That((await Write($"temporary-uploads/{originalId}", new { }, method: HttpMethod.Delete)).StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+        await Gc(); app.Clock.Advance(TimeSpan.FromHours(25)); await Gc();
+        client.DefaultRequestHeaders.Remove("X-Collection-Id"); Assert.That((await client.GetAsync(url)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        await using var finalScope = app.Services.CreateAsyncScope(); var after = finalScope.ServiceProvider.GetRequiredService<AppDbContext>(); Assert.That(await after.Set<ImageAsset>().AnyAsync(x => x.Id == originalAsset), Is.False); Assert.That(await after.Set<ImageAsset>().AnyAsync(x => x.Id == targetAsset), Is.True);
+    }
+
 }

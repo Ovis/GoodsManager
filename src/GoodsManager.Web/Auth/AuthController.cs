@@ -34,19 +34,21 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
         await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
         try
         {
+            await using var transaction = await db.Database.BeginTransactionAsync();
             if (await db.Users.AnyAsync())
             {
                 return Failure(409, "SETUP_COMPLETED");
             }
 
-            await using var transaction = await db.Database.BeginTransactionAsync();
-            user = new AppUser { Id = Guid.NewGuid(), UserName = request.LoginId, LockoutEnabled = true };
+            user = new AppUser { Id = Guid.NewGuid(), UserName = request.LoginId, LockoutEnabled = true, IsAdministrator = true };
             var result = await users.CreateAsync(user, request.Password);
             if (!result.Succeeded)
             {
                 return Failure(400, "VALIDATION_FAILED");
             }
 
+            db.Add(new Collections.CollectionMember { CollectionId = Collections.CollectionSchema.DefaultId, UserId = user.Id, Role = "manager" });
+            await db.SaveChangesAsync();
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
             await IssueCookieAsync(user, false);
@@ -259,7 +261,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
     internal static bool ValidLoginId(string? id) => id is { Length: >= 1 and <= 64 } && id.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-');
 
     /// <summary>秘密や標準エンティティを公開しないユーザー情報</summary>
-    internal static object UserDto(AppUser user) => new { id = user.Id, loginId = user.UserName, etag = AuthenticationEtags.Account(user) };
+    internal static object UserDto(AppUser user) => new { id = user.Id, loginId = user.UserName, user.IsAdministrator, etag = AuthenticationEtags.Account(user) };
 
     /// <summary>認証処理のエラーを共通形式で返す</summary>
     internal ObjectResult Failure(int status, string code) => Problem(statusCode: status, title: "認証処理を確認してください", extensions: new Dictionary<string, object?> { ["code"] = code });

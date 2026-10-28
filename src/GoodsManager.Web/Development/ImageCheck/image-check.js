@@ -26,20 +26,20 @@ function imageRows(){
   }
 }
 function adoptProduct(x){product={id:$('product-id').value.trim(),etag:x.etag};entries=x.entries.map(e=>({...e}));primaryRef=entries.find(e=>e.isPrimary)?.linkId??null;show('product-state',x);imageRows();}
-async function session(){try{const s=await api.read('auth/session');authenticated=true;show('session',s);adoptSettings(await api.read('settings/images'));}catch{authenticated=false;show('session','ログインしてから取得してください。');}}
+async function session(){try{const s=await api.connect();authenticated=true;show('session',s);adoptSettings(await api.read('settings/images'));}catch{authenticated=false;show('session','ログインしてから取得してください。');}}
 async function poll(id,version){
   if(version!==pollVersion)return;
   try{const next=await api.read(`temporary-uploads/${id}`);if(version!==pollVersion)return;uploadState=next;show('upload-state',uploadState);$('preview').hidden=uploadState.state!=='ready';if(uploadState.state==='ready')$('preview').src=uploadState.previewUrl;render();if(['pending','processing'].includes(uploadState.state))setTimeout(()=>poll(id,version),1000);}catch(e){log('状態の取得に失敗しました。再送操作で照合できます。');}
 }
 async function sendUpload(replay=false){
-  if(xhr||preparing)return;if(!replay){const file=$('file').files[0];if(!file){log('ファイルを選んでください。');return;}lastUpload={file,key:crypto.randomUUID(),sentAt:Date.now()};}
+  if(xhr||preparing)return;if(!replay){const file=$('file').files[0];if(!file){log('ファイルを選んでください。');return;}lastUpload={file,key:crypto.randomUUID(),sentAt:Date.now(),context:api.context};}
   if(Date.now()-lastUpload.sentAt>=7*86400000){log('7日経過したため同じキーでは再送しません。');return;}
   preparing=true;render();
   try {
   const csrf=await api.read('auth/csrf'); const form=new FormData();form.append('file',lastUpload.file);
   uploadState=null;++pollVersion;$('preview').hidden=true;$('progress').value=0;
   await new Promise(resolve=>{
-    xhr=new XMLHttpRequest();xhr.open('POST','/api/v1/temporary-uploads');xhr.setRequestHeader('X-CSRF-Token',csrf.token);xhr.setRequestHeader('Client-Upload-Key',lastUpload.key);
+    xhr=new XMLHttpRequest();xhr.open('POST','/api/v1/temporary-uploads');xhr.setRequestHeader('X-CSRF-Token',csrf.token);xhr.setRequestHeader('Client-Upload-Key',lastUpload.key);for(const [key,value] of Object.entries(api.contextHeaders(lastUpload.context)))xhr.setRequestHeader(key,value);
     xhr.upload.onprogress=e=>{if(e.lengthComputable)$('progress').value=Math.round(e.loaded/e.total*100);};
     xhr.onload=()=>{const status=xhr.status;let body;try{body=JSON.parse(xhr.responseText);}catch{body={};}log(`POST /api/v1/temporary-uploads → ${status} / key=${lastUpload.key}`);show('upload-state',body);if(status===202){uploadState=body;poll(body.id,++pollVersion);}else show('response',body);};
     xhr.onerror=()=>show('upload-state','通信失敗・結果不明。同じファイル・キーで照合してください。');xhr.onabort=()=>show('upload-state','送信を中断しました。結果不明の場合は同じファイル・キーで照合できます。');
@@ -50,7 +50,7 @@ async function sendUpload(replay=false){
 $('session-refresh').onclick=()=>run(session);$('settings-get').onclick=()=>run(async()=>adoptSettings(await api.read('settings/images')));
 $('settings-save').onclick=()=>run(async()=>{const body={keepOriginal:$('keep-original').checked,displayMaxEdge:Number($('display-edge').value),displayQuality:Number($('display-quality').value),thumbMaxEdge:Number($('thumb-edge').value),thumbQuality:Number($('thumb-quality').value)};const x=await api.write('settings/images','PUT',body,settings.etag);adoptSettings(x);show('response',x);});
 $('upload').onclick=()=>sendUpload().catch(e=>log(e.message));$('upload-replay').onclick=()=>sendUpload(true).catch(e=>log(e.message));$('abort').onclick=()=>xhr?.abort();
-$('cancel').onclick=()=>run(async()=>{const csrf=await api.read('auth/csrf');const response=await fetch(`/api/v1/temporary-uploads/${uploadState.id}`,{method:'DELETE',headers:{'X-CSRF-Token':csrf.token},credentials:'same-origin',cache:'no-store'});log(`DELETE upload → ${response.status}`);if(!response.ok){show('response',await response.json());return;}await poll(uploadState.id,++pollVersion);});
+$('cancel').onclick=()=>run(async()=>{const csrf=await api.read('auth/csrf');const response=await fetch(`/api/v1/temporary-uploads/${uploadState.id}`,{method:'DELETE',headers:{...api.contextHeaders(),'X-CSRF-Token':csrf.token},credentials:'same-origin',cache:'no-store'});log(`DELETE upload → ${response.status}`);if(!response.ok){show('response',await response.json());return;}await poll(uploadState.id,++pollVersion);});
 $('append').onclick=()=>{if(uploadState?.state!=='ready'||!product)return;const entry={clientRef:crypto.randomUUID().replaceAll('-','').slice(0,12),temporaryUploadId:uploadState.id,sortOrder:entries.length,previewUrl:uploadState.previewUrl};entries.push(entry);primaryRef??=entry.clientRef;imageRows();};
 $('product-get').onclick=()=>run(async()=>{const id=$('product-id').value.trim();if(!/^[0-9a-f-]{36}$/i.test(id))throw new Error('商品IDを確認してください。');adoptProduct(await api.read(`products/${id}/images`));});
 $('product-save').onclick=()=>run(async()=>{const body={entries:entries.map(e=>e.linkId?{linkId:e.linkId,sortOrder:e.sortOrder,...(e.replacementUploadId?{replacementUploadId:e.replacementUploadId}:{})}:{clientRef:e.clientRef,temporaryUploadId:e.temporaryUploadId,sortOrder:e.sortOrder}),primaryRef};const x=await api.write(`products/${product.id}/images`,'PUT',body,product.etag);adoptProduct(x);show('response',x);if(uploadState)await poll(uploadState.id,++pollVersion);});

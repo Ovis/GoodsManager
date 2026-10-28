@@ -2,10 +2,10 @@ using Microsoft.AspNetCore.Identity;
 
 namespace GoodsManager.Web.Auth;
 
-/// <summary>標準Identityユーザー。1件制約だけを追加</summary>
+/// <summary>標準Identityユーザーと、アプリ全体の管理権限。</summary>
 public sealed class AppUser : IdentityUser<Guid>
 {
-    public int Singleton { get; set; } = 1;
+    public bool IsAdministrator { get; set; }
 }
 
 /// <summary>標準クッキーミドルウェアのITicketStore用保存領域</summary>

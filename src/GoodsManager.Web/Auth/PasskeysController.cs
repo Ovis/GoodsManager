@@ -22,8 +22,8 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
         var user = request.LoginId is not null && AuthController.ValidLoginId(request.LoginId) ? await users.FindByNameAsync(request.LoginId) : null;
         var options = await signIn.MakePasskeyRequestOptionsAsync(user);
         // ユーザー名なしの認証でも、発行時の認証世代へ結び付けて復旧前の処理を拒否
-        var bindingUser = user ?? await db.Users.SingleOrDefaultAsync();
-        return Options(ceremonies.Begin(HttpContext, "login", bindingUser, request.RememberMe), options);
+        var stamps = user is null ? string.IsNullOrEmpty(request.LoginId) ? await db.Users.ToDictionaryAsync(x => x.Id, x => x.SecurityStamp) : new Dictionary<Guid, string?>() : null;
+        return Options(ceremonies.Begin(HttpContext, "login", user, request.RememberMe, stamps), options);
     }
 
     /// <summary>標準の署名検証とカウンター更新後、合意済みの絶対期限でログイン</summary>
@@ -43,7 +43,8 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
             db.ChangeTracker.Clear();
             var result = await AssertionAsync(request.Credential);
             if (result is null || !result.Succeeded || await users.IsLockedOutAsync(result.User)
-                || (ceremony.UserId.HasValue && (ceremony.UserId != result.User.Id || ceremony.SecurityStamp != result.User.SecurityStamp)))
+                || (ceremony.UserId.HasValue && (ceremony.UserId != result.User.Id || ceremony.SecurityStamp != result.User.SecurityStamp))
+                || (ceremony.UserStamps is { } stamps && (!stamps.TryGetValue(result.User.Id, out var stamp) || stamp != result.User.SecurityStamp)))
             {
                 return Failure(401, "INVALID_CREDENTIALS");
             }

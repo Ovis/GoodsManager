@@ -1,3 +1,4 @@
+import {useCollectionApi} from './CollectionContext';
 import {holdingLabel} from './holding-label';
 import {useEffect,useId,useRef,useState} from 'react';
 import {ProductWorkspace} from './ProductWorkspace';
@@ -8,8 +9,9 @@ import {fields,quantity,total} from './inventory-draft.mjs';
 import type {Holding} from './types';
 const blank={condition:null,storageLocation:null,purchasePlace:null,memo:null};
 export function OwnershipFields({value,onChange,disabled=false}:{value:Holding;onChange:(value:Holding)=>void;disabled?:boolean}){
+  const request=useCollectionApi();
  const id=useId(),[values,setValues]=useState<{storageLocation:string[];purchasePlace:string[]}>({storageLocation:[],purchasePlace:[]}),[error,setError]=useState('');
- const suggestions=async(field:'storageLocation'|'purchasePlace')=>{try{const result=await api<{values:string[]}>(`/suggestions/ownership?field=${field}&q=${encodeURIComponent(value[field]||'')}&limit=20`);setValues(old=>({...old,[field]:result.values}));setError('');}catch(e){setError(errorText(e));}};
+ const suggestions=async(field:'storageLocation'|'purchasePlace')=>{try{const result=await request<{values:string[]}>(`/suggestions/ownership?field=${field}&q=${encodeURIComponent(value[field]||'')}&limit=20`);setValues(old=>({...old,[field]:result.values}));setError('');}catch(e){setError(errorText(e));}};
  return <fieldset disabled={disabled} className="form-grid ownership-fields"><label className="field">状態<select value={value.condition||''} onChange={e=>onChange({...value,condition:e.target.value||null})}><option value="">未設定</option><option value="unopened">未開封</option><option value="opened">開封済み</option><option value="inUse">使用中</option></select></label>{(['storageLocation','purchasePlace'] as const).map(field=><div className="field" key={field}><label htmlFor={id+field}>{field==='storageLocation'?'保管場所':'購入先'}</label><input id={id+field} list={id+field+'-values'} value={value[field]||''} onChange={e=>onChange({...value,[field]:e.target.value||null})}/><datalist id={id+field+'-values'}>{values[field].map(x=><option key={x} value={x}/>)}</datalist><button type="button" className="btn link small" onClick={()=>void suggestions(field)}>{field==='storageLocation'?'保管場所':'購入先'}の入力候補</button></div>)}<label className="field full">所持メモ<textarea rows={3} value={value.memo||''} onChange={e=>onChange({...value,memo:e.target.value||null})}/></label>{error&&<p role="alert" className="error-message">{error}</p>}</fieldset>;
 }function LotEditor({store,row,index}:{store:ProductWorkspace;row:Holding&{quantity:number};index:number}){
  if(!store.lotDrafts.has(row.id))store.lotDrafts.set(row.id,{fields:{...row},quantity:String(row.quantity),amount:'1'});const draft=store.lotDrafts.get(row.id)!;

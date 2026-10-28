@@ -8,9 +8,16 @@ namespace GoodsManager.Web.Auth;
 public sealed class AccountRecovery(AppDbContext db, UserManager<AppUser> users, TimeProvider clock)
 {
     /// <summary>パスキーの保持・削除を明示して、パスワード・全端末失効を一括確定</summary>
-    public async Task<IdentityResult> ResetAsync(string password, bool clearPasskeys)
+    public async Task<IdentityResult> ResetAsync(string password, bool clearPasskeys, string? loginId = null)
     {
-        var user = await db.Users.SingleAsync();
+        AppUser? user;
+        if (loginId is not null) user = await users.FindByNameAsync(loginId);
+        else
+        {
+            var candidates = await db.Users.Take(2).ToArrayAsync();
+            user = candidates.Length == 1 ? candidates[0] : null;
+        }
+        if (user is null) return IdentityResult.Failed(new IdentityError { Code = "LOGIN_ID_REQUIRED", Description = "対象のログインIDを指定してください。" });
         await using var transaction = await db.Database.BeginTransactionAsync();
         var token = await users.GeneratePasswordResetTokenAsync(user);
         var result = await users.ResetPasswordAsync(user, token, password);
@@ -30,7 +37,7 @@ public sealed class AccountRecovery(AppDbContext db, UserManager<AppUser> users,
         user.LockoutEnd = null;
         user.AccessFailedCount = 0;
         AuthController.EnsureSuccess(await users.UpdateAsync(user));
-        await db.AuthTickets.ExecuteDeleteAsync();
+        await db.AuthTickets.Where(x => x.UserId == user.Id).ExecuteDeleteAsync();
         await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE SystemState SET DataRevision=DataRevision+1, UpdatedAt={StorageValues.ToMilliseconds(clock.GetUtcNow())} WHERE Id=1");
         await transaction.CommitAsync();
         return result;
@@ -45,6 +52,9 @@ public sealed class AccountRecovery(AppDbContext db, UserManager<AppUser> users,
             return 2;
         }
 
+        Console.Write("復旧するログインID: ");
+        var loginId = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(loginId)) return 2;
         Console.Write("新しいパスワード: ");
         var password = ReadSecret();
         Console.Write("新しいパスワード（再入力）: ");
@@ -55,7 +65,7 @@ public sealed class AccountRecovery(AppDbContext db, UserManager<AppUser> users,
         }
 
         await using var scope = services.CreateAsyncScope();
-        var result = await scope.ServiceProvider.GetRequiredService<AccountRecovery>().ResetAsync(password, args[1] == "--clear-passkeys");
+        var result = await scope.ServiceProvider.GetRequiredService<AccountRecovery>().ResetAsync(password, args[1] == "--clear-passkeys", loginId);
         Console.WriteLine(result.Succeeded ? "パスワードを再設定し、全端末を失効" : "パスワード条件を満たしていないため変更を取消");
         return result.Succeeded ? 0 : 1;
     }

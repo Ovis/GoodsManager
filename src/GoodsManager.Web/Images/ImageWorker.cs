@@ -32,12 +32,14 @@ public sealed class ImageWorker(IServiceScopeFactory scopes, IImageFiles files, 
     public async Task ProcessAsync(Guid id, CancellationToken token)
     {
         TemporaryUpload upload;
+        Guid uploadCollectionId;
         CancellationTokenSource? conversionCancellation = null;
         await gate.Semaphore.WaitAsync(token);
         try
         {
             await using var scope = scopes.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             upload = await db.Set<TemporaryUpload>().SingleAsync(x => x.Id == id, token);
+            uploadCollectionId = (Guid)db.Entry(upload).Property("CollectionId").CurrentValue!;
             if (upload.State != "pending") return;
             if (upload.ExpiresAt <= clock.GetUtcNow()) { upload.State = "cancelled"; upload.ErrorCode = "UPLOAD_EXPIRED"; }
             else upload.State = "processing";
@@ -65,6 +67,7 @@ public sealed class ImageWorker(IServiceScopeFactory scopes, IImageFiles files, 
             {
                 await using var scope = scopes.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 await using var transaction = await db.Database.BeginTransactionAsync(token);
+                db.CollectionId = uploadCollectionId;
                 var current = await db.Set<TemporaryUpload>().SingleAsync(x => x.Id == id, token);
                 if (current.State != "processing" || current.ExpiresAt <= clock.GetUtcNow()) return;
                 var now = clock.GetUtcNow();

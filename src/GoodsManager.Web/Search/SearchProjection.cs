@@ -51,7 +51,9 @@ public sealed class SearchProjection(AppDbContext db)
         if (db.Database.CurrentTransaction is null) throw new InvalidOperationException("検索投影の更新には業務トランザクションが必要");
         ids = ids.Distinct().ToArray();
         if (ids.Length == 0) return;
-        var products = await db.Set<Product>().AsNoTracking().Where(x => ids.Contains(x.Id)).ToArrayAsync(token);
+        var productRows = await db.Set<Product>().AsNoTracking().Where(x => ids.Contains(x.Id)).Select(x => new { Product = x, CollectionId = EF.Property<Guid>(x, "CollectionId") }).ToArrayAsync(token);
+        var products = productRows.Select(x => x.Product).ToArray();
+        var collections = productRows.ToDictionary(x => x.Product.Id, x => x.CollectionId);
         var documents = await db.Set<ProductSearchDocument>().Where(x => ids.Contains(x.ProductId)).ToDictionaryAsync(x => x.ProductId, token);
         var categories = await db.Set<Category>().AsNoTracking().ToDictionaryAsync(x => x.Id, token);
         var works = await (from r in db.Set<ProductWork>() join w in db.Set<Work>() on r.WorkId equals w.Id where ids.Contains(r.ProductId) select new { r.ProductId, r.WorkId, w.Name }).ToArrayAsync(token);
@@ -98,6 +100,7 @@ public sealed class SearchProjection(AppDbContext db)
             {
                 document = new ProductSearchDocument { ProductId = product.Id };
                 db.Add(document);
+                db.Entry(document).Property("CollectionId").CurrentValue = collections[product.Id];
             }
             if (document.NameNormalized != nameText || document.WorksNormalized != worksText || document.CharactersNormalized != charactersText || document.OtherNormalized != otherText || document.NormalizationVersion != 1)
             {

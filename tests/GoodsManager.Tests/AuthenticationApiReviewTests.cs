@@ -25,7 +25,7 @@ public sealed class AuthenticationApiReviewTests
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.That((await db.Users.SingleAsync()).UserName, Is.EqualTo("owner"));
-        Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(2)); // 初期カテゴリ投入 + アカウント作成
+        Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(1)); // 初期カテゴリはスキーマの初期データ。アカウント作成で1回増える
     }
 
     /// <summary>同じ版からの同時編集は一方だけ保存し、ログイン期限を延長しない</summary>
@@ -48,7 +48,7 @@ public sealed class AuthenticationApiReviewTests
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user = await db.Users.SingleAsync();
         Assert.That(user.UserName, Is.AnyOf("owner-first", "owner-second"));
-        Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(3));
+        Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(2));
         var after = await first.GetFromJsonAsync<JsonElement>("/api/v1/auth/session");
         Assert.That(after.GetProperty("expiresAt").GetString(), Is.EqualTo(expires));
         Assert.That(after.GetProperty("user").GetProperty("loginId").GetString(), Is.EqualTo(user.UserName));
@@ -74,7 +74,7 @@ public sealed class AuthenticationApiReviewTests
         }
 
         await using var scope = app.Services.CreateAsyncScope();
-        Assert.That((await scope.ServiceProvider.GetRequiredService<AppDbContext>().SystemStates.SingleAsync()).DataRevision, Is.EqualTo(2));
+        Assert.That((await scope.ServiceProvider.GetRequiredService<AppDbContext>().SystemStates.SingleAsync()).DataRevision, Is.EqualTo(1));
     }
 
     /// <summary>パスキーの改名・削除に版を要求し、拒否時は情報を変更しない</summary>
@@ -118,7 +118,7 @@ public sealed class AuthenticationApiReviewTests
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.That(await db.UserPasskeys.CountAsync(), Is.Zero);
-        Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(5));
+        Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(4));
     }
 
     /// <summary>変更番号の更新失敗で、先に保存したログインIDと標準スタンプも取り消す</summary>

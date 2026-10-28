@@ -167,6 +167,12 @@ public sealed class NdlBooksTests
         var matches = response.GetProperty("items")[0].GetProperty("publishers")[0].GetProperty("matches"); Assert.That(matches.GetArrayLength(), Is.EqualTo(2));
         await Add("新潮社"); response = await client.GetFromJsonAsync<JsonElement>("/api/v1/book-metadata?isbn=" + Isbn);
         Assert.That(response.GetProperty("items")[0].GetProperty("publishers")[0].GetProperty("matches").GetArrayLength(), Is.EqualTo(3)); Assert.That(handler.Calls, Has.Count.EqualTo(1));
+        var csrf = await client.GetFromJsonAsync<JsonElement>("/api/v1/auth/csrf");
+        using var create = new HttpRequestMessage(HttpMethod.Post, "/api/v1/collections") { Content = JsonContent.Create(new { name = "別の蔵書" }) }; create.Headers.Add("X-CSRF-Token", csrf.GetProperty("token").GetString()); create.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
+        var created = await client.SendAsync(create); Assert.That(created.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        var collectionId = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString(); client.DefaultRequestHeaders.Remove("X-Collection-Id"); client.DefaultRequestHeaders.Add("X-Collection-Id", collectionId);
+        response = await client.GetFromJsonAsync<JsonElement>("/api/v1/book-metadata?isbn=" + Isbn);
+        Assert.That(response.GetProperty("items")[0].GetProperty("publishers")[0].GetProperty("matches").GetArrayLength(), Is.Zero);
         await using var verifyScope = app.Services.CreateAsyncScope(); Assert.That(await verifyScope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Organization>().CountAsync(), Is.EqualTo(104));
     }
 }

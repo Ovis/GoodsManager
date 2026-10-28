@@ -129,6 +129,7 @@ app.Use(async (context, next) =>
 });
 app.UseAuthentication();
 app.UseAuthorization();
+app.Use(GoodsManager.Web.Collections.CollectionAccess.InvokeAsync);
 app.Use(async (context, next) =>
 {
     if (context.Request.Path.StartsWithSegments("/api"))

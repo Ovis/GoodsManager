@@ -1,14 +1,12 @@
-using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using GoodsManager.Web.Masters;
+using GoodsManager.Web.Collections;
 using GoodsManager.Web.Products;
 using GoodsManager.Web.Search;
 using GoodsManager.Web.Storage;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using static GoodsManager.Tests.AuthenticationTests;
 
@@ -17,10 +15,9 @@ namespace GoodsManager.Tests;
 public sealed class SearchMigrationTests
 {
     [Test]
-    public async Task P05UpgradePreservesTicketLotsItemsAndBusinessNumbersAndRebuildsSearch()
+    public async Task RestartPreservesOtherCollectionAndRebuildsItsMissingSearchProjection()
     {
-        string directory, cookie; Guid productId, lotId, itemId; long revision;
-        const string previousMigration = "20261018065826_ProductFoundation";
+        string directory, cookie, collectionHeader; Guid productId, lotId, itemId; long revision;
         await using (var first = new TestApplication { PreserveData = true })
         {
             directory = first.DataDirectory;
@@ -29,7 +26,12 @@ public sealed class SearchMigrationTests
             cookie = login.Headers.GetValues("Set-Cookie").Single(x => x.StartsWith("__Host-GoodsManager=")).Split(';')[0];
             await using var scope = first.Services.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var category = await db.Set<Category>().Select(x => x.Id).FirstAsync();
+            var collectionId = Guid.NewGuid();
+            var category = Guid.NewGuid();
+            db.Add(new CollectionSpace { Id = collectionId, Name = "別コレクション", CreatedAt = first.Clock.GetUtcNow(), UpdatedAt = first.Clock.GetUtcNow() });
+            db.Add(new CollectionMember { CollectionId = collectionId, UserId = (await db.Users.SingleAsync()).Id });
+            db.CollectionId = collectionId;
+            db.Add(new Category { Id = category, Name = "カテゴリ", NormalizedName = "カテゴリ" });
             productId = Guid.NewGuid(); lotId = Guid.NewGuid(); itemId = Guid.NewGuid();
             var now = StorageValues.FromMilliseconds(first.Clock.GetUtcNow().ToUnixTimeMilliseconds());
             db.Add(new Product { Id = productId, Name = "移行商品", NormalizedName = "移行商品", CategoryId = category, Memo = "保存メモ", Revision = 7, CreatedAt = now, UpdatedAt = now });
@@ -37,12 +39,11 @@ public sealed class SearchMigrationTests
             db.Add(new InventoryItem { Id = itemId, ProductId = productId, StorageLocation = "Ｂ棚", PurchasePlace = "通販", Condition = "opened", Memo = "個体", CreatedAt = now, UpdatedAt = now });
             await db.SaveChangesAsync();
             revision = (await db.SystemStates.SingleAsync()).DataRevision;
+            collectionHeader = collectionId.ToString();
         }
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(new DatabaseRuntime(directory).ConnectionString).Options;
-        await using (var previous = new AppDbContext(options)) await previous.GetService<IMigrator>().MigrateAsync(previousMigration);
         var keys = Directory.GetFiles(Path.Combine(directory, "keys")).ToDictionary(x => Path.GetFileName(x)!, File.ReadAllText);
         await using var upgraded = new TestApplication(directory);
-        using var restored = Client(upgraded); restored.DefaultRequestHeaders.Add("Cookie", cookie);
+        using var restored = Client(upgraded); restored.DefaultRequestHeaders.Add("Cookie", cookie); restored.DefaultRequestHeaders.Remove("X-Collection-Id"); restored.DefaultRequestHeaders.Add("X-Collection-Id", collectionHeader);
         Assert.That((await restored.GetAsync("/api/v1/auth/session")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var detail = await restored.GetFromJsonAsync<JsonElement>($"/api/v1/products/{productId}");
         Assert.That(detail.GetProperty("revision").GetString(), Is.EqualTo("7"));
@@ -58,13 +59,6 @@ public sealed class SearchMigrationTests
         Assert.That(projection.OtherNormalized, Does.Contain("保存メモ").And.Contain("ロット").And.Contain("個体"));
         Assert.That(after.Database.HasPendingModelChanges(), Is.False);
         foreach (var key in keys) Assert.That(File.ReadAllText(Path.Combine(directory, "keys", key.Key!)), Is.EqualTo(key.Value));
-        using var zip = ZipFile.OpenRead(Directory.GetFiles(Path.Combine(directory, "pre-migration"), "*.zip").Single());
-        var file = Path.Combine(directory, "before.db"); zip.GetEntry("goods-manager.db")!.ExtractToFile(file);
-        await using var snapshot = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite($"Data Source={file};Pooling=False").Options);
-        Assert.That((await snapshot.Database.GetAppliedMigrationsAsync()).Last(), Is.EqualTo(previousMigration));
-        // 旧スキーマに新しい正規化列はないため、正本の旧列をSQLで検証する。
-        Assert.That(await snapshot.Database.SqlQueryRaw<long>("SELECT SUM(Quantity) AS Value FROM InventoryLots").SingleAsync(), Is.EqualTo(2));
-        Assert.That(await snapshot.Database.SqlQueryRaw<long>("SELECT COUNT(*) AS Value FROM InventoryItems").SingleAsync(), Is.EqualTo(1));
-        Assert.That((await snapshot.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(revision));
+        Assert.That(Directory.Exists(Path.Combine(directory, "pre-migration")), Is.False);
     }
 }

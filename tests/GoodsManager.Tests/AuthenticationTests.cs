@@ -16,7 +16,12 @@ public sealed class AuthenticationTests
     public const string Password = "test-password-123";
 
     /// <summary>Secureクッキーを使う同一オリジンのクライアントを作成</summary>
-    public static HttpClient Client(TestApplication app) => app.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost:7443"), AllowAutoRedirect = false });
+    public static HttpClient Client(TestApplication app)
+    {
+        var client = app.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost:7443"), AllowAutoRedirect = false });
+        client.DefaultRequestHeaders.Add("X-Collection-Id", GoodsManager.Web.Collections.CollectionSchema.DefaultId.ToString("D"));
+        return client;
+    }
 
     /// <summary>認証状態に対応したCSRFトークンを取得して送信</summary>
     public static async Task<HttpResponseMessage> SendAsync(HttpClient client, string path, object? body = null, HttpMethod? method = null, string? ifMatch = null)
@@ -62,7 +67,7 @@ public sealed class AuthenticationTests
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.That(await db.Users.CountAsync(), Is.EqualTo(1));
-        Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(2)); // 初期カテゴリ投入 + アカウント作成
+        Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(1)); // 初期カテゴリはスキーマの初期データ。アカウント作成で1回増える
     }
 
     /// <summary>初期登録だけでセッションが発行され、登録済みなら別アカウントを作成できない</summary>
@@ -174,7 +179,7 @@ public sealed class AuthenticationTests
         await using (var scope = app.Services.CreateAsyncScope())
         {
             Assert.That((await scope.ServiceProvider.GetRequiredService<AccountRecovery>().ResetAsync("recovered-password", false)).Succeeded, Is.True);
-            Assert.That((await scope.ServiceProvider.GetRequiredService<AppDbContext>().SystemStates.SingleAsync()).DataRevision, Is.EqualTo(3));
+            Assert.That((await scope.ServiceProvider.GetRequiredService<AppDbContext>().SystemStates.SingleAsync()).DataRevision, Is.EqualTo(2));
         }
 
         Assert.That((await client.GetAsync("/api/v1/auth/session")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));

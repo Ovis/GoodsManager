@@ -13,14 +13,31 @@ export class MasterRequests {
   constructor({ fetcher = (url, options) => fetch(url, options), now = () => Date.now(), key = () => crypto.randomUUID(), record = () => {} } = {}) {
     Object.assign(this, { fetcher, now, key, record });
     this.last = null;
+    this.context = null;
     this.status = "none";
     this.inFlight = false;
+  }
+
+  async connect() {
+    this.context = null;
+    const session = await this.read("auth/session");
+    const { items } = await this.read("collections");
+    const selected = new URLSearchParams(globalThis.location?.search || "").get("collectionId");
+    const collection = selected ? items.find(x => x.id === selected) : items.length === 1 ? items[0] : null;
+    if (!collection) throw new Error("確認先をURLの ?collectionId=コレクションID で指定してください。");
+    this.context = Object.freeze({ collectionId: collection.id, accountId: session.user.id });
+    return { ...session, collection };
+  }
+
+  contextHeaders(context = this.context) {
+    return context ? { "X-Collection-Id": context.collectionId, "X-Account-Id": context.accountId } : {};
   }
 
   async read(path) { return this.transport(path, { method: "GET" }); }
 
   async transport(path, options) {
-    const response = await this.fetcher("/api/v1/" + path, { ...options, credentials: "same-origin", cache: "no-store" });
+    const { context = this.context, ...request } = options;
+    const response = await this.fetcher("/api/v1/" + path, { ...request, headers: { ...this.contextHeaders(context), ...request.headers }, credentials: "same-origin", cache: "no-store" });
     this.record(options.method + " /api/v1/" + path + " → " + response.status);
     let body;
     try { body = await response.json(); }
@@ -31,7 +48,7 @@ export class MasterRequests {
 
   write(path, method, body, etag) {
     if (this.inFlight || this.status === "unknown") throw new Error("結果不明の要求を先に確認してください。");
-    this.last = Object.freeze({ path, method, body: JSON.stringify(body), etag: etag ?? null, key: this.key(), sentAt: this.now() });
+    this.last = Object.freeze({ path, method, body: JSON.stringify(body), etag: etag ?? null, key: this.key(), sentAt: this.now(), context: this.context });
     return this.send();
   }
 
@@ -51,7 +68,7 @@ export class MasterRequests {
       const headers = { "Content-Type": "application/json", "X-CSRF-Token": csrf.token, "Idempotency-Key": saved.key };
       if (saved.etag) headers["If-Match"] = saved.etag;
       attempted = true;
-      const body = await this.transport(saved.path, { method: saved.method, headers, body: saved.body });
+      const body = await this.transport(saved.path, { method: saved.method, headers, body: saved.body, context: saved.context });
       this.status = "success";
       return body;
     } catch (error) {

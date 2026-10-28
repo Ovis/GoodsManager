@@ -66,7 +66,7 @@ async function run(label, action, mutation = false) {
 }
 
 async function session() {
-  state.session = await api.read("auth/session");
+  state.session = await api.connect();
   el("session").textContent = JSON.stringify({ loginId: state.session.user.loginId, persistent: state.session.persistent, expiresAt: state.session.expiresAt }, null, 2);
 }
 
