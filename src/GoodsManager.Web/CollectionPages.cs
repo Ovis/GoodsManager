@@ -16,7 +16,7 @@ public static class CollectionPages
         {
             var file = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), "index.html");
             context.Response.Headers.CacheControl = "no-store";
-            context.Response.Headers[HeaderNames.ContentSecurityPolicy] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+            context.Response.Headers[HeaderNames.ContentSecurityPolicy] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; media-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
             context.Response.Headers[HeaderNames.XContentTypeOptions] = "nosniff";
             await Results.File(file, "text/html; charset=utf-8").ExecuteAsync(context);
         }

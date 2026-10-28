@@ -17,10 +17,12 @@ public sealed class HostTests
         Assert.That((await client.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
-    /// <summary>初期登録・アカウント設定のURLを直接開いても認証前にキャッシュ不可のSPAを返す</summary>
+    /// <summary>各画面のURLを直接開いても認証前にキャッシュ不可のSPAを返す</summary>
     [TestCase("/setup")]
     [TestCase("/account")]
-    public async Task AccountPagesCanBeOpenedDirectly(string path)
+    [TestCase("/register")]
+    [TestCase("/products/11111111-1111-4111-8111-111111111111")]
+    public async Task CollectionPagesCanBeOpenedDirectly(string path)
     {
         await using var factory = new TestApplication();
         var webRoot = Path.Combine(factory.DataDirectory, "webroot");
@@ -32,6 +34,8 @@ public sealed class HostTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/html"));
         Assert.That(response.Headers.CacheControl?.NoStore, Is.True);
+        Assert.That(response.Headers.GetValues("Content-Security-Policy").Single(),
+            Does.Contain("media-src 'self' blob:").And.Contain("script-src 'self';").And.Contain("frame-ancestors 'none'"));
         Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("Setup page"));
     }
 

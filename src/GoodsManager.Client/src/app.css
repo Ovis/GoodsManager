@@ -139,3 +139,16 @@
 .account-empty {color:var(--muted)}
 .account-topbar-actions {display:flex;align-items:center;gap:8px;flex-shrink:0}
 @media(max-width:720px){.topbar:has(.account-topbar-actions){height:auto;min-height:51px;gap:8px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}.account-topbar-actions{margin-left:auto}.account-passkeys li{align-items:flex-start;flex-direction:column;gap:6px}.account-page .account-verification{padding:10px 12px}.account-action{padding:14px}}
+
+.registration-code-actions {display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.registration-code-actions>.btn {min-height:43px;white-space:nowrap}
+.barcode-dialog {border:0;border-radius:12px;padding:24px;width:min(680px,94vw);max-height:90dvh;overflow:auto;color:var(--ink);background:white}
+.barcode-dialog::backdrop {background:#132b24bb}
+.barcode-dialog h2 {font-size:20px;margin:0 0 14px}
+.barcode-dialog p {margin:12px 0;line-height:1.7}
+.barcode-preview {background:#132b24;border-radius:8px;overflow:hidden;margin:16px 0;min-height:160px}
+.barcode-preview video {display:block;width:100%;max-height:52dvh;object-fit:contain}
+.barcode-preview canvas {display:none}
+.barcode-dialog-actions {display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;margin-top:18px}
+.barcode-scan-status {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media(max-width:600px){.registration-code .field:nth-child(2){flex-basis:100%}.registration-code-actions{margin-left:auto}.barcode-dialog{padding:18px}}

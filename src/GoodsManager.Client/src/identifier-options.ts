@@ -6,5 +6,5 @@ export const identifierOptions = [
   ['isbn13', '本の番号（13桁・ISBN）'],
 ] as const;
 
-export const identifierHelp = '商品は包装や値札のバーコードの下にある数字を、本は「ISBN」と書かれた番号を入力します。番号の桁数に合わせて種類を選んでください。';
+export const identifierHelp = '商品は包装や値札のバーコードの下にある数字を、本は「ISBN」と書かれた番号を入力します。手入力では番号の桁数に合わせて種類を選んでください。カメラで読み取ることもできます。';
 export const identifierOptionalHelp = 'コードがない場合は空欄で構いません。';
