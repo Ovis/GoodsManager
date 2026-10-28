@@ -1,4 +1,4 @@
-import {api} from './api';
+import {api,ApiError} from './api';
 import {categoryPaths,type CategoryNode} from './category-paths';
 import type {NamedRef} from './types';
 
@@ -16,7 +16,7 @@ export async function loadPickerPage(kind:string,params:URLSearchParams,signal:A
 
 export async function loadPickerNames(kind:string,ids:string[],signal:AbortSignal):Promise<Record<string,string>>{
   if(!ids.length)return {};
-  if(kind==='categories')return categoryNames(signal);
-  const items=await Promise.all(ids.map(id=>api<NamedRef>(`/masters/${kind}/${encodeURIComponent(id)}`,{signal})));
+  if(kind==='categories'){const names=await categoryNames(signal);for(const id of ids)if(!names[id])names[id]='削除済みのカテゴリ';return names;}
+  const items=await Promise.all(ids.map(id=>api<NamedRef>(`/masters/${kind}/${encodeURIComponent(id)}`,{signal}).catch(error=>{if(error instanceof ApiError&&error.status===404)return {id,name:'削除済みの項目'};throw error;})));
   return Object.fromEntries(items.map(item=>[item.id,item.name]));
 }

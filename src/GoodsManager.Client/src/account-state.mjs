@@ -13,7 +13,6 @@ export function passkeyNameError(name) {
 export function accountError(error) {
   const messages={REAUTHENTICATION_REQUIRED:'本人確認に失敗しました。現在のパスワードを確認するか、登録済みパスキーでやり直してください。',REVISION_MISMATCH:'ほかの操作で登録内容が変更されました。最新一覧を取得し、内容を見直してください。',PASSKEY_CHALLENGE_INVALID:'本人確認または登録の有効期限が切れました。操作を最初からやり直してください。',PASSKEY_INVALID:'パスキーを確認できませんでした。公開URLと端末の登録先を確認し、やり直してください。',PASSKEY_EXISTS:'このパスキーはすでに登録されています。最新一覧を確認してください。',VALIDATION_FAILED:'入力の文字数・使用できる文字を確認してください。',CSRF_FAILED:'操作の有効期限が切れました。最新一覧を取得してからやり直してください。'};
   let text=messages[error?.code] || (error?.status===401?'ログインの有効期限が切れました。ログインし直してください。':error?.status===404?'対象のパスキーは見つかりません。最新一覧を確認してください。':error?.name==='NotAllowedError'||error?.name==='AbortError'?'ブラウザのパスキー操作を完了できませんでした。再試行するか、パスワードで本人確認してください。':error?.name==='NotSupportedError'?'このブラウザではパスキーを利用できません。対応ブラウザで開いてください。':'通信・処理を完了できませんでした。接続を確認してください。');
-  if(error?.traceId)text+=' / 照会ID: '+error.traceId;
   return text;
 }
 
