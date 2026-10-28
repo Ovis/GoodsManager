@@ -6,4 +6,7 @@
     <Project Path="tests/GoodsManager.FaultHost/GoodsManager.FaultHost.csproj" />
     <Project Path="tests/GoodsManager.Tests/GoodsManager.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/GoodsManager.SampleData/GoodsManager.SampleData.csproj" />
+  </Folder>
 </Solution>

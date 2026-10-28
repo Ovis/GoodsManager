@@ -1,0 +1,1844 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": "旅立ちのアクリルスタンド",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "アクリルスタンド",
+      "type": "stand",
+      "color": 0,
+      "characters": [
+        "蒼"
+      ],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "星巡り展で購入。台座と本体を一緒に保管。",
+      "lots": [
+        {
+          "quantity": 3,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "stand-0.png"
+    },
+    {
+      "id": 2,
+      "name": "旅のともだち ぬいぐるみ",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "ぬいぐるみ",
+      "type": "plush",
+      "color": 2,
+      "characters": [
+        "リク"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "plush-2.png"
+    },
+    {
+      "id": 3,
+      "name": "夜空のアクリルキーホルダー",
+      "works": [
+        "月と喫茶室"
+      ],
+      "category": "アクリルキーホルダー",
+      "type": "key",
+      "color": 1,
+      "characters": [
+        "ルナ"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "key-1.png"
+    },
+    {
+      "id": 4,
+      "name": "企画展 キービジュアル A4ファイル",
+      "works": [
+        "星の博物館"
+      ],
+      "category": "クリアファイル",
+      "type": "poster",
+      "color": 3,
+      "characters": [],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "poster-3.png"
+    },
+    {
+      "id": 5,
+      "name": "蒼 トレーディング缶バッジ",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "缶バッジ",
+      "type": "badge",
+      "color": 0,
+      "characters": [
+        "蒼"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 5,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "badge-0.png"
+    },
+    {
+      "id": 6,
+      "name": "ミュージアム マグカップ",
+      "works": [
+        "星の博物館"
+      ],
+      "category": "マグカップ・グラス",
+      "type": "mug",
+      "color": 3,
+      "characters": [],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "mug-3.png"
+    },
+    {
+      "id": 7,
+      "name": "公式アートブック 星の記録",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "書籍",
+      "type": "book",
+      "color": 0,
+      "characters": [],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "book-0.png"
+    },
+    {
+      "id": 8,
+      "name": "ルナ おでかけアクリルスタンド",
+      "works": [
+        "月と喫茶室"
+      ],
+      "category": "アクリルスタンド",
+      "type": "stand",
+      "color": 1,
+      "characters": [
+        "ルナ"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "stand-1.png"
+    },
+    {
+      "id": 9,
+      "name": "旅の風景 ポストカードセット",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "ポストカード",
+      "type": "poster",
+      "color": 2,
+      "characters": [],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "poster-2.png"
+    },
+    {
+      "id": 10,
+      "name": "リク アクリルキーホルダー",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "アクリルキーホルダー",
+      "type": "key",
+      "color": 2,
+      "characters": [
+        "リク"
+      ],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "key-2.png"
+    },
+    {
+      "id": 11,
+      "name": "花便り ぬいぐるみ",
+      "works": [
+        "花のある日々"
+      ],
+      "category": "ぬいぐるみ",
+      "type": "plush",
+      "color": 1,
+      "characters": [
+        "ハル"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "plush-1.png"
+    },
+    {
+      "id": 12,
+      "name": "ハル ちいさな缶バッジ",
+      "works": [
+        "花のある日々"
+      ],
+      "category": "缶バッジ",
+      "type": "badge",
+      "color": 2,
+      "characters": [
+        "ハル"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "badge-2.png"
+    },
+    {
+      "id": 13,
+      "name": "旅立ちのアクリルスタンド 春の装い",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "アクリルスタンド",
+      "type": "stand",
+      "color": 0,
+      "characters": [
+        "蒼"
+      ],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 3,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "stand-0.png"
+    },
+    {
+      "id": 14,
+      "name": "旅のともだち ぬいぐるみ 春の装い",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "ぬいぐるみ",
+      "type": "plush",
+      "color": 2,
+      "characters": [
+        "リク"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "plush-2.png"
+    },
+    {
+      "id": 15,
+      "name": "夜空のアクリルキーホルダー 春の装い",
+      "works": [
+        "月と喫茶室"
+      ],
+      "category": "アクリルキーホルダー",
+      "type": "key",
+      "color": 1,
+      "characters": [
+        "ルナ"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "key-1.png"
+    },
+    {
+      "id": 16,
+      "name": "企画展 キービジュアル A4ファイル 春の装い",
+      "works": [
+        "星の博物館"
+      ],
+      "category": "クリアファイル",
+      "type": "poster",
+      "color": 3,
+      "characters": [],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "poster-3.png"
+    },
+    {
+      "id": 17,
+      "name": "蒼 トレーディング缶バッジ 春の装い",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "缶バッジ",
+      "type": "badge",
+      "color": 0,
+      "characters": [
+        "蒼"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 5,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "badge-0.png"
+    },
+    {
+      "id": 18,
+      "name": "ミュージアム マグカップ 春の装い",
+      "works": [
+        "星の博物館"
+      ],
+      "category": "マグカップ・グラス",
+      "type": "mug",
+      "color": 3,
+      "characters": [],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "mug-3.png"
+    },
+    {
+      "id": 19,
+      "name": "公式アートブック 星の記録 春の装い",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "書籍",
+      "type": "book",
+      "color": 0,
+      "characters": [],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "book-0.png"
+    },
+    {
+      "id": 20,
+      "name": "ルナ おでかけアクリルスタンド 春の装い",
+      "works": [
+        "月と喫茶室"
+      ],
+      "category": "アクリルスタンド",
+      "type": "stand",
+      "color": 1,
+      "characters": [
+        "ルナ"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "stand-1.png"
+    },
+    {
+      "id": 21,
+      "name": "旅の風景 ポストカードセット 春の装い",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "ポストカード",
+      "type": "poster",
+      "color": 2,
+      "characters": [],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "poster-2.png"
+    },
+    {
+      "id": 22,
+      "name": "リク アクリルキーホルダー 春の装い",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "アクリルキーホルダー",
+      "type": "key",
+      "color": 2,
+      "characters": [
+        "リク"
+      ],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "key-2.png"
+    },
+    {
+      "id": 23,
+      "name": "花便り ぬいぐるみ 春の装い",
+      "works": [
+        "花のある日々"
+      ],
+      "category": "ぬいぐるみ",
+      "type": "plush",
+      "color": 1,
+      "characters": [
+        "ハル"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "plush-1.png"
+    },
+    {
+      "id": 24,
+      "name": "ハル ちいさな缶バッジ 春の装い",
+      "works": [
+        "花のある日々"
+      ],
+      "category": "缶バッジ",
+      "type": "badge",
+      "color": 2,
+      "characters": [
+        "ハル"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "badge-2.png"
+    },
+    {
+      "id": 25,
+      "name": "旅立ちのアクリルスタンド 夏の記憶",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "アクリルスタンド",
+      "type": "stand",
+      "color": 0,
+      "characters": [
+        "蒼"
+      ],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 3,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "stand-0.png"
+    },
+    {
+      "id": 26,
+      "name": "旅のともだち ぬいぐるみ 夏の記憶",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "ぬいぐるみ",
+      "type": "plush",
+      "color": 2,
+      "characters": [
+        "リク"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "plush-2.png"
+    },
+    {
+      "id": 27,
+      "name": "夜空のアクリルキーホルダー 夏の記憶",
+      "works": [
+        "月と喫茶室"
+      ],
+      "category": "アクリルキーホルダー",
+      "type": "key",
+      "color": 1,
+      "characters": [
+        "ルナ"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "key-1.png"
+    },
+    {
+      "id": 28,
+      "name": "企画展 キービジュアル A4ファイル 夏の記憶",
+      "works": [
+        "星の博物館"
+      ],
+      "category": "クリアファイル",
+      "type": "poster",
+      "color": 3,
+      "characters": [],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "poster-3.png"
+    },
+    {
+      "id": 29,
+      "name": "蒼 トレーディング缶バッジ 夏の記憶",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "缶バッジ",
+      "type": "badge",
+      "color": 0,
+      "characters": [
+        "蒼"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 5,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "badge-0.png"
+    },
+    {
+      "id": 30,
+      "name": "ミュージアム マグカップ 夏の記憶",
+      "works": [
+        "星の博物館"
+      ],
+      "category": "マグカップ・グラス",
+      "type": "mug",
+      "color": 3,
+      "characters": [],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "mug-3.png"
+    },
+    {
+      "id": 31,
+      "name": "公式アートブック 星の記録 夏の記憶",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "書籍",
+      "type": "book",
+      "color": 0,
+      "characters": [],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "book-0.png"
+    },
+    {
+      "id": 32,
+      "name": "ルナ おでかけアクリルスタンド 夏の記憶",
+      "works": [
+        "月と喫茶室"
+      ],
+      "category": "アクリルスタンド",
+      "type": "stand",
+      "color": 1,
+      "characters": [
+        "ルナ"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "stand-1.png"
+    },
+    {
+      "id": 33,
+      "name": "旅の風景 ポストカードセット 夏の記憶",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "ポストカード",
+      "type": "poster",
+      "color": 2,
+      "characters": [],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "poster-2.png"
+    },
+    {
+      "id": 34,
+      "name": "リク アクリルキーホルダー 夏の記憶",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "アクリルキーホルダー",
+      "type": "key",
+      "color": 2,
+      "characters": [
+        "リク"
+      ],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "key-2.png"
+    },
+    {
+      "id": 35,
+      "name": "花便り ぬいぐるみ 夏の記憶",
+      "works": [
+        "花のある日々"
+      ],
+      "category": "ぬいぐるみ",
+      "type": "plush",
+      "color": 1,
+      "characters": [
+        "ハル"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "plush-1.png"
+    },
+    {
+      "id": 36,
+      "name": "ハル ちいさな缶バッジ 夏の記憶",
+      "works": [
+        "花のある日々"
+      ],
+      "category": "缶バッジ",
+      "type": "badge",
+      "color": 2,
+      "characters": [
+        "ハル"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "badge-2.png"
+    },
+    {
+      "id": 37,
+      "name": "旅立ちのアクリルスタンド 秋の散歩",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "アクリルスタンド",
+      "type": "stand",
+      "color": 0,
+      "characters": [
+        "蒼"
+      ],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 3,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "stand-0.png"
+    },
+    {
+      "id": 38,
+      "name": "旅のともだち ぬいぐるみ 秋の散歩",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "ぬいぐるみ",
+      "type": "plush",
+      "color": 2,
+      "characters": [
+        "リク"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "plush-2.png"
+    },
+    {
+      "id": 39,
+      "name": "夜空のアクリルキーホルダー 秋の散歩",
+      "works": [
+        "月と喫茶室"
+      ],
+      "category": "アクリルキーホルダー",
+      "type": "key",
+      "color": 1,
+      "characters": [
+        "ルナ"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "key-1.png"
+    },
+    {
+      "id": 40,
+      "name": "企画展 キービジュアル A4ファイル 秋の散歩",
+      "works": [
+        "星の博物館"
+      ],
+      "category": "クリアファイル",
+      "type": "poster",
+      "color": 3,
+      "characters": [],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "poster-3.png"
+    },
+    {
+      "id": 41,
+      "name": "蒼 トレーディング缶バッジ 秋の散歩",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "缶バッジ",
+      "type": "badge",
+      "color": 0,
+      "characters": [
+        "蒼"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 5,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "badge-0.png"
+    },
+    {
+      "id": 42,
+      "name": "ミュージアム マグカップ 秋の散歩",
+      "works": [
+        "星の博物館"
+      ],
+      "category": "マグカップ・グラス",
+      "type": "mug",
+      "color": 3,
+      "characters": [],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "mug-3.png"
+    },
+    {
+      "id": 43,
+      "name": "公式アートブック 星の記録 秋の散歩",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "書籍",
+      "type": "book",
+      "color": 0,
+      "characters": [],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "book-0.png"
+    },
+    {
+      "id": 44,
+      "name": "ルナ おでかけアクリルスタンド 秋の散歩",
+      "works": [
+        "月と喫茶室"
+      ],
+      "category": "アクリルスタンド",
+      "type": "stand",
+      "color": 1,
+      "characters": [
+        "ルナ"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "stand-1.png"
+    },
+    {
+      "id": 45,
+      "name": "旅の風景 ポストカードセット 秋の散歩",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "ポストカード",
+      "type": "poster",
+      "color": 2,
+      "characters": [],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "poster-2.png"
+    },
+    {
+      "id": 46,
+      "name": "リク アクリルキーホルダー 秋の散歩",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "アクリルキーホルダー",
+      "type": "key",
+      "color": 2,
+      "characters": [
+        "リク"
+      ],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "key-2.png"
+    },
+    {
+      "id": 47,
+      "name": "花便り ぬいぐるみ 秋の散歩",
+      "works": [
+        "花のある日々"
+      ],
+      "category": "ぬいぐるみ",
+      "type": "plush",
+      "color": 1,
+      "characters": [
+        "ハル"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "plush-1.png"
+    },
+    {
+      "id": 48,
+      "name": "ハル ちいさな缶バッジ 秋の散歩",
+      "works": [
+        "花のある日々"
+      ],
+      "category": "缶バッジ",
+      "type": "badge",
+      "color": 2,
+      "characters": [
+        "ハル"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "badge-2.png"
+    },
+    {
+      "id": 49,
+      "name": "旅立ちのアクリルスタンド 冬のおくりもの",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "アクリルスタンド",
+      "type": "stand",
+      "color": 0,
+      "characters": [
+        "蒼"
+      ],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 3,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "stand-0.png"
+    },
+    {
+      "id": 50,
+      "name": "旅のともだち ぬいぐるみ 冬のおくりもの",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "ぬいぐるみ",
+      "type": "plush",
+      "color": 2,
+      "characters": [
+        "リク"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "plush-2.png"
+    },
+    {
+      "id": 51,
+      "name": "夜空のアクリルキーホルダー 冬のおくりもの",
+      "works": [
+        "月と喫茶室"
+      ],
+      "category": "アクリルキーホルダー",
+      "type": "key",
+      "color": 1,
+      "characters": [
+        "ルナ"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "key-1.png"
+    },
+    {
+      "id": 52,
+      "name": "企画展 キービジュアル A4ファイル 冬のおくりもの",
+      "works": [
+        "星の博物館"
+      ],
+      "category": "クリアファイル",
+      "type": "poster",
+      "color": 3,
+      "characters": [],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "poster-3.png"
+    },
+    {
+      "id": 53,
+      "name": "蒼 トレーディング缶バッジ 冬のおくりもの",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "缶バッジ",
+      "type": "badge",
+      "color": 0,
+      "characters": [
+        "蒼"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 5,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "badge-0.png"
+    },
+    {
+      "id": 54,
+      "name": "ミュージアム マグカップ 冬のおくりもの",
+      "works": [
+        "星の博物館"
+      ],
+      "category": "マグカップ・グラス",
+      "type": "mug",
+      "color": 3,
+      "characters": [],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "mug-3.png"
+    },
+    {
+      "id": 55,
+      "name": "公式アートブック 星の記録 冬のおくりもの",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "書籍",
+      "type": "book",
+      "color": 0,
+      "characters": [],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "book-0.png"
+    },
+    {
+      "id": 56,
+      "name": "ルナ おでかけアクリルスタンド 冬のおくりもの",
+      "works": [
+        "月と喫茶室"
+      ],
+      "category": "アクリルスタンド",
+      "type": "stand",
+      "color": 1,
+      "characters": [
+        "ルナ"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "stand-1.png"
+    },
+    {
+      "id": 57,
+      "name": "旅の風景 ポストカードセット 冬のおくりもの",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "ポストカード",
+      "type": "poster",
+      "color": 2,
+      "characters": [],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "poster-2.png"
+    },
+    {
+      "id": 58,
+      "name": "リク アクリルキーホルダー 冬のおくりもの",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "アクリルキーホルダー",
+      "type": "key",
+      "color": 2,
+      "characters": [
+        "リク"
+      ],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "key-2.png"
+    },
+    {
+      "id": 59,
+      "name": "花便り ぬいぐるみ 冬のおくりもの",
+      "works": [
+        "花のある日々"
+      ],
+      "category": "ぬいぐるみ",
+      "type": "plush",
+      "color": 1,
+      "characters": [
+        "ハル"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "plush-1.png"
+    },
+    {
+      "id": 60,
+      "name": "ハル ちいさな缶バッジ 冬のおくりもの",
+      "works": [
+        "花のある日々"
+      ],
+      "category": "缶バッジ",
+      "type": "badge",
+      "color": 2,
+      "characters": [
+        "ハル"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "badge-2.png"
+    },
+    {
+      "id": 61,
+      "name": "旅立ちのアクリルスタンド 記念展",
+      "works": [
+        "星巡りの旅（表記違い）"
+      ],
+      "category": "アクリルスタンド",
+      "type": "stand",
+      "color": 0,
+      "characters": [
+        "蒼"
+      ],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 3,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "stand-0.png"
+    },
+    {
+      "id": 62,
+      "name": "旅のともだち ぬいぐるみ 記念展",
+      "works": [
+        "星巡りの旅"
+      ],
+      "category": "ぬいぐるみ",
+      "type": "plush",
+      "color": 2,
+      "characters": [
+        "リク"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "plush-2.png"
+    },
+    {
+      "id": 63,
+      "name": "夜空のアクリルキーホルダー 記念展",
+      "works": [
+        "月と喫茶室"
+      ],
+      "category": "アクリルキーホルダー",
+      "type": "key",
+      "color": 1,
+      "characters": [
+        "ルナ"
+      ],
+      "tags": [],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 2,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "key-1.png"
+    },
+    {
+      "id": 64,
+      "name": "企画展 キービジュアル A4ファイル 記念展",
+      "works": [
+        "星の博物館"
+      ],
+      "category": "クリアファイル",
+      "type": "poster",
+      "color": 3,
+      "characters": [],
+      "tags": [
+        "会場限定"
+      ],
+      "version": "通常ver.",
+      "maker": "星空企画",
+      "memo": "",
+      "lots": [
+        {
+          "quantity": 1,
+          "state": "未開封",
+          "place": "書斎 / グッズボックスA",
+          "seller": "星巡り展 会場ショップ",
+          "memo": ""
+        }
+      ],
+      "items": [],
+      "imageFile": "poster-3.png"
+    }
+  ],
+  "masterData": {
+    "作品": [
+      "星巡りの旅",
+      "月と喫茶室",
+      "星の博物館",
+      "花のある日々",
+      "星巡りの旅（表記違い）"
+    ],
+    "シリーズ": [
+      "星巡りシリーズ",
+      "喫茶室シリーズ"
+    ],
+    "キャラクター": [
+      "蒼",
+      "リク",
+      "ルナ",
+      "ハル"
+    ],
+    "カテゴリ": [
+      "アクリル・キーホルダー類",
+      "　アクリルスタンド",
+      "　アクリルキーホルダー",
+      "バッジ類",
+      "　缶バッジ",
+      "紙・印刷物",
+      "　クリアファイル",
+      "　ポストカード",
+      "フィギュア・立体物",
+      "　ぬいぐるみ",
+      "書籍",
+      "食器・生活雑貨",
+      "　マグカップ・グラス"
+    ],
+    "組織": [
+      "星空企画",
+      "星の博物館",
+      "月灯舎"
+    ],
+    "タグ": [
+      "会場限定",
+      "描き下ろし",
+      "周年記念",
+      "お気に入り",
+      "要整理"
+    ]
+  }
+}

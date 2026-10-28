@@ -14,6 +14,7 @@
     <PackageReference Include="NUnit3TestAdapter" Version="5.2.0" />
     <ProjectReference Include="../../src/GoodsManager.Web/GoodsManager.Web.csproj" />
     <ProjectReference Include="../GoodsManager.FaultHost/GoodsManager.FaultHost.csproj" />
+    <ProjectReference Include="../../tools/GoodsManager.SampleData/GoodsManager.SampleData.csproj" />
     <Using Include="NUnit.Framework" />
   </ItemGroup>
 </Project>
