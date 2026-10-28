@@ -10,6 +10,8 @@
 .registration-page h2 {font-size:18px;margin:0 0 18px}
 .registration-page h2:not(:first-child) {margin-top:28px}
 .registration-page .field {margin-bottom:16px}
+.registration-page .field-caption {display:flex;align-items:center;gap:7px}
+.registration-page .field-caption .required {flex:none;margin:0;line-height:1.4;white-space:nowrap}
 .registration-page .photo-zone {padding:30px 18px;min-height:230px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px}
 .registration-page .photo-zone p,.registration-page .photo-zone small,.registration-page .photo-zone strong {width:100%;text-align:center}
 .file-input {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
@@ -22,9 +24,14 @@
 .inline-create label {display:block;margin-top:10px}
 .registration-more {padding:16px 0;border-bottom:1px solid #ddd;margin-bottom:18px}
 .registration-more>summary {font-weight:600;cursor:pointer;margin-bottom:12px}
-.registration-code {display:flex;gap:10px;align-items:start;flex-wrap:wrap}
+.registration-code {display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:16px}
+.registration-page .registration-code .field {margin-bottom:0}
 .registration-code .field:first-child {flex:1;min-width:150px}
 .registration-code .field:nth-child(2) {flex:2;min-width:180px}
+.registration-code>.btn {min-height:43px;flex-shrink:0}
+.registration-code-errors {flex-basis:100%;min-width:0}
+.registration-code-errors small {display:block}
+@media(max-width:600px){.registration-code .field:first-child{flex-basis:100%;min-width:0}.registration-code .field:nth-child(2){min-width:0}}
 .registration-link {display:flex;gap:10px;align-items:center}
 .registration-link .field {flex:1;min-width:0}
 .carry-options {display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
