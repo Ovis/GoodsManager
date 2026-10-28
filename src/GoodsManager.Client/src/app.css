@@ -151,4 +151,24 @@
 .barcode-preview canvas {display:none}
 .barcode-dialog-actions {display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;margin-top:18px}
 .barcode-scan-status {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.isbn-lookup {flex-basis:100%;min-width:0;padding:10px 0;border-top:1px solid var(--line)}
+.isbn-lookup p {margin:8px 0;overflow-wrap:anywhere}
+.isbn-attribution {font-size:11px}
+.isbn-attribution a {text-decoration:underline}
+.isbn-publishers {background:var(--bg);padding:14px;border-radius:8px;margin-top:12px}
+.isbn-publishers h3 {font-size:14px;margin-bottom:12px}
+.isbn-publisher-match {padding:12px 0;border-bottom:1px solid var(--line)}
+.isbn-publisher-match>.btn {display:block;margin-top:10px}
+.isbn-dialog {border:0;border-radius:12px;width:min(680px,94vw);max-height:85dvh;overflow:auto;padding:24px;color:var(--ink)}
+.isbn-dialog[open] {display:flex;flex-direction:column;overflow:hidden}
+.isbn-candidates {min-height:0;overflow:auto}
+.isbn-dialog>h2,.isbn-dialog>p,.isbn-dialog>footer {flex-shrink:0}
+.isbn-dialog>footer {padding-top:14px}
+.isbn-dialog::backdrop {background:#132b24bb}
+.isbn-dialog article {padding:16px 0;border-bottom:1px solid var(--line)}
+.isbn-dialog h2 {font-size:20px;margin-bottom:14px}
+.isbn-dialog h3 {font-size:16px;margin:8px 0;overflow-wrap:anywhere}
+.isbn-dialog p {margin:8px 0;overflow-wrap:anywhere}
+.isbn-dialog article>.btn {display:block;margin:12px 0}
+.isbn-dialog>.btn {margin-top:18px}
 @media(max-width:600px){.registration-code .field:nth-child(2){flex-basis:100%}.registration-code-actions{margin-left:auto}.barcode-dialog{padding:18px}}

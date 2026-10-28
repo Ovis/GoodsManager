@@ -57,6 +57,12 @@ builder.Services.AddScoped<ProductWrites>();
 builder.Services.AddScoped<DuplicateChecks>();
 builder.Services.AddScoped<SearchProjection>();
 builder.Services.AddScoped<ProductSearch>();
+builder.Services.AddHttpClient("NdlBooks", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(20);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("GoodsManager/1.0");
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddSingleton(services => new GoodsManager.Web.Books.NdlBooks(services.GetRequiredService<IHttpClientFactory>().CreateClient("NdlBooks"), services.GetRequiredService<TimeProvider>()));
 builder.Services.AddSingleton<ImageLimits>();
 builder.Services.AddSingleton<ImageActivity>();
 builder.Services.AddSingleton<IImageFiles, ImageFiles>();

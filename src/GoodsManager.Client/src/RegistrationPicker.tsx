@@ -5,9 +5,9 @@ import {RegistrationStore,mutation} from './RegistrationStore';
 import {validText} from './registration-state.mjs';
 import type {NamedRef} from './types';
 type Master=NamedRef&{etag:string};
-export function RegistrationPicker({store,field,kind,label,multiple=false}:{store:RegistrationStore;field:'workIds'|'characterIds'|'tagIds'|'categoryId'|'manufacturerId'|'sellerId';kind:string;label:string;multiple?:boolean}){
+export function RegistrationPicker({store,field,kind,label,multiple=false,suggestion,canSelect}:{store:RegistrationStore;field:'workIds'|'characterIds'|'tagIds'|'categoryId'|'manufacturerId'|'sellerId';kind:string;label:string;multiple?:boolean;suggestion?:string;canSelect?:()=>boolean}){
   const value=store.draft[field],selected=Array.isArray(value)?value:value?[value]:[];
-  const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[applied,setApplied]=useState(''),[page,setPage]=useState(1),[data,setData]=useState<{items:NamedRef[];totalPages:number}|null>(null),[error,setError]=useState(''),[newName,setNewName]=useState(''),[parent,setParent]=useState(false),[linkWorks,setLinkWorks]=useState(true),[refresh,setRefresh]=useState(0);
+  const [open,setOpen]=useState(!!suggestion),[query,setQuery]=useState(suggestion||''),[applied,setApplied]=useState(suggestion||''),[page,setPage]=useState(1),[data,setData]=useState<{items:NamedRef[];totalPages:number}|null>(null),[error,setError]=useState(''),[newName,setNewName]=useState(suggestion||''),[parent,setParent]=useState(false),[linkWorks,setLinkWorks]=useState(true),[refresh,setRefresh]=useState(0);
   const job=store.masterJobs[field],pending=job&&(job.result?job.relation.last&&job.relation.state!=='success':job.create.last&&job.create.state!=='success');
   const related=kind==='characters'?store.draft.workIds.join('|'):'';
   useEffect(()=>{if(!open)return;const abort=new AbortController();setData(null);setError('');const p=new URLSearchParams({q:applied,page:String(page),pageSize:'25'});if(related)for(const id of related.split('|'))p.append('relatedWorkIds',id);
@@ -15,7 +15,7 @@ export function RegistrationPicker({store,field,kind,label,multiple=false}:{stor
   },[open,applied,page,kind,related,refresh]);
   useEffect(()=>{if(kind==='categories'&&open)return;const abort=new AbortController();void loadPickerNames(kind,kind==='categories'?selected:selected.filter(id=>!store.names[id]),abort.signal).then(names=>{store.resolved(names);store.notify();}).catch(e=>{if(!abort.signal.aborted)setError(errorText(e));});return()=>abort.abort();},[selected.join('|'),kind,open,refresh]);
   const select=(id:string)=>{if(multiple)store.update(field,selected.includes(id)?selected.filter(x=>x!==id):[...selected,id] as never);else store.update(field,selected.includes(id)?'':id as never);};
-  const finish=(item:Master)=>{store.resolved({[item.id]:item.name});if(multiple){if(!selected.includes(item.id))store.update(field,[...selected,item.id] as never);}else store.update(field,item.id as never);setNewName('');setRefresh(n=>n+1);store.notice=`「${item.name}」を作成しました。商品登録を取り消しても、この項目は残ります。`;store.notify();};
+  const finish=(item:Master)=>{store.resolved({[item.id]:item.name});if(canSelect&&!canSelect()){store.notice=`「${item.name}」を作成しました。入力が変わったため選択はしていません。`;store.notify();return;}if(multiple){if(!selected.includes(item.id))store.update(field,[...selected,item.id] as never);}else store.update(field,item.id as never);setNewName('');setRefresh(n=>n+1);store.notice=`「${item.name}」を作成しました。商品登録を取り消しても、この項目は残ります。`;store.notify();};
   const create=async(replay=false)=>{if(!replay&&(store.blocked||pending))return;setError('');
     try{
       let active=store.masterJobs[field];
