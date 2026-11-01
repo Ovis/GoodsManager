@@ -1,0 +1,204 @@
+[
+  {
+    "name": "@paddleocr/paddleocr-js",
+    "version": "0.4.2",
+    "license": "Apache-2.0",
+    "integrity": "sha512-vpwSaFVKcpTaRaNXIXL7R76lyvGjqQ8K17d7L/gsugQZYkNfwMR+yesAkLwzZtXmQVdMhVGtQmqBAQNkjvQ3EQ==",
+    "licenseFiles": [],
+    "supplement": "paddle.txt"
+  },
+  {
+    "name": "@protobufjs/aspromise",
+    "version": "1.1.2",
+    "license": "BSD-3-Clause",
+    "integrity": "sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "@protobufjs/base64",
+    "version": "1.1.2",
+    "license": "BSD-3-Clause",
+    "integrity": "sha512-AZkcAA5vnN/v4PDqKyMR5lx7hZttPDgClv83E//FMNhR2TMcLUhfRUBHCmSl0oi9zMgDDqRUJkSxO3wm85+XLg==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "@protobufjs/codegen",
+    "version": "2.0.5",
+    "license": "BSD-3-Clause",
+    "integrity": "sha512-zgXFLzW3Ap33e6d0Wlj4MGIm6Ce8O89n/apUaGNB/jx+hw+ruWEp7EwGUshdLKVRCxZW12fp9r40E1mQrf/34g==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "@protobufjs/eventemitter",
+    "version": "1.1.1",
+    "license": "BSD-3-Clause",
+    "integrity": "sha512-vW1GmwMZNnL+gMRaovlh9yZX74kc+TTU3FObkkurpMaRtBfLP3ldjS9KQWlwZgraRE0+dheEEoAxdzcJQ8eXZg==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "@protobufjs/fetch",
+    "version": "1.1.1",
+    "license": "BSD-3-Clause",
+    "integrity": "sha512-GpptLrs57adMSuHi3VNj0mAF8dwh36LMaYF6XyJ6JMWlVsc+t42tm1HSEDmOs3A8fC9yyeisgLhsTVQokOZ0zw==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "@protobufjs/float",
+    "version": "1.0.2",
+    "license": "BSD-3-Clause",
+    "integrity": "sha512-Ddb+kVXlXst9d+R9PfTIxh1EdNkgoRe5tOX6t01f1lYWOvJnSPDBlG241QLzcyPdoNTsblLUdujGSE4RzrTZGQ==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "@protobufjs/path",
+    "version": "1.1.2",
+    "license": "BSD-3-Clause",
+    "integrity": "sha512-6JOcJ5Tm08dOHAbdR3GrvP+yUUfkjG5ePsHYczMFLq3ZmMkAD98cDgcT2iA1lJ9NVwFd4tH/iSSoe44YWkltEA==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "@protobufjs/pool",
+    "version": "1.1.0",
+    "license": "BSD-3-Clause",
+    "integrity": "sha512-0kELaGSIDBKvcgS4zkjz1PeddatrjYcmMWOlAuAPwAeccUrPHdUqo/J6LiymHHEiJT5NrF1UVwxY14f+fy4WQw==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "@protobufjs/utf8",
+    "version": "1.1.2",
+    "license": "BSD-3-Clause",
+    "integrity": "sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "@techstark/opencv-js",
+    "version": "4.10.0-release.1",
+    "license": "Apache-2.0",
+    "integrity": "sha512-S4XELidRiQeA0q1s9VQLo540wCxUo24r1O4C+LqZ6llX+sPCXvZCPv3Ice8dEIr0uavyZ8YZeKXSBdDgMXSXjw==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "@types/node",
+    "version": "26.6.6",
+    "license": "MIT",
+    "integrity": "sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "argparse",
+    "version": "2.0.1",
+    "license": "Python-2.0",
+    "integrity": "sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "clipper-lib",
+    "version": "6.4.2",
+    "license": "BSL",
+    "integrity": "sha512-knglhjQX5ihNj/XCIs6zCHrTemdvHY3LPZP9XB2nq2/3igyYMFueFXtfp84baJvEE+f8pO1ZS4UVeEgmLnAprQ==",
+    "licenseFiles": [],
+    "supplement": "boost.txt; jsbn.txt; attribution below"
+  },
+  {
+    "name": "flatbuffers",
+    "version": "25.9.23",
+    "license": "Apache-2.0",
+    "integrity": "sha512-MI1qs7Lo4Syw0EOzUl0xjs2lsoeqFku44KpngfIduHBYvzm8h2+7K8YMQh1JtVVVrUvhLpNwqVi4DERegUJhPQ==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "guid-typescript",
+    "version": "1.0.9",
+    "license": "ISC",
+    "integrity": "sha512-Y8T4vYhEfwJOTbouREvG+3XDsjr8E3kIr7uf+JZ0BYloFsttiHU0WfvANVsR7TxNUJa/WpCnw/Ino/p+DeBhBQ==",
+    "licenseFiles": [],
+    "supplement": "ISC (package.json). ONNX WebGL-only dependency; omitted from the wasm-only bundle. Not redistributed."
+  },
+  {
+    "name": "js-yaml",
+    "version": "4.3.2",
+    "license": "MIT",
+    "integrity": "sha512-SFNOvSJ+Dgf/9An904Yx+CgSlIPCkIpao4qo51lpee25TIRejdH3rhR4EZMGoNx3/TP3O+wzWuiTFl4sqbltzA==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "long",
+    "version": "5.3.2",
+    "license": "Apache-2.0",
+    "integrity": "sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "onnxruntime-common",
+    "version": "1.22.0",
+    "license": "MIT",
+    "integrity": "sha512-vcuaNWgtF2dGQu/EP5P8UI5rEPEYqXG2sPPe5j9lg2TY/biJF8eWklTMwlDO08iuXq48xJo0awqIpK5mPG+IxA==",
+    "licenseFiles": [],
+    "supplement": "onnx.txt"
+  },
+  {
+    "name": "onnxruntime-web",
+    "version": "1.22.0",
+    "license": "MIT",
+    "integrity": "sha512-Ud/+EBo6mhuaQWt/OjaOk0iNWjXqJoeeMFr6xQEERZdIZH2OWpGzuujz7lfuOBjUa6TEE/sc4nb7Da5dNL34fg==",
+    "licenseFiles": [],
+    "supplement": "onnx.txt; onnx-third-party.txt"
+  },
+  {
+    "name": "platform",
+    "version": "1.3.6",
+    "license": "MIT",
+    "integrity": "sha512-fnWVljUchTro6RiCFvCXBbNhJc2NijN7oIQxbwsyL0buWJPG85v81ehlHI9fXrJsMNgTofEoWIQeClKpgxFLrg==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "protobufjs",
+    "version": "7.6.6",
+    "license": "BSD-3-Clause",
+    "integrity": "sha512-dYDWdjSl5RNb7SgPxGQcRU+GtvP7s2fpkrY0r432PcOIaZ0/rBcxEZnQN67iJhFuQiVw754JDoPruPCNdGsbjg==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "undici-types",
+    "version": "8.9.0",
+    "license": "MIT",
+    "integrity": "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  }
+]

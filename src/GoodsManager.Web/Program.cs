@@ -11,6 +11,7 @@ using GoodsManager.Web.Development;
 using GoodsManager.Web.Products;
 using GoodsManager.Web.Search;
 using GoodsManager.Web.Images;
+using GoodsManager.Web.PhotoOcr;
 
 if (args.FirstOrDefault() == "healthcheck") { Environment.ExitCode = await HealthCommand.RunAsync(); return; }
 if (args.FirstOrDefault() == "image-worker") { Environment.ExitCode = ImageConverter.RunCli(args); return; }
@@ -73,6 +74,7 @@ builder.Services.AddScoped<ImageGc>();
 builder.Services.AddScoped<ImageAlerts>();
 builder.Services.AddHostedService<ImageWorker>();
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict);
+builder.Services.AddSingleton(new GoodsManager.Web.PhotoOcr.PhotoOcrAssets(Path.Combine(builder.Environment.ContentRootPath, "PhotoOcrAssets")));
 
 var app = builder.Build();
 var runtime = app.Services.GetRequiredService<DatabaseRuntime>();
@@ -120,7 +122,7 @@ app.UseStatusCodePages();
 app.Use(async (context, next) =>
 {
     // 認証のチャレンジが短絡した場合もAPI応答をキャッシュさせない
-    if (context.Request.Path.StartsWithSegments("/api") || context.Request.Path.StartsWithSegments("/media"))
+    if (context.Request.Path.StartsWithSegments("/api") || context.Request.Path.StartsWithSegments("/media") || context.Request.Path.StartsWithSegments("/registration-photo-ocr"))
     {
         context.Response.Headers.CacheControl = "private, no-store";
     }
@@ -151,6 +153,7 @@ app.Use(async (context, next) =>
     await next(context);
 });
 app.MapCollectionPages();
+app.MapRegistrationPhotoOcr();
 app.MapControllers();
 app.MapAuthenticationCheck();
 app.MapMasterCheck();

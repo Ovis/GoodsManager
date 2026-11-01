@@ -1,0 +1,57 @@
+GoodsManager 商品登録の写真文字読み取り — 使用資産とライセンス（2026-11-01）
+
+このディレクトリの文書を、生成したJS/WASM/モデルと
+一緒に配布してください。原著作権表示・免責条項を保持しています。
+GoodsManagerによる上流ライブラリやモデルの変更はありません（バンドルのみ）。
+商用利用を含む利用・再配布を禁止する条件は採用資産にありません。
+MPL-2.0のソース提供、BSD/MIT/Apache等の表示条件は以下の形で満たします。
+依存やモデルを更新する場合は再確認が必要です。
+
+主要構成
+* @paddleocr/paddleocr-js 0.4.2: Apache-2.0 (paddle.txt, npm-notices.txt)
+  https://github.com/PaddlePaddle/PaddleOCR.js
+* PP-OCRv5_mobile_det / PP-OCRv5_mobile_rec ONNX: Apache-2.0 (paddle.txt)
+  公式PaddleOCR/PaddleX配布。認識モデルに日本語・英数字の辞書を含む。
+  https://github.com/PaddlePaddle/PaddleOCR/blob/main/LICENSE
+  取得URLとSHA-256は models.json。学習データそのものは同梱しません。
+* @techstark/opencv-js 4.10.0-release.1 / OpenCV 4.10.0: Apache-2.0
+  opencv.txt, npm-notices.txt, opencv-*.txt
+  https://github.com/TechStark/opencv-js/tree/v4.10.0-release.1
+  https://github.com/opencv/opencv/tree/4.10.0
+* onnxruntime-web / onnxruntime-common 1.22.0: MIT
+  onnx.txt / onnx-third-party.txt / ort-deps.txt
+  https://github.com/microsoft/onnxruntime/tree/v1.22.0
+npm依存全体
+npm-inventory.json に23パッケージの解決版・npm integrityを記録し、
+npm-notices.txt に同梱ライセンス/著作権表示を収録。
+Apache-2.0 / MIT / BSD-2-Clause / BSD-3-Clause / ISC /
+Python-2.0 (argparseというJSパッケージ。Python実行環境は導入しない)。
+clipper-lib 6.4.2 のmetadata「BSL」は Business Source Licenseではなく
+Boost Software License 1.0。boost.txt と組込JSBNの jsbn.txt を併記。
+guid-typescript 1.0.9 はnpm metadataがISC。原配布にLICENSE文書がなく、
+本機能のWASM専用ONNXバンドルではWebGL依存の同コードを配布・実行しない。
+型定義なども取得依存として台帳に含める。
+
+WASMの内包依存
+* OpenCV実配布のgetBuildInformationで確認:
+  4.10.0 / zlib 1.3.1 / protobuf 3.19.1 / flatbuffers 23.5.9、
+  Non-free algorithms: NO、imgcodecs無効。
+  modules内のFLANN(BSD)とSoftFloat(BSD)の通知も同梱。
+  OpenJPEG(BSD2)の表示を保守的に含める。
+* Emscripten由来のJS/system runtimeのMIT/NCSA/LLVM-exception等を
+  emscripten*.txt に保持。opencv側は旧Emscripten系列の通知も保持。
+* ONNXのThirdPartyNoticesは公式1.22.0配布を省略せず保持。
+  全ターゲット用の広い通知で、そこにある全依存をWASMに含める意味ではない。
+  本機能はWASM backendのみ。WebGL/WebGPU/JSEP用runtimeと、依存を内部に
+  バンドルしたSDK既定Workerは配布しない。
+
+MPL-2.0 source availability (Eigen in ONNX Runtime)
+Eigenの対応ソースは改変していません。実行物を受け取った方は次のURLから
+MPL-2.0で対応ソースを取得できます（ORT 1.22.0のdeps.txtに一致）:
+https://gitlab.com/libeigen/eigen/-/archive/1d8b82b0740839c0de7f1242a3585e3390ff5f33/eigen-1d8b82b0740839c0de7f1242a3585e3390ff5f33.zip
+MPL全文: onnx-third-party.txt のEigen節。
+取得先を変更/廃止して配布する際は同じソースも提供してください。
+
+LinuxイメージのOS/.NET共有ランタイムは既存の配布元の条件に従います。
+OS文書 /usr/share/doc 等を削除せず、Dockerベースの固定digestはDockerfileに記録しています。
+本機能は.NETのバージョンを変更していません。

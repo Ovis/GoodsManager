@@ -6,6 +6,8 @@ RUN test "$TARGETARCH" = "amd64"
 COPY --from=node /usr/local/ /usr/local/
 WORKDIR /source
 COPY global.json ./
+COPY tools/photo-ocr/ tools/photo-ocr/
+COPY third-party/photo-ocr/ third-party/photo-ocr/
 COPY src/GoodsManager.Web/ src/GoodsManager.Web/
 COPY src/GoodsManager.Client/ src/GoodsManager.Client/
 RUN dotnet publish src/GoodsManager.Web -c Release -r linux-x64 --self-contained false -o /publish

@@ -440,3 +440,6 @@ src/GoodsManager.Client/dist/
 # Deployment-local configuration
 compose.yml
 .env
+
+# Generated browser OCR assets
+src/GoodsManager.Web/PhotoOcrAssets/

@@ -25,14 +25,22 @@
     <!-- 生成アセットは発行直前に確定し、運用データと鍵を発行物へ混入させない。 -->
     <Content Remove="wwwroot/**/*;data/**/*" />
     <None Remove="data/**/*" />
+    <Content Remove="PhotoOcrAssets/**/*" />
+    <None Remove="PhotoOcrAssets/**/*" />
   </ItemGroup>
   <Target Name="BuildCollectionClient" AfterTargets="ComputeFilesToPublish" Condition="'$(DesignTimeBuild)' != 'true'">
     <Exec WorkingDirectory="../GoodsManager.Client" Command="npm ci --ignore-scripts" />
     <Exec WorkingDirectory="../GoodsManager.Client" Command="npm run build" />
     <ItemGroup>
       <_ClientFiles Include="wwwroot/**/*" />
+      <_OcrFiles Include="PhotoOcrAssets/**/*" />
       <ResolvedFileToPublish Include="@(_ClientFiles->'%(FullPath)')">
         <RelativePath>wwwroot/%(_ClientFiles.RecursiveDir)%(_ClientFiles.Filename)%(_ClientFiles.Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+      <ResolvedFileToPublish Include="@(_OcrFiles->'%(FullPath)')">
+        <RelativePath>PhotoOcrAssets/%(_OcrFiles.RecursiveDir)%(_OcrFiles.Filename)%(_OcrFiles.Extension)</RelativePath>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       </ResolvedFileToPublish>

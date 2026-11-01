@@ -1,5 +1,11 @@
 **
 !global.json
+!tools/
+!tools/photo-ocr/
+!tools/photo-ocr/**
+!third-party/
+!third-party/photo-ocr/
+!third-party/photo-ocr/**
 !src/
 !src/GoodsManager.Web/
 !src/GoodsManager.Web/**
@@ -14,3 +20,5 @@ src/GoodsManager.Web/wwwroot/
 **/*.pem
 **/*.key
 **/.env*
+
+src/GoodsManager.Web/PhotoOcrAssets/
