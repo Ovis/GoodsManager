@@ -18,6 +18,8 @@
 .registration-photos article {display:flex;gap:12px;margin-top:16px;padding:12px;border:1px solid #ddd;border-radius:10px;overflow-wrap:anywhere}
 .registration-photos img {width:90px;height:100px;object-fit:contain;background:#f6f5f1;border-radius:6px}
 .registration-photos article>div {min-width:0;display:grid;gap:8px}
+.registration-photo-position {font-size:12px;font-weight:600;color:var(--green)}
+.registration-photos .image-edit-actions {margin-top:0}
 .registration-picker {margin:12px 0}
 .registration-picker summary {overflow-wrap:anywhere}
 .inline-create {margin-top:16px;padding:14px;background:#f6f5f1;border-radius:8px}

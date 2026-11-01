@@ -36,6 +36,8 @@ export class PhotoOcrSession {
     if(fresh.length&&this.active){
       for(const photo of fresh)this.entries.push({identity:this.identity(photo),photo,state:'queued',text:'',error:''});
     }
+    const byPhoto=new Map(this.entries.map(entry=>[entry.photo.localId,entry]));
+    this.entries=this.store.photos.flatMap(photo=>{const entry=byPhoto.get(photo.localId);return entry?[entry]:[];});
     if(!this.entries.length)this.close();
     this.notify();void this.pump();
   }

@@ -77,6 +77,7 @@ export class RegistrationStore{
   async refreshConflict(){if(!this.conflict)return;this.busy=true;this.notify();try{this.conflict.latest=await this.request<ProductDetail>(`/products/${this.conflict.attempt.target!.product.id}`);}catch(e){this.showError(e);}finally{this.busy=false;this.notify();}}
   async acceptConflict(onSuccess:(result:SaveResult,mode:'next'|'finish')=>void){if(!this.conflict?.latest)return;const {attempt,latest}=this.conflict;const target={...attempt.target!,product:{...attempt.target!.product,revision:latest.revision,name:latest.name,totalQuantity:latest.totalQuantity}};this.conflict=null;await this.perform({...attempt,target},onSuccess);}
   addFiles(files:File[]){if(this.blocked)return;if(this.photos.length+files.length>100){this.error='1商品に一度に選択できる画像は100枚までです。';this.notify();return;}for(const file of files)this.photos.push({localId:crypto.randomUUID(),file,url:URL.createObjectURL(file),key:crypto.randomUUID(),state:'queued',progress:0,generation:0});this.notify();void this.pump();}
+  movePhoto(photo:Photo,delta:-1|1){if(this.blocked)return;const index=this.photos.indexOf(photo),target=index+delta;if(index<0||target<0||target>=this.photos.length)return;[this.photos[index],this.photos[target]]=[this.photos[target],this.photos[index]];this.notify();}
   private async pump(){if(this.uploadBusy)return;const photo=this.photos.find(x=>x.state==='queued');if(!photo)return;this.uploadBusy=true;
     try{await this.sendPhoto(photo);}finally{this.uploadBusy=false;this.notify();void this.pump();}
   }

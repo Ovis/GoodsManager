@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {fileURLToPath} from 'node:url';
 import {build} from '../../src/GoodsManager.Client/node_modules/vite/dist/node/index.js';
 import {normalize} from '../../src/GoodsManager.Client/photo-ocr/normalize.js';
+import {FrozenMutation} from '../../src/GoodsManager.Client/src/frozen-mutation.ts';
 const root=fileURLToPath(new URL('../../src/GoodsManager.Client/',import.meta.url));
 const bundle=await build({configFile:false,root,logLevel:'silent',build:{ssr:'../../tests/Browser/photo-ocr-fixture.ts',write:false}});
 const {PhotoOcrClient,PhotoOcrSession,PhotoOcrError,RegistrationStore,copyPhotoText}=await import('data:text/javascript;base64,'+Buffer.from(bundle.output.find(x=>x.type==='chunk').code).toString('base64'));
@@ -30,6 +31,36 @@ test('複数写真を直列処理し、文字ありでも自動表示せず手�
 test('処理待ちから手動表示でき、後続結果を更新し、閉じた後は再表示しない',async t=>{
  const f=fixture(t);await f.session.activate();await f.add('a','b');await f.session.show();assert.equal(f.session.open,true);assert.equal(f.session.withText,0);
  await f.done('一枚目');assert.equal(f.session.open,true);assert.equal(f.session.withText,1);f.session.close();await f.done('後続');assert.equal(f.session.open,false);assert.equal(f.session.withText,2);
+});
+test('写真の並べ替えはアップロード状態と同じ写真の参照を保ち、端や保存結果不明では移動しない',async t=>{
+ const f=fixture(t);await f.add('a','b','c');const [a,b,c]=f.store.photos;
+ b.state='uploading';b.progress=42;b.generation=3;const key=b.key;
+ f.store.movePhoto(b,-1);assert.deepEqual(f.store.photos,[b,a,c]);assert.equal(b.progress,42);assert.equal(b.generation,3);assert.equal(b.key,key);
+ f.store.movePhoto(b,-1);f.store.movePhoto(c,1);assert.deepEqual(f.store.photos,[b,a,c]);
+ f.store.busy=true;f.store.movePhoto(b,1);assert.deepEqual(f.store.photos,[b,a,c]);f.store.busy=false;
+ f.store.save.state='unknown';f.store.movePhoto(c,-1);assert.deepEqual(f.store.photos,[b,a,c]);
+});
+test('並べ替えた写真の順番を保存し、結果不明の再送でも代表と順序を変えない',async t=>{
+ const f=fixture(t);await f.add('a','b','c');const [a,b,c]=f.store.photos;
+ f.store.draft.name='写真の順序';f.store.draft.categoryId='category';
+ for(const photo of f.store.photos){photo.state='ready';photo.id=photo.file.name;}
+ f.store.movePhoto(c,-1);f.store.movePhoto(c,-1);assert.deepEqual(f.store.photos,[c,a,b]);
+ const sent=[];let fail=true;
+ f.store.save=new FrozenMutation({csrf:async()=>'csrf',post:async request=>{sent.push(request);if(fail)throw new TypeError('offline');return {outcome:'created',deduplicatedCount:0,product:{id:'saved'}};}});
+ await f.store.submit('next',()=>{});assert.equal(f.store.save.state,'unknown');
+ assert.deepEqual(JSON.parse(sent[0].body).images,[{temporaryUploadId:'c'},{temporaryUploadId:'a'},{temporaryUploadId:'b'}]);
+ f.store.movePhoto(c,1);assert.deepEqual(f.store.photos,[c,a,b]);fail=false;await f.store.replay(()=>{});
+ assert.strictEqual(sent[0],sent[1]);assert.equal(f.store.photos.length,0);
+});
+test('写真を並べ替えてもOCRの結果・処理中の写真・選択を保持し、表示順だけ写真に追従する',async t=>{
+ const f=fixture(t);await f.session.activate();await f.add('a','b','c');const [a,b,c]=f.store.photos;
+ await f.done('Aの結果');assert.equal(f.calls[1].file,b.file);f.session.selectedId=a.localId;
+ const aResult=f.session.entries[0],running=f.session.entries[1];
+ f.store.movePhoto(c,-1);f.store.movePhoto(c,-1);
+ assert.deepEqual(f.session.entries.map(x=>x.photo),[c,a,b]);assert.strictEqual(f.session.entries[1],aResult);assert.strictEqual(f.session.entries[2],running);
+ assert.equal(f.session.selected.photo,a);assert.equal(f.session.selected.text,'Aの結果');assert.equal(f.calls.length,2);
+ await f.done('Bの結果');assert.equal(f.calls[2].file,c.file);await f.done('Cの結果');
+ assert.deepEqual(f.session.entries.map(x=>x.text),['Cの結果','Aの結果','Bの結果']);assert.equal(f.calls.length,3);
 });
 test('文字なし・認識失敗でも次の写真を処理し、明示再試行では自動表示しない',async t=>{
  const f=fixture(t);await f.session.activate();await f.add('a','b');await f.done('');f.calls[1].reject(new PhotoOcrError('recognize','失敗'));await turn();assert.equal(f.session.open,false);assert.deepEqual(f.session.entries.map(x=>x.state),['empty','error']);
