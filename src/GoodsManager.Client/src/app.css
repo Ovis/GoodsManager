@@ -184,6 +184,9 @@
 .collections-manager {max-width:900px;margin:auto}
 .collections-manager>.panel {margin-top:20px}
 .collections-manager h2 {margin-bottom:18px}
+.collections-manager .field {margin-bottom:16px}
+.collections-manager .editor-actions {display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.collection-rename {margin-top:20px}
 .collections-manager .note {margin:12px 0}
 .collection-space {padding:18px 0;border-bottom:1px solid var(--line)}
 .collection-space h3 {overflow-wrap:anywhere}
