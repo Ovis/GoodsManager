@@ -38,7 +38,7 @@ public sealed partial class MastersController(AppDbContext db, SignInManager<App
             "characters" => await PageAsync<Character>(kind, search, page, pageSize, relatedWorkIds ?? []),
             "tags" => await PageAsync<Tag>(kind, search, page, pageSize, []),
             "organizations" => await PageAsync<Organization>(kind, search, page, pageSize, []),
-            "categories" => await PageAsync<Category>(kind, search, page, pageSize, []),
+            "categories" => await PageCategoriesAsync(search, page, pageSize),
             _ => throw new MasterProblem(404, "NOT_FOUND")
         };
         await native.CommitAsync(HttpContext.RequestAborted);
