@@ -72,7 +72,8 @@
 .image-edit-grid article {border:1px solid #dbe0d7;padding:14px;border-radius:10px;overflow-wrap:anywhere}
 .image-edit-grid article>img {width:100%;height:180px;object-fit:contain;background:#f7f6f2}
 .image-edit-actions {display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
-.image-edit-grid input[type=radio] {width:auto;margin-right:6px}
+.image-edit-grid article>label {display:inline-flex;align-items:center;gap:6px}
+.image-edit-grid input[type=radio] {width:auto;min-height:0;padding:0;margin:0;flex:none}
 .holding-edit {padding:22px;margin:20px 0;border:1px solid #dbe0d7;border-radius:12px}
 .ownership-fields .full {grid-column:1/-1}
 .ownership-fields .field {margin-bottom:12px}
