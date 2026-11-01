@@ -2,7 +2,7 @@ import {api,ApiError,errorText,type ApiClient} from './api';
 import {mutation} from './RegistrationStore';
 import {validText} from './registration-state.mjs';
 import type {NamedRef} from './types';
-export const masterKinds:Record<string,string>={works:'作品',series:'シリーズ',characters:'キャラクター',tags:'タグ',organizations:'組織',categories:'カテゴリ'};
+export const masterKinds:Record<string,string>={works:'作品',series:'シリーズ',characters:'キャラクター',tags:'タグ',organizations:'メーカー・販売元',categories:'カテゴリ'};
 export type Master=NamedRef&{revision:string;etag:string;websiteUrl?:string|null;memo?:string|null;parentId?:string|null;sortOrder?:number;usage:{activeProductCount:number;trashedProductCount:number}};
 type Page={items:Master[];page:number;totalCount:number;totalPages:number};
 export type Impact={source:Master;target:Master|null;confirmedImpact:{activeProductCount:number;trashedProductCount:number;referenceCounts:Record<string,number>;duplicateRelationCount:number};affectedMasters:{kind:string;id:string;name:string;revision:string}[];lostAttributes:{name:string;websiteUrl:string|null;memo:string|null};canDelete:boolean};

@@ -3,7 +3,7 @@ import {navigate} from './navigation';
 
 export function Settings({isAdministrator,collectionName}:{isAdministrator:boolean;collectionName?:string}){
   const items=[
-    {href:'/masters',title:'マスター管理',description:collectionName?`「${collectionName}」のカテゴリ・作品・キャラクター・タグ・組織を管理します。`:'コレクションを選択すると、カテゴリや作品などを管理できます。',available:!!collectionName},
+    {href:'/masters',title:'マスター管理',description:collectionName?`「${collectionName}」のカテゴリや作品、メーカー・販売元などを管理します。`:'コレクションを選択すると、カテゴリや作品などを管理できます。',available:!!collectionName},
     {href:'/account',title:'アカウント設定',description:'パスワードの変更や、パスキーの登録・管理を行います。',available:true},
     ...(isAdministrator?[{href:'/backups',title:'バックアップ',description:'すべてのコレクションのバックアップ設定・手動実行・履歴を管理します。',available:true}]:[])
   ];
