@@ -7,6 +7,10 @@ GoodsManagerによる上流ライブラリやモデルの変更はありませ�
 MPL-2.0のソース提供、BSD/MIT/Apache等の表示条件は以下の形で満たします。
 依存やモデルを更新する場合は再確認が必要です。
 
+発行物では PhotoOcrAssets/notices/（Dockerでは /app/PhotoOcrAssets/notices/）
+に収録します。ブラウザへ配信するOCRのJS/MJSにも、この文書の相対パスと
+Eigenの対応ソース取得先をコメントで付記します。登録画面内のリンクは設けません。
+
 主要構成
 * @paddleocr/paddleocr-js 0.4.2: Apache-2.0 (paddle.txt, npm-notices.txt)
   https://github.com/PaddlePaddle/PaddleOCR.js

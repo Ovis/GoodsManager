@@ -41,4 +41,20 @@ for(const file of await fs.readdir(path.join(client,'node_modules/onnxruntime-we
   if(/^ort-wasm-simd-threaded\.(mjs|wasm)$/.test(file))await fs.copyFile(path.join(client,'node_modules/onnxruntime-web/dist',file),path.join(target,'runtime/ort',file));
 await fs.cp(path.join(root,'third-party/photo-ocr'),path.join(target,'notices'),{recursive:true});
 await fs.copyFile(new URL('./models.json',import.meta.url),path.join(target,'notices/models.json'));
+// Browser delivery is distribution too. Keep notices/source availability attached
+// to the delivered code without adding a link to the registration screen.
+const notices=await fs.readFile(path.join(target,'notices/index.txt'),'utf8');
+const eigenSource=notices.match(/^https:\/\/gitlab\.com\/libeigen\/eigen\/[^\s]+\.zip$/m)?.[0];
+if(!eigenSource)throw Error('OCR notices must provide the corresponding Eigen source.');
+async function attachNotices(directory){
+  for(const entry of await fs.readdir(directory,{withFileTypes:true})){
+    const file=path.join(directory,entry.name);
+    if(entry.isDirectory()){await attachNotices(file);continue;}
+    if(!/\.(?:js|mjs)$/.test(entry.name))continue;
+    const noticePath=path.relative(directory,path.join(target,'notices/index.txt')).split(path.sep).join('/');
+    const banner=`/*! GoodsManager photo OCR: third-party licenses, copyrights and source availability: ${noticePath} (relative to this file).\n * Eigen (MPL-2.0), unmodified corresponding source: ${eigenSource}\n */\n`;
+    await fs.writeFile(file,banner+await fs.readFile(file,'utf8'));
+  }
+}
+await attachNotices(target);
 console.log('OCR assets prepared; runtime downloads use this app only.');
