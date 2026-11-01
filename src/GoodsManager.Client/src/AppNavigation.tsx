@@ -16,7 +16,7 @@ function NavigationIcon({name}:{name:typeof items[number]['icon']}){
 
 export function AppNavigation({pathname,mobile=false}:{pathname:string;mobile?:boolean}){
   return <nav className={mobile?'bottom-nav':undefined} aria-label={mobile?'スマートフォンナビゲーション':'メインナビゲーション'}>{items.map(item=>{
-    const active=item.href==='/settings'?['/settings','/masters','/account','/backups'].includes(pathname):item.href==='/trash'?pathname.startsWith('/trash'):pathname===item.href;
+    const active=item.href==='/settings'?['/settings','/collections','/masters','/account','/backups'].includes(pathname):item.href==='/trash'?pathname.startsWith('/trash'):pathname===item.href;
     return <CollectionLink key={item.href} href={item.href} className={active?'active':undefined} aria-current={active?'page':undefined} onClick={event=>{if(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;event.preventDefault();navigate(item.href);}}><span className="navigation-symbol"><NavigationIcon name={item.icon}/></span><span className="navigation-label">{mobile?item.shortLabel:item.label}</span></CollectionLink>;
   })}</nav>;
 }
