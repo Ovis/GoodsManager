@@ -20,6 +20,7 @@ public sealed class HostTests
     /// <summary>各画面のURLを直接開いても認証前にキャッシュ不可のSPAを返す</summary>
     [TestCase("/setup")]
     [TestCase("/account")]
+    [TestCase("/settings")]
     [TestCase("/register")]
     [TestCase("/products/11111111-1111-4111-8111-111111111111")]
     public async Task CollectionPagesCanBeOpenedDirectly(string path)

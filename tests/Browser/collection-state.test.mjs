@@ -25,6 +25,7 @@ test('最近登録を表示する範囲とページ番号を絞る',()=>{
  assert.equal(isFiltered('?inventory=all'),true);assert.equal(isFiltered('?q=a'),true);
  assert.deepEqual(pageNumbers(5,10000),[1,3,4,5,6,7,10000]);assert.deepEqual(pageNumbers(1,0),[]);
 });
-test('認証後の復帰先はコレクションと商品詳細に限定する',()=>{
+test('認証後の復帰先はアプリ内の画面に限定し、設定画面にも復帰できる',()=>{
  assert.equal(safeReturn('/collection?page=2'),'/collection?page=2');assert.equal(safeReturn('https://evil.example'),'/collection');assert.equal(safeReturn('//evil.example'),'/collection');assert.equal(safeReturn('/collection-other'),'/collection');
+ assert.equal(safeReturn('/settings'),'/settings');assert.equal(safeReturn('/settings?collectionId=selected'),'/settings?collectionId=selected');assert.equal(safeReturn('/settings-other'),'/collection');assert.equal(safeReturn('/settings/other'),'/collection');
 });
