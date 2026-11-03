@@ -85,6 +85,8 @@ public static class AuthTraffic
             feature.MaxRequestBodySize = maximum;
         }
 
+        // 現行のMVCとHTTP/2では標準上限超過がInvalidOperationExceptionとなり、500応答へ変わる。
+        // 413を維持するため、BodyReaderが使うStreamでも読み取り量を検査する。
         var original = context.Request.Body;
         using var limited = new LimitedBody(original, maximum);
         context.Request.Body = limited;

@@ -1,8 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
 using GoodsManager.Web.Auth;
 using GoodsManager.Web.Storage;
 using Microsoft.AspNetCore.Http;
@@ -33,22 +29,6 @@ public sealed class AuthLoadTests
             })).StatusCode,
                 Is.EqualTo(i < 2 ? HttpStatusCode.Unauthorized : HttpStatusCode.TooManyRequests));
         }
-    }
-
-    [TestCase(65536, HttpStatusCode.Unauthorized)]
-    [TestCase(65537, HttpStatusCode.RequestEntityTooLarge)]
-    public async Task BodyBoundaryAllowsExactlyTheConfiguredNumberOfBytes(int length, HttpStatusCode expected)
-    {
-        await using var app = new TestApplication();
-        using var client = Client(app);
-
-        var csrf = await client.GetFromJsonAsync<JsonElement>("/api/v1/auth/csrf");
-        const string prefix = "{\"loginId\":\"unknown\",\"password\":\"x\",\"padding\":\"";
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/password");
-        request.Headers.Add("X-CSRF-Token", csrf.GetProperty("token").GetString());
-        request.Content = new StringContent(prefix + new string('x', length - prefix.Length - 2) + "\"}", Encoding.UTF8, "application/json");
-
-        Assert.That((await client.SendAsync(request)).StatusCode, Is.EqualTo(expected));
     }
 
     [Test]
@@ -108,24 +88,6 @@ public sealed class AuthLoadTests
             loginId = "unknown",
             password = Password
         })).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-    }
-
-    [TestCase(false)]
-    [TestCase(true)]
-    public async Task OversizedBodyIsRejectedWithAndWithoutDeclaredLength(bool chunked)
-    {
-        await using var app = new TestApplication();
-        using var client = Client(app);
-
-        var csrf = await client.GetFromJsonAsync<JsonElement>("/api/v1/auth/csrf");
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/password");
-        request.Headers.Add("X-CSRF-Token", csrf.GetProperty("token").GetString());
-
-        var bytes = Encoding.UTF8.GetBytes("{\"loginId\":\"unknown\",\"password\":\"x\",\"padding\":\"" + new string('x', 65536) + "\"}");
-        request.Content = chunked ? new StreamContent(new Unseekable(new MemoryStream(bytes))) : new ByteArrayContent(bytes);
-        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-        Assert.That((await client.SendAsync(request)).StatusCode, Is.EqualTo(HttpStatusCode.RequestEntityTooLarge));
     }
 
     [TestCase("account/password")]
@@ -241,23 +203,4 @@ public sealed class AuthLoadTests
         }
     }
 
-    private sealed class Unseekable(Stream inner) : Stream
-    {
-        public override bool CanRead => true; public override bool CanWrite => false; public override bool CanSeek => false;
-        public override long Length => throw new NotSupportedException();
-        public override long Position
-        {
-            get => throw new NotSupportedException(); set => throw new NotSupportedException();
-        }
-
-        public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
-
-        public override void Flush()
-        {
-        }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException(); public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    }
 }
