@@ -99,6 +99,7 @@ public sealed class PasskeyTests
         Assert.That(await users.IsLockedOutAsync(user), Is.True);
     }
 
+    /// <summary>パスワードがロックされても実署名でログインでき、ロック状態は解除しないことを確認する。</summary>
     [Test]
     public async Task PasswordLockDoesNotPreventValidPasskeyLoginOrClearPasswordLock()
     {
@@ -580,6 +581,7 @@ public sealed class PasskeyTests
         Assert.Throws<InvalidDataException>(() => PasskeyMetadata.RequireValid(passkey));
     }
 
+    /// <summary>IDを指定しない認証でも署名したユーザーの復旧世代を照合し、別ユーザーの復旧と混同しないことを確認する。</summary>
     [TestCase("owner", HttpStatusCode.Unauthorized)]
     [TestCase("second.owner", HttpStatusCode.OK)]
     public async Task DiscoverablePasskeyBindsRecoveredUserGenerationIndependently(string recoveredLogin, HttpStatusCode expected)

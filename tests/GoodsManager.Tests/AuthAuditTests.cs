@@ -10,6 +10,7 @@ using static GoodsManager.Tests.AuthenticationTests;
 
 namespace GoodsManager.Tests;
 
+/// <summary>認証監査の分類・件数・障害時の出力と、秘密を保存しない制約を検証する。</summary>
 public sealed class AuthAuditTests
 {
     /// <summary>MVCが同じ操作へ解決するURLは、表記によらず同じ失敗イベントに集計する。</summary>
@@ -95,6 +96,7 @@ public sealed class AuthAuditTests
             .And.Not.Contain("AUTH_REQUEST_REJECTED").And.Not.Contain("private-incorrect-verification").And.Not.Contain("private-new-password"));
     }
 
+    /// <summary>ファイル出力が壊れても重要な認証変更と障害通知を標準出力へ残す。</summary>
     [Test]
     public async Task CriticalAuditFallsBackToConsoleWhenFileStorageFails()
     {
@@ -115,6 +117,7 @@ public sealed class AuthAuditTests
         Assert.That(output.ToString(), Does.Contain("AUTH_PASSWORD_CHANGED").And.Contain("LOG_STORAGE_FAILED").And.Contain(user.ToString()));
     }
 
+    /// <summary>アカウント操作を内部IDで追跡でき、入力値やWebAuthnデータがログに残らないことを確認する。</summary>
     [Test]
     public async Task AccountEventsAreTraceableWithoutPasswordsTokensNamesOrCredentials()
     {
@@ -238,6 +241,7 @@ public sealed class AuthAuditTests
         Assert.That(failures.Any(x => x.TryGetProperty("UserId", out var user) && user.GetGuid() == id), Is.True);
     }
 
+    /// <summary>パスワードロックとCSRF拒否を、それぞれ固定イベントで記録する。</summary>
     [Test]
     public async Task PasswordLockAndRequestRejectionHaveFixedAuditEvents()
     {
@@ -267,6 +271,7 @@ public sealed class AuthAuditTests
         Assert.That(text, Does.Not.Contain("private.body").And.Not.Contain("private-body-password"));
     }
 
+    /// <summary>多数のユーザーへの失敗でも集計領域を有限にし、終了時まで総件数を保持する。</summary>
     [Test]
     public async Task AggregationBoundsGroupsPreservesCountsAndFlushesOnShutdown()
     {
@@ -298,7 +303,13 @@ public sealed class AuthAuditTests
         Assert.That(records.Length, Is.LessThanOrEqualTo(AuthAudit.MaximumGroups + 3));
     }
 
+    /// <summary>隔離アプリが出力した監査ファイルを連結して照合する。</summary>
     private static string ReadLogs(TestApplication app) => string.Join("", Directory.EnumerateFiles(Path.Combine(app.DataDirectory, "logs"), "*.jsonl").Select(File.ReadAllText));
 
-    private static JsonElement[] Records(string text) => text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(x => { using var document = JsonDocument.Parse(x); return document.RootElement.Clone(); }).ToArray();
+    /// <summary>各ログ行を独立したJSONとして読み、解析用Documentの寿命から切り離す。</summary>
+    private static JsonElement[] Records(string text) => text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(x =>
+    {
+        using var document = JsonDocument.Parse(x);
+        return document.RootElement.Clone();
+    }).ToArray();
 }

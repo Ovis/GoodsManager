@@ -21,7 +21,11 @@ public sealed class AuthAudit(ILogger<AuthAudit> logger, TimeProvider clock)
     private readonly Dictionary<(AuthEvent Event, Guid? User), long> pending = new();
     private readonly Dictionary<AuthEvent, long> overflow = new();
     private DateTimeOffset windowStart = clock.GetUtcNow();
+
+    /// <summary>内部ユーザーIDを含む集計キーの全体上限。超過分はIDを残さずイベント別に合算する。</summary>
     public const int MaximumGroups = 128;
+
+    /// <summary>保留中のユーザー別集計と、上限超過分のイベント別集計の総数。</summary>
     public int GroupCount
     {
         get
@@ -33,8 +37,10 @@ public sealed class AuthAudit(ILogger<AuthAudit> logger, TimeProvider clock)
         }
     }
 
+    /// <summary>認証済みPrincipalから内部ユーザーIDだけを取り出す。生のログインIDは扱わない。</summary>
     public static Guid? UserId(ClaimsPrincipal user) => Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
 
+    /// <summary>成功と重要な変更は即時記録し、反復する失敗は件数を失わず集計する。</summary>
     public void Record(AuthEvent kind, Guid? userId = null)
     {
         if (!Enum.IsDefined(kind))
@@ -101,9 +107,11 @@ public sealed class AuthAudit(ILogger<AuthAudit> logger, TimeProvider clock)
         }
     }
 
+    /// <summary>固定イベントと型を限定した照合情報だけをログへ渡す。</summary>
     private void Write(AuthEvent kind, Guid? user, long count, bool aggregated, DateTimeOffset start, DateTimeOffset end) =>
         logger.LogInformation(new EventId((int)kind), "認証監査 Code={Code} UserId={UserId} Count={Count} Aggregated={Aggregated} WindowStart={WindowStart} WindowEnd={WindowEnd}", kind.ToString(), user, count, aggregated, start, end);
 
+    /// <summary>同じ要求の拒否を操作側とミドルウェア側で重複計上しない。</summary>
     public void Failure(HttpContext context, AuthEvent kind, Guid? user = null)
     {
         if (context.Items.ContainsKey(typeof(AuthAudit)))
@@ -129,7 +137,11 @@ public sealed class AuthAudit(ILogger<AuthAudit> logger, TimeProvider clock)
         {
             await next(context);
         }
-        catch { audit.Failure(context, AuthEvent.AUTH_REQUEST_REJECTED); throw; }
+        catch
+        {
+            audit.Failure(context, AuthEvent.AUTH_REQUEST_REJECTED);
+            throw;
+        }
         finally
         {
             if (context.Response.StatusCode >= 400)
@@ -140,8 +152,10 @@ public sealed class AuthAudit(ILogger<AuthAudit> logger, TimeProvider clock)
     }
 }
 
+/// <summary>認証失敗の保留件数を定期的に出力し、正常終了時にも残件を記録する。</summary>
 public sealed class AuthAuditWorker(AuthAudit audit, TimeProvider clock) : BackgroundService
 {
+    /// <summary>60秒ごとに集計窓を区切り、反復する認証失敗の件数を出力する。</summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(60), clock);
@@ -151,12 +165,16 @@ public sealed class AuthAuditWorker(AuthAudit audit, TimeProvider clock) : Backg
         }
     }
 
+    /// <summary>定期処理を停止した後、終了時点の未出力件数を必ず記録する。</summary>
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         try
         {
             await base.StopAsync(cancellationToken);
         }
-        finally { audit.Flush(); }
+        finally
+        {
+            audit.Flush();
+        }
     }
 }

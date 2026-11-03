@@ -95,16 +95,21 @@ public sealed class AuthBodyLimitTests
     {
         /// <summary>逐次読み取りだけを許可する。</summary>
         public override bool CanRead => true;
+
         /// <summary>宣言長を事前計算させない。</summary>
         public override bool CanSeek => false;
+
         /// <summary>試験本文の書き換えを許可しない。</summary>
         public override bool CanWrite => false;
+
         /// <summary>総バイト数の問い合わせを拒否する。</summary>
         public override long Length => throw new NotSupportedException();
+
         /// <summary>転送位置の参照と巻き戻しを拒否する。</summary>
         public override long Position
         {
-            get => throw new NotSupportedException(); set => throw new NotSupportedException();
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
         }
 
         /// <summary>本文を順に読み取る。</summary>

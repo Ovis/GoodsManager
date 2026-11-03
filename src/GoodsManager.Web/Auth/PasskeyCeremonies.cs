@@ -9,7 +9,11 @@ public sealed class PasskeyCeremonies(TimeProvider clock)
     private const string CookieName = "__Host-GoodsManager-Ceremony";
     private readonly object gate = new();
     private readonly Dictionary<Guid, Ceremony> pending = new();
+
+    /// <summary>全ユーザーと匿名ブラウザを合わせて保持できる認証待ち情報の上限。</summary>
     public const int Capacity = 128;
+
+    /// <summary>認証待ち情報の保持数。期限切れの項目は回収されるまで含む。</summary>
     public int ActiveCount
     {
         get

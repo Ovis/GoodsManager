@@ -9,8 +9,10 @@ using static GoodsManager.Tests.AuthenticationTests;
 
 namespace GoodsManager.Tests;
 
+/// <summary>初期登録用秘密の公開防止・失効・再起動時の扱いを検証する。</summary>
 public sealed class SetupTokenTests
 {
+    /// <summary>誤入力や検証失敗で秘密を消費せず、登録成功後には再利用を拒否する。</summary>
     [Test]
     public async Task TokenIsNeverReturnedAndOnlySuccessfulSetupConsumesIt()
     {
@@ -65,6 +67,7 @@ public sealed class SetupTokenTests
         }
     }
 
+    /// <summary>有効な秘密を再起動で変えず、24時間経過後だけ再発行する。</summary>
     [Test]
     public async Task RestartPreservesValidTokenAndRegeneratesOnlyAfterExpiry()
     {
@@ -94,6 +97,7 @@ public sealed class SetupTokenTests
         Assert.That(File.Exists(path), Is.False);
     }
 
+    /// <summary>秘密ファイルの消失・破損・読み取り失敗で初期登録を許可しない。</summary>
     [Test]
     public async Task MissingCorruptAndUnreadableFilesFailClosed()
     {

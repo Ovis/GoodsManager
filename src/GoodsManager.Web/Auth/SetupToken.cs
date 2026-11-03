@@ -11,6 +11,8 @@ public sealed class SetupToken(DatabaseRuntime runtime, TimeProvider clock, ILog
 {
     private byte[]? hash;
     private DateTimeOffset expires;
+
+    /// <summary>初期登録を許可する一時秘密の永続ファイル。Web応答には公開しない。</summary>
     private string FilePath => Path.Combine(runtime.DirectoryPath, "setup-token.txt");
 
     /// <summary>有効な既存値は維持し、期限切れだけ起動時に再発行。破損・読取失敗では起動を拒否する。</summary>
@@ -60,7 +62,10 @@ public sealed class SetupToken(DatabaseRuntime runtime, TimeProvider clock, ILog
                 && CryptographicOperations.FixedTimeEquals(hash, SHA256.HashData(Encoding.ASCII.GetBytes(stored.Token)))
                 && CryptographicOperations.FixedTimeEquals(hash, SHA256.HashData(Encoding.UTF8.GetBytes(supplied)));
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException) { return false; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            return false;
+        }
     }
 
     /// <summary>登録確定後に失効する。削除失敗時もアカウント存在検査とメモリ上の失効を優先する。</summary>
@@ -78,6 +83,7 @@ public sealed class SetupToken(DatabaseRuntime runtime, TimeProvider clock, ILog
         }
     }
 
+    /// <summary>リンク・ファイル権限・容量・2行の書式を検査し、一時秘密と期限を読む。</summary>
     private (string Token, DateTimeOffset Expires) Read()
     {
         BackupPaths.RejectLinks(FilePath);
@@ -104,6 +110,7 @@ public sealed class SetupToken(DatabaseRuntime runtime, TimeProvider clock, ILog
         return (token, expiry);
     }
 
+    /// <summary>256ビットの秘密と24時間の期限を、一時ファイルからの置換で確定する。</summary>
     private void Create()
     {
         var temporary = Path.Combine(runtime.DirectoryPath, ".setup-token-" + Guid.NewGuid().ToString("N"));

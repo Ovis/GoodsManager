@@ -18,7 +18,13 @@ public static class HealthCommand
 
             return (await client.GetAsync($"http://127.0.0.1:{port}/health/ready")).IsSuccessStatusCode ? 0 : 1;
         }
-        catch (HttpRequestException) { return 1; }
-        catch (TaskCanceledException) { return 1; }
+        catch (HttpRequestException)
+        {
+            return 1;
+        }
+        catch (TaskCanceledException)
+        {
+            return 1;
+        }
     }
 }

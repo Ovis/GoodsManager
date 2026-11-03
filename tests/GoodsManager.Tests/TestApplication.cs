@@ -10,19 +10,28 @@ namespace GoodsManager.Tests;
 /// <summary>試験ごとに実ファイルDBと鍵の保存先を分離</summary>
 public sealed class TestApplication : WebApplicationFactory<Program>
 {
+    /// <summary>他の試験や稼働データと共有しない、DB・鍵・ログの保存先。</summary>
     public string DataDirectory
     {
         get;
     }
+
+    /// <summary>再起動試験の次のホストへ渡すため、一時領域を終了時に削除しない。</summary>
     public bool PreserveData
     {
         get; set;
     }
+
+    /// <summary>標準パスキー検証のRPとOriginを起動前に指定する試験用の設定。</summary>
     public string? AuthenticationOrigin
     {
         get; init;
     }
+
+    /// <summary>認証期限を実時間から独立して進める試験時計。</summary>
     public TestClock Clock { get; } = new();
+
+    /// <summary>本番のサービス登録後に、隔離試験に必要な置換だけを適用する。</summary>
     public Action<IServiceCollection>? ConfigureTestServices
     {
         get; init;

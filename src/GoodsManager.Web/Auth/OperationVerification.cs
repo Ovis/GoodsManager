@@ -5,7 +5,8 @@ namespace GoodsManager.Web.Auth;
 /// <summary>対象の管理操作と同じ要求で本人確認する。直近認証の汎用期限は持たない</summary>
 public sealed class OperationVerification(SignInManager<AppUser> signIn, UserManager<AppUser> users, PasskeyCeremonies ceremonies, AuthAudit audit)
 {
-    /// <summary>パスワードを標準Identityで検証</summary>
+    /// <summary>パスワードまたは対象操作用のパスキーで本人確認し、失敗とロック遷移を監査する。</summary>
+    /// <remarks>ユーザーの再取得から検証まで、呼び出し元でAuthWriteGateを保持する。</remarks>
     public async Task<bool> VerifyAsync(AppUser user, VerificationRequest request, string purpose, HttpContext context)
     {
         if (request.Password is not null)

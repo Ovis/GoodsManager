@@ -8,8 +8,10 @@ using static GoodsManager.Tests.AuthenticationTests;
 
 namespace GoodsManager.Tests;
 
+/// <summary>設定変更と認証失効の対象範囲、および古い版への変更拒否を検証する。</summary>
 public sealed class AccountSettingsTests
 {
+    /// <summary>全端末失効とパスワード変更が本人のセッションだけを削除し、別ユーザーを巻き込まないことを確認する。</summary>
     [TestCase(false)]
     [TestCase(true)]
     public async Task RevocationOnlyEndsTheActingUsersSessions(bool changePassword)
@@ -67,6 +69,7 @@ public sealed class AccountSettingsTests
         })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
+    /// <summary>全端末失効で既存の全セッションを無効化し、同じパスワードで再ログインできることを確認する。</summary>
     [Test]
     public async Task RevokeAllInvalidatesCurrentAndOtherSessionsWithoutChangingPassword()
     {
@@ -94,6 +97,7 @@ public sealed class AccountSettingsTests
         })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
+    /// <summary>ID変更でログイン状態を保ち、古いETagによる上書きを拒否する。</summary>
     [Test]
     public async Task LoginIdChangeKeepsSessionsAndPasswordAndRejectsOldEtag()
     {

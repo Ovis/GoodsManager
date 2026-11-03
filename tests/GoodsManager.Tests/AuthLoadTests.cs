@@ -12,8 +12,10 @@ using static GoodsManager.Tests.AuthenticationTests;
 
 namespace GoodsManager.Tests;
 
+/// <summary>認証負荷の全体制限と、並行する認証・失効の順序を検証する。</summary>
 public sealed class AuthLoadTests
 {
+    /// <summary>匿名クライアントを作り直しても重い認証要求の頻度制限を回避できないことを確認する。</summary>
     [Test]
     public async Task HeavyFrequencyIsAlsoGlobalAcrossAnonymousClients()
     {
@@ -31,6 +33,7 @@ public sealed class AuthLoadTests
         }
     }
 
+    /// <summary>送信元を偽装するヘッダーで読み取り制限を分割できず、生存確認は継続することを確認する。</summary>
     [Test]
     public async Task GlobalReadLimitIgnoresSuppliedPeerHeadersAndLeavesLiveAvailable()
     {
@@ -55,6 +58,7 @@ public sealed class AuthLoadTests
         Assert.That((await client.GetAsync("/health/live")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
+    /// <summary>実行枠と待機枠の上限を守り、完了後には後続要求を受け付けることを確認する。</summary>
     [Test]
     public async Task HeavyConcurrencyAndQueueAreBoundedAndReleased()
     {
@@ -80,7 +84,11 @@ public sealed class AuthLoadTests
                 password = Password
             })).StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
         }
-        finally { gate.Semaphore.Release(); await Task.WhenAll(pending); }
+        finally
+        {
+            gate.Semaphore.Release();
+            await Task.WhenAll(pending);
+        }
 
         Assert.That(pending.Select(x => x.Result.StatusCode), Is.All.EqualTo(HttpStatusCode.Unauthorized));
         Assert.That((await SendAsync(client, "auth/password", new
@@ -90,13 +98,21 @@ public sealed class AuthLoadTests
         })).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
+    /// <summary>ハッシュ検証中に設定変更でき、検証途中で失効した世代にチケットを発行しないことを確認する。</summary>
     [TestCase("account/password")]
     [TestCase("auth/revoke-all")]
     [TestCase("unknown")]
     public async Task HashingDoesNotHoldWriteGateAndRevokedGenerationCannotIssueTicket(string operation)
     {
         var hasher = new PausingHasher();
-        await using var app = new TestApplication { ConfigureTestServices = services => { services.RemoveAll<IPasswordHasher<AppUser>>(); services.AddSingleton<IPasswordHasher<AppUser>>(hasher); } };
+        await using var app = new TestApplication
+        {
+            ConfigureTestServices = services =>
+            {
+                services.RemoveAll<IPasswordHasher<AppUser>>();
+                services.AddSingleton<IPasswordHasher<AppUser>>(hasher);
+            }
+        };
         using var owner = Client(app);
         await SetupAsync(owner);
 
@@ -137,7 +153,10 @@ public sealed class AuthLoadTests
                 Assert.That(changed.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
             }
         }
-        finally { hasher.Resume.Set(); }
+        finally
+        {
+            hasher.Resume.Set();
+        }
 
         Assert.That((await pending).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
@@ -146,6 +165,7 @@ public sealed class AuthLoadTests
         Assert.That(await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuthTickets.CountAsync(), Is.EqualTo(operation == "unknown" ? 1 : 0));
     }
 
+    /// <summary>並行して受理した失敗を取りこぼさず、5回でパスワードをロックする。</summary>
     [Test]
     public async Task AcceptedParallelFailuresAreCountedAndLockAtFive()
     {
@@ -177,16 +197,25 @@ public sealed class AuthLoadTests
         Assert.That(await users.IsLockedOutAsync((await users.FindByNameAsync("owner"))!), Is.True);
     }
 
+    /// <summary>標準ハッシュ検証の終了直後を停止し、書き込みゲートとの競合を再現する。</summary>
     private sealed class PausingHasher : IPasswordHasher<AppUser>
     {
-        private readonly PasswordHasher<AppUser> inner = new(); private int armed;
+        private readonly PasswordHasher<AppUser> inner = new();
+        private int armed;
+
+        /// <summary>検証結果が得られた時点を試験側へ通知する。</summary>
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>競合操作を完了した試験側から検証処理を再開する。</summary>
         public ManualResetEventSlim Resume { get; } = new();
 
+        /// <summary>次のハッシュ検証1回だけを停止対象にする。</summary>
         public void Arm() => armed = 1;
 
+        /// <summary>試験でもIdentity標準のハッシュ形式を維持する。</summary>
         public string HashPassword(AppUser user, string password) => inner.HashPassword(user, password);
 
+        /// <summary>標準検証の結果を保持したまま、試験用の再開通知まで待機する。</summary>
         public PasswordVerificationResult VerifyHashedPassword(AppUser user, string hashedPassword, string providedPassword)
         {
             var result = inner.VerifyHashedPassword(user, hashedPassword, providedPassword);

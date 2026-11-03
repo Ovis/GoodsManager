@@ -6,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace GoodsManager.Tests;
 
+/// <summary>重い詳細検査を公開リスナーから隔離し、内部ループバックでだけ実行することを検証する。</summary>
 public sealed class HealthIsolationTests
 {
+    /// <summary>送信元やHostの偽装で詳細検査を公開できず、内部CLIだけが検査結果を取得できることを確認する。</summary>
     [TestCase("127.0.0.1", "127.0.0.1:8081")]
     [TestCase("192.0.2.1", "localhost:8081")]
     public async Task PublicListenerCannotRunReadyEvenWithSpoofedHeaders(string peer, string host)
@@ -35,7 +37,11 @@ public sealed class HealthIsolationTests
             Assert.That((await client.GetAsync("/health/live")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That((await app.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
         }
-        finally { File.Delete(images); Directory.Move(held, images); }
+        finally
+        {
+            File.Delete(images);
+            Directory.Move(held, images);
+        }
 
         var internalUri = app.Services.GetRequiredService<InternalHealthListener>().ReadinessUri!;
 
