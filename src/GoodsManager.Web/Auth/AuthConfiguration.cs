@@ -16,6 +16,7 @@ public static class AuthConfiguration
         builder.Services.AddSingleton<AuthWriteGate>();
         builder.Services.AddSingleton<SetupToken>();
         builder.Services.AddSingleton<PasskeyCeremonies>();
+        builder.Services.AddHostedService<PasskeyCleanupWorker>();
         builder.Services.AddDataProtection().SetApplicationName("GoodsManager");
         builder.Services.AddOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>()
             .Configure<DatabaseRuntime, ILoggerFactory, GoodsManager.Web.Backups.BackupGate>((options, runtime, loggerFactory, gate) =>
