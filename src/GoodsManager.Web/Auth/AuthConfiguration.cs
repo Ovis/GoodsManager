@@ -14,6 +14,7 @@ public static class AuthConfiguration
     {
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<AuthWriteGate>();
+        builder.Services.AddSingleton<SetupToken>();
         builder.Services.AddSingleton<PasskeyCeremonies>();
         builder.Services.AddDataProtection().SetApplicationName("GoodsManager");
         builder.Services.AddOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>()

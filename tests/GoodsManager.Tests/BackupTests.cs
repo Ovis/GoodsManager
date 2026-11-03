@@ -60,6 +60,7 @@ public sealed class BackupTests
     [TestCase(true)]
     public async Task ManualReplayAndSnapshotPreserveFormalDataWithoutTransientState(bool trashed)
     {
+        await File.WriteAllTextAsync(Path.Combine(app.DataDirectory, "setup-token.txt"), "backup-exclusion-probe");
         if (trashed) { await using var scope = app.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); (await db.Set<Product>().SingleAsync()).DeletedAt = app.Clock.GetUtcNow(); await db.SaveChangesAsync(); }
         var key = Guid.NewGuid(); var first = await Write("backups", new { kind = "manual" }, key);
         Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.Accepted), await first.Content.ReadAsStringAsync());
@@ -69,6 +70,7 @@ public sealed class BackupTests
         Assert.That((await Write("backups", new { kind = "automatic" }, key)).StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
         await Run(id); var path = await PathFor(id);
         using var zip = ZipFile.OpenRead(path);
+        Assert.That(zip.Entries.Any(x => x.FullName.EndsWith("setup-token.txt", StringComparison.Ordinal)), Is.False);
         Assert.That(zip.Entries.Count(x => x.FullName.StartsWith("images/")), Is.EqualTo(1));
         var stage = Path.Combine(app.DataDirectory, ".test-verify");
         try

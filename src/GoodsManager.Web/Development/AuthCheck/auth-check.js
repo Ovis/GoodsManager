@@ -182,7 +182,7 @@ element("refresh").addEventListener("click", () => run("状態取得", refresh))
 element("setup").addEventListener("click", () => {
   if (!element("login-form").reportValidity()) return;
   run("初期作成", async () => {
-    await api("setup", { method: "POST", body: { loginId: element("login-id").value, password: element("login-password").value } });
+    await api("setup", { method: "POST", body: { loginId: element("login-id").value, password: element("login-password").value, setupToken: element("setup-token").value } });
     await refreshedAfterSuccess();
   });
 });

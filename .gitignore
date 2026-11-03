@@ -439,6 +439,7 @@ src/GoodsManager.Client/dist/
 
 # Deployment-local configuration
 compose.yml
+setup-token.txt
 .env
 
 # Generated browser OCR assets

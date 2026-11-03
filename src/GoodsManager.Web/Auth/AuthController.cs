@@ -23,7 +23,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
 
     /// <summary>単一制約とトランザクションで初期ユーザーの同時作成を防ぐ</summary>
     [HttpPost("setup")]
-    public async Task<IActionResult> Setup(SetupRequest request)
+    public async Task<IActionResult> Setup(SetupRequest request, [FromServices] SetupToken setupToken)
     {
         if (!ValidLoginId(request.LoginId))
         {
@@ -40,6 +40,8 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
                 return Failure(409, "SETUP_COMPLETED");
             }
 
+            if (!setupToken.Verify(request.SetupToken)) return Failure(403, "SETUP_TOKEN_INVALID");
+
             user = new AppUser { Id = Guid.NewGuid(), UserName = request.LoginId, LockoutEnabled = true, IsAdministrator = true };
             var result = await users.CreateAsync(user, request.Password);
             if (!result.Succeeded)
@@ -51,6 +53,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
             await db.SaveChangesAsync();
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
+            setupToken.Invalidate();
             await IssueCookieAsync(user, false);
             return Created("/api/v1/auth/session", new { user = UserDto(user) });
         }
@@ -276,7 +279,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
     }
 }
 
-public sealed record SetupRequest(string LoginId, string Password);
+public sealed record SetupRequest(string LoginId, string Password, string? SetupToken);
 public sealed record LoginRequest(string LoginId, string Password, bool RememberMe);
 public sealed record VerificationRequest(string? Password, Guid? ChallengeId, System.Text.Json.JsonElement? Credential);
 public sealed record ChangePasswordRequest(string NewPassword, VerificationRequest Verification);

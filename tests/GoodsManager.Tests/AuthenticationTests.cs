@@ -13,6 +13,7 @@ namespace GoodsManager.Tests;
 /// <summary>実SQLiteとHTTPのクッキー・CSRF・失効・競合を検証</summary>
 public sealed class AuthenticationTests
 {
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<HttpClient, TestApplication> Applications = new();
     public const string Password = "test-password-123";
 
     /// <summary>Secureクッキーを使う同一オリジンのクライアントを作成</summary>
@@ -20,6 +21,7 @@ public sealed class AuthenticationTests
     {
         var client = app.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost:7443"), AllowAutoRedirect = false });
         client.DefaultRequestHeaders.Add("X-Collection-Id", GoodsManager.Web.Collections.CollectionSchema.DefaultId.ToString("D"));
+        Applications.Add(client, app);
         return client;
     }
 
@@ -38,7 +40,12 @@ public sealed class AuthenticationTests
     }
 
     /// <summary>初期ユーザーを作成</summary>
-    public static async Task<HttpResponseMessage> SetupAsync(HttpClient client) => await SendAsync(client, "setup", new { loginId = "owner", password = Password });
+    public static async Task<HttpResponseMessage> SetupAsync(HttpClient client, string? dataDirectory = null)
+    {
+        var path = Path.Combine(dataDirectory ?? Applications.GetValue(client, _ => throw new InvalidOperationException("試験アプリの指定が必要")).DataDirectory, "setup-token.txt");
+        var token = File.Exists(path) ? File.ReadLines(path).First() : "";
+        return await SendAsync(client, "setup", new { loginId = "owner", password = Password, setupToken = token });
+    }
 
     /// <summary>未認証APIは401、匿名セットアップもCSRF必須</summary>
     [Test]

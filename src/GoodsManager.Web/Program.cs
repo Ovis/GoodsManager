@@ -92,6 +92,7 @@ try
     await ImageWorker.InitializeAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), scope.ServiceProvider.GetRequiredService<TimeProvider>());
     if (!recovery)
     {
+        scope.ServiceProvider.GetRequiredService<SetupToken>().Initialize(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.AnyAsync());
         await scope.ServiceProvider.GetRequiredService<ImageGc>().RunAsync(CancellationToken.None);
         await scope.ServiceProvider.GetRequiredService<GoodsManager.Web.Backups.BackupService>().InitializeAsync(CancellationToken.None);
     }

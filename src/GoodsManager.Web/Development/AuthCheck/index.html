@@ -29,6 +29,7 @@
     <h2 id="login-heading">1. セットアップ・ログイン</h2>
     <form id="login-form">
       <fieldset id="login-fields" disabled>
+        <label>初期登録トークン（初期作成のみ） <input id="setup-token" type="password" autocomplete="off" maxlength="64"></label>
         <label>ログインID <input id="login-id" name="username" autocomplete="username" required pattern="[A-Za-z0-9._\-]{1,64}" maxlength="64"></label>
         <label>パスワード <input id="login-password" name="password" type="password" autocomplete="current-password"></label>
         <p class="hint">初期パスワードは12～128文字（Unicodeコードポイント）、文字種の指定なし。</p>

@@ -33,7 +33,7 @@ public sealed class ForwardedAuthenticationTests
         Assert.That(missingCsrf.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
         Assert.That(await missingCsrf.Content.ReadAsStringAsync(), Does.Contain("CSRF_FAILED"));
 
-        var setup = await SetupAsync(client);
+        var setup = await SetupAsync(client, app.DataDirectory);
         Assert.That(setup.StatusCode, Is.EqualTo(HttpStatusCode.Created), await setup.Content.ReadAsStringAsync());
         Assert.That(setup.Headers.GetValues("Set-Cookie").Single(value => value.StartsWith("__Host-GoodsManager=")), Does.Contain("secure").And.Contain("httponly"));
         Assert.That((await client.GetFromJsonAsync<JsonElement>("/api/v1/setup/status")).GetProperty("setupRequired").GetBoolean(), Is.False);
@@ -80,7 +80,7 @@ public sealed class ForwardedAuthenticationTests
         await using var app = new TestApplication { AuthenticationOrigin = "https://localhost:7443" };
         await using var production = Production(app);
         using var client = ThroughProxy(production);
-        Assert.That((await SetupAsync(client)).StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        Assert.That((await SetupAsync(client, app.DataDirectory)).StatusCode, Is.EqualTo(HttpStatusCode.Created));
         using var authenticator = new TestAuthenticator();
         var optionsResponse = await SendAsync(client, "account/passkeys/options", new { verification = new { password = Password } });
         var options = await optionsResponse.Content.ReadFromJsonAsync<JsonElement>();
