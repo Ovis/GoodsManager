@@ -17,6 +17,14 @@ public sealed class ImageTests
     private HttpClient client = null!;
     [SetUp] public async Task Start() { app = new(); client = Client(app); await SetupAsync(client); }
     [TearDown] public async Task Stop() { client.Dispose(); await app.DisposeAsync(); }
+    [Test]
+    public async Task NormalImageSettingsPageIsServedWithoutDevelopmentRoutes()
+    {
+        using var response = await client.GetAsync("/settings/images");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/html"));
+        Assert.That(response.Headers.CacheControl?.NoStore, Is.True);
+    }
     private async Task<T> Db<T>(Func<AppDbContext, Task<T>> action) { await using var scope = app.Services.CreateAsyncScope(); return await action(scope.ServiceProvider.GetRequiredService<AppDbContext>()); }
     private async Task<long> Revision() => await Db(async db => (await db.SystemStates.AsNoTracking().SingleAsync()).DataRevision);
     private async Task<HttpResponseMessage> Write(string path, object body, string? etag = null, Guid? key = null, HttpMethod? method = null)
