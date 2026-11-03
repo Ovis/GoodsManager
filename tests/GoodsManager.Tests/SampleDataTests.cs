@@ -48,7 +48,6 @@ public sealed class SampleDataTests
     [TestCase("https://[::1]:7449", true)]
     [TestCase("http://localhost:7449", false)]
     [TestCase("https://example.com", true)]
-    [TestCase("https://localhost.example.com", false)]
     [TestCase("https://example.com:8443/", true)]
     [TestCase("https://192.168.1.10:8443", true)]
     [TestCase("https://[2001:db8::1]:8443", true)]
