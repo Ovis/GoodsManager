@@ -8,16 +8,22 @@ namespace GoodsManager.Tests;
 public sealed partial class MasterTests
 {
     private const string CategoryOrderPrefix = "順序試験";
+
     private static Guid CategoryOrderId(int value) => Guid.Parse($"cafe0000-0000-4000-8000-{value:000000000000}");
 
     private async Task<Guid[]> SeedCategoryOrder()
     {
         Category Category(int id, string name, int order, int? parent = null) => new()
         {
-            Id = CategoryOrderId(id), Name = name, NormalizedName = MasterText.Normalize(name),
-            SortOrder = order, ParentCategoryId = parent.HasValue ? CategoryOrderId(parent.Value) : null,
-            CreatedAt = app.Clock.GetUtcNow(), UpdatedAt = app.Clock.GetUtcNow()
+            Id = CategoryOrderId(id),
+            Name = name,
+            NormalizedName = MasterText.Normalize(name),
+            SortOrder = order,
+            ParentCategoryId = parent.HasValue ? CategoryOrderId(parent.Value) : null,
+            CreatedAt = app.Clock.GetUtcNow(),
+            UpdatedAt = app.Clock.GetUtcNow()
         };
+
         var categories = new List<Category>
         {
             Category(100, "順序試験 A親", 20),
@@ -28,8 +34,12 @@ public sealed partial class MasterTests
         };
         // 名前順・挿入順のどちらでも期待する階層順にはならないデータ。
         for (var i = 27; i >= 0; i--)
+        {
             categories.Add(Category(201 + i, i < 2 ? "順序試験 その他" : $"順序試験 子{27 - i:00}", Math.Max(0, i - 1), 200));
+        }
+
         await WithDb(async db => { db.AddRange(categories); await db.SaveChangesAsync(); });
+
         return new[] { 200, 201, 300 }.Concat(Enumerable.Range(202, 27)).Concat([100, 101, 102])
             .Select(CategoryOrderId).ToArray();
     }
@@ -45,6 +55,7 @@ public sealed partial class MasterTests
         var first = await client.GetFromJsonAsync<JsonElement>($"/api/v1/masters/categories?q={CategoryOrderPrefix}&pageSize=25");
         var second = await client.GetFromJsonAsync<JsonElement>($"/api/v1/masters/categories?q={CategoryOrderPrefix}&pageSize=25&page=2");
         var all = await client.GetFromJsonAsync<JsonElement>($"/api/v1/masters/categories?q={CategoryOrderPrefix}&pageSize=50");
+
         Assert.Multiple(() =>
         {
             Assert.That(CategoryPageIds(first), Is.EqualTo(expected.Take(25)));
@@ -61,9 +72,11 @@ public sealed partial class MasterTests
     public async Task CategorySearchKeepsAncestorGroupsEvenWhenParentsDoNotMatch()
     {
         await SeedCategoryOrder();
+
         var result = await client.GetFromJsonAsync<JsonElement>("/api/v1/masters/categories?q=順序試験　その他&pageSize=25");
         var missing = await client.GetFromJsonAsync<JsonElement>("/api/v1/masters/categories?q=該当なし&pageSize=25");
         var overflow = await client.GetFromJsonAsync<JsonElement>($"/api/v1/masters/categories?q={CategoryOrderPrefix}&pageSize=25&page=2147483647");
+
         Assert.Multiple(() =>
         {
             Assert.That(CategoryPageIds(result), Is.EqualTo(new[] { 201, 202, 101 }.Select(CategoryOrderId)));
@@ -83,13 +96,22 @@ public sealed partial class MasterTests
         {
             var other = new CollectionSpace { Id = Guid.NewGuid(), Name = "別コレクション", CreatedAt = app.Clock.GetUtcNow(), UpdatedAt = app.Clock.GetUtcNow() };
             db.Add(other);
-            var category = new Category { Id = Guid.NewGuid(), Name = CategoryOrderPrefix, NormalizedName = CategoryOrderPrefix,
-                CreatedAt = app.Clock.GetUtcNow(), UpdatedAt = app.Clock.GetUtcNow() };
+
+            var category = new Category
+            {
+                Id = Guid.NewGuid(),
+                Name = CategoryOrderPrefix,
+                NormalizedName = CategoryOrderPrefix,
+                CreatedAt = app.Clock.GetUtcNow(),
+                UpdatedAt = app.Clock.GetUtcNow()
+            };
             db.Add(category);
             db.Entry(category).Property("CollectionId").CurrentValue = other.Id;
             await db.SaveChangesAsync();
         });
+
         var result = await client.GetFromJsonAsync<JsonElement>($"/api/v1/masters/categories?q={CategoryOrderPrefix}&pageSize=50");
+
         Assert.That(CategoryPageIds(result), Is.EqualTo(expected));
     }
 }

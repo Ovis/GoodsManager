@@ -5,94 +5,208 @@ namespace GoodsManager.Web.Masters;
 
 public interface INamedMaster
 {
-    Guid Id { get; set; }
-    string Name { get; set; }
-    string NormalizedName { get; set; }
-    DateTimeOffset CreatedAt { get; set; }
-    DateTimeOffset UpdatedAt { get; set; }
-    long Revision { get; set; }
+    Guid Id
+    {
+        get; set;
+    }
+    string Name
+    {
+        get; set;
+    }
+    string NormalizedName
+    {
+        get; set;
+    }
+    DateTimeOffset CreatedAt
+    {
+        get; set;
+    }
+    DateTimeOffset UpdatedAt
+    {
+        get; set;
+    }
+    long Revision
+    {
+        get; set;
+    }
 }
 
 public sealed class Work : INamedMaster
 {
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
     public string Name { get; set; } = "";
     public string NormalizedName { get; set; } = "";
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset CreatedAt
+    {
+        get; set;
+    }
+    public DateTimeOffset UpdatedAt
+    {
+        get; set;
+    }
     public long Revision { get; set; } = 1;
 }
 public sealed class Series : INamedMaster
 {
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
     public string Name { get; set; } = "";
     public string NormalizedName { get; set; } = "";
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset CreatedAt
+    {
+        get; set;
+    }
+    public DateTimeOffset UpdatedAt
+    {
+        get; set;
+    }
     public long Revision { get; set; } = 1;
 }
 public sealed class Character : INamedMaster
 {
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
     public string Name { get; set; } = "";
     public string NormalizedName { get; set; } = "";
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset CreatedAt
+    {
+        get; set;
+    }
+    public DateTimeOffset UpdatedAt
+    {
+        get; set;
+    }
     public long Revision { get; set; } = 1;
 }
 public sealed class Tag : INamedMaster
 {
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
     public string Name { get; set; } = "";
     public string NormalizedName { get; set; } = "";
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset CreatedAt
+    {
+        get; set;
+    }
+    public DateTimeOffset UpdatedAt
+    {
+        get; set;
+    }
     public long Revision { get; set; } = 1;
 }
 public sealed class Organization : INamedMaster
 {
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
     public string Name { get; set; } = "";
     public string NormalizedName { get; set; } = "";
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset CreatedAt
+    {
+        get; set;
+    }
+    public DateTimeOffset UpdatedAt
+    {
+        get; set;
+    }
     public long Revision { get; set; } = 1;
-    public string? WebsiteUrl { get; set; }
-    public string? Memo { get; set; }
+    public string? WebsiteUrl
+    {
+        get; set;
+    }
+    public string? Memo
+    {
+        get; set;
+    }
 }
 public sealed class Category : INamedMaster
 {
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
     public string Name { get; set; } = "";
     public string NormalizedName { get; set; } = "";
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset CreatedAt
+    {
+        get; set;
+    }
+    public DateTimeOffset UpdatedAt
+    {
+        get; set;
+    }
     public long Revision { get; set; } = 1;
-    public Guid? ParentCategoryId { get; set; }
-    public int SortOrder { get; set; }
+    public Guid? ParentCategoryId
+    {
+        get; set;
+    }
+    public int SortOrder
+    {
+        get; set;
+    }
 }
 public sealed class WorkSeries
 {
-    public Guid WorkId { get; set; }
-    public Guid SeriesId { get; set; }
+    public Guid WorkId
+    {
+        get; set;
+    }
+    public Guid SeriesId
+    {
+        get; set;
+    }
 }
 public sealed class CharacterWork
 {
-    public Guid CharacterId { get; set; }
-    public Guid WorkId { get; set; }
+    public Guid CharacterId
+    {
+        get; set;
+    }
+    public Guid WorkId
+    {
+        get; set;
+    }
 }
 public sealed class IdempotencyRecord
 {
-    public Guid UserId { get; set; }
+    public Guid UserId
+    {
+        get; set;
+    }
     public string OperationScope { get; set; } = "";
-    public Guid Key { get; set; }
+    public Guid Key
+    {
+        get; set;
+    }
     public string RequestHash { get; set; } = "";
-    public int ResponseStatus { get; set; }
+    public int ResponseStatus
+    {
+        get; set;
+    }
     public string ResponseJson { get; set; } = "";
-    public string? Location { get; set; }
+    public string? Location
+    {
+        get; set;
+    }
     public string ResponseEtag { get; set; } = "";
-    public DateTimeOffset CompletedAt { get; set; }
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset CompletedAt
+    {
+        get; set;
+    }
+    public DateTimeOffset ExpiresAt
+    {
+        get; set;
+    }
 }
 
 /// <summary>マスターごとの通常テーブルと、関連・成功再送記録の永続制約</summary>
@@ -109,11 +223,13 @@ public static class MasterSchema
         Named<Tag>(model, "Tags", "TagId");
         Named<Organization>(model, "Organizations", "OrganizationId");
         Named<Category>(model, "Categories", "CategoryId");
+
         model.Entity<Organization>().ToTable("Organizations", t =>
         {
             t.HasCheckConstraint("CK_Organization_Memo", "Memo IS NULL OR length(Memo)<=4000");
             t.HasCheckConstraint("CK_Organization_Url", "WebsiteUrl IS NULL OR (length(WebsiteUrl) BETWEEN 1 AND 2048 AND (lower(WebsiteUrl) GLOB 'https://?*' OR lower(WebsiteUrl) GLOB 'http://?*'))");
         });
+
         model.Entity<Category>(e =>
         {
             e.HasOne<Category>().WithMany().HasForeignKey(x => x.ParentCategoryId).OnDelete(DeleteBehavior.Restrict);
@@ -124,6 +240,7 @@ public static class MasterSchema
                 t.HasCheckConstraint("CK_Category_Order", "SortOrder>=0");
             });
         });
+
         model.Entity<WorkSeries>(e =>
         {
             e.ToTable("WorkSeries");
@@ -132,6 +249,7 @@ public static class MasterSchema
             e.HasOne<Work>().WithMany().HasForeignKey(x => x.WorkId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Series>().WithMany().HasForeignKey(x => x.SeriesId).OnDelete(DeleteBehavior.Restrict);
         });
+
         model.Entity<CharacterWork>(e =>
         {
             e.ToTable("CharacterWorks");
@@ -140,6 +258,7 @@ public static class MasterSchema
             e.HasOne<Character>().WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Work>().WithMany().HasForeignKey(x => x.WorkId).OnDelete(DeleteBehavior.Restrict);
         });
+
         model.Entity<IdempotencyRecord>(e =>
         {
             e.ToTable("IdempotencyRecords", t =>

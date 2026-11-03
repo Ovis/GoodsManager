@@ -1,12 +1,25 @@
 import {useEffect,useSyncExternalStore} from 'react';
 import type {ImageSettingsStore,ImageSettings as Saved} from './ImageSettingsStore';
+
 const size=(bytes:number)=>`${Number((bytes/1024/1024).toFixed(1))} MiB`;
-function Summary({value}:{value:Saved}){return <dl className="detail-field"><dt>原本保持</dt><dd>{value.keepOriginal?'保持する':'保持しない'}</dd><dt>表示用画像</dt><dd>長辺 {value.displayMaxEdge}px ／ 品質 {value.displayQuality}</dd><dt>サムネイル</dt><dd>長辺 {value.thumbMaxEdge}px ／ 品質 {value.thumbQuality}</dd></dl>;}
+
+function Summary({value}:{value:Saved}){
+    return <dl className="detail-field"><dt>原本保持</dt><dd>{value.keepOriginal?'保持する':'保持しない'}</dd><dt>表示用画像</dt><dd>長辺 {value.displayMaxEdge}px ／ 品質 {value.displayQuality}</dd><dt>サムネイル</dt><dd>長辺 {value.thumbMaxEdge}px ／ 品質 {value.thumbQuality}</dd></dl>;
+}
+
 export function ImageSettings({store}:{store:ImageSettingsStore}){
- useSyncExternalStore(store.subscribe,store.snapshot);useEffect(()=>{void store.load();},[store]);
- const value=store.current;
- return <div className="image-settings-page"><header className="page-heading"><span className="eyebrow">IMAGE SETTINGS</span><h1>画像設定</h1><p>このコレクションに新しくアップロードする画像へ適用します。保存済みの画像は再変換しません。</p></header>{store.error&&<p role="alert" className="error-message">{store.error}</p>}{store.notice&&<p role="status">{store.notice}</p>}{!value?<section className="panel"><p>{store.busy?'設定を取得中…':'設定を取得できませんでした。'}</p><button className="btn" disabled={store.busy} onClick={()=>void store.load()}>再取得</button></section>:<>
- <section className="panel"><h2>画像の保存・変換</h2><form onSubmit={event=>{event.preventDefault();void store.submit();}}><fieldset disabled={store.locked}><label className="registration-ack"><input type="checkbox" checked={store.draft.keepOriginal} onChange={event=>store.update('keepOriginal',event.target.checked)}/>アップロードした原本を保持する</label><p className="muted">原本を保持すると使用容量が増えます。原本を保持しない場合も、表示用画像とサムネイルは保存します。</p><div className="form-grid">{([['displayMaxEdge','表示用画像の長辺（px）',4096],['displayQuality','表示用画像の品質',100],['thumbMaxEdge','サムネイルの長辺（px）',1024],['thumbQuality','サムネイルの品質',100]] as const).map(([key,label,max])=><label className="field" key={key}>{label}<input type="number" min="1" max={max} step="1" required value={store.draft[key]} onChange={event=>store.update(key,event.target.value)}/></label>)}</div><p className="muted">元画像より大きく拡大しません。品質は1〜100で、大きいほど画質とファイルサイズが上がります。</p><div className="editor-actions"><button className="btn primary" disabled={store.conflict||!store.dirty}>画像設定を保存</button><button type="button" className="btn" onClick={()=>store.reset()}>保存済みの入力に戻す</button><button type="button" className="btn quiet" onClick={()=>void store.fetchLatest()}>最新の保存内容を確認</button></div></fieldset></form>{store.save.state==='unknown'&&<button className="btn primary" disabled={store.busy} onClick={()=>void store.replay()}>同じ要求で結果を確認</button>}{store.conflict&&<p role="alert">ほかの画面で設定が変更されました。入力は保持しています。最新の保存内容を確認してください。</p>}{store.latest&&<div className="note"><h3>最新の保存内容</h3><Summary value={store.latest}/><p>上の入力は変更していません。最新内容と入力を比較してください。</p><button className="btn" disabled={store.locked} onClick={()=>store.reviewed()}>比較しました。入力を保持して見直す</button></div>}</section>
+    useSyncExternalStore(store.subscribe,store.snapshot);
+    useEffect(()=>{
+        void store.load();
+    },[store]);
+
+    const value=store.current;
+
+    return <div className="image-settings-page"><header className="page-heading"><span className="eyebrow">IMAGE SETTINGS</span><h1>画像設定</h1><p>このコレクションに新しくアップロードする画像へ適用します。保存済みの画像は再変換しません。</p></header>{store.error&&<p role="alert" className="error-message">{store.error}</p>}{store.notice&&<p role="status">{store.notice}</p>}{!value?<section className="panel"><p>{store.busy?'設定を取得中…':'設定を取得できませんでした。'}</p><button className="btn" disabled={store.busy} onClick={()=>void store.load()}>再取得</button></section>:<>
+ <section className="panel"><h2>画像の保存・変換</h2><form onSubmit={event=>{
+        event.preventDefault();
+        void store.submit();
+    }}><fieldset disabled={store.locked}><label className="registration-ack"><input type="checkbox" checked={store.draft.keepOriginal} onChange={event=>store.update('keepOriginal',event.target.checked)}/>アップロードした原本を保持する</label><p className="muted">原本を保持すると使用容量が増えます。原本を保持しない場合も、表示用画像とサムネイルは保存します。</p><div className="form-grid">{([['displayMaxEdge','表示用画像の長辺（px）',4096],['displayQuality','表示用画像の品質',100],['thumbMaxEdge','サムネイルの長辺（px）',1024],['thumbQuality','サムネイルの品質',100]] as const).map(([key,label,max])=><label className="field" key={key}>{label}<input type="number" min="1" max={max} step="1" required value={store.draft[key]} onChange={event=>store.update(key,event.target.value)}/></label>)}</div><p className="muted">元画像より大きく拡大しません。品質は1〜100で、大きいほど画質とファイルサイズが上がります。</p><div className="editor-actions"><button className="btn primary" disabled={store.conflict||!store.dirty}>画像設定を保存</button><button type="button" className="btn" onClick={()=>store.reset()}>保存済みの入力に戻す</button><button type="button" className="btn quiet" onClick={()=>void store.fetchLatest()}>最新の保存内容を確認</button></div></fieldset></form>{store.save.state==='unknown'&&<button className="btn primary" disabled={store.busy} onClick={()=>void store.replay()}>同じ要求で結果を確認</button>}{store.conflict&&<p role="alert">ほかの画面で設定が変更されました。入力は保持しています。最新の保存内容を確認してください。</p>}{store.latest&&<div className="note"><h3>最新の保存内容</h3><Summary value={store.latest}/><p>上の入力は変更していません。最新内容と入力を比較してください。</p><button className="btn" disabled={store.locked} onClick={()=>store.reviewed()}>比較しました。入力を保持して見直す</button></div>}</section>
  <section className="panel"><h2>アップロードの上限</h2><p>以下は運用環境で設定された値です。この画面からは変更できません。</p><dl className="detail-field"><dt>対応形式</dt><dd>JPEG・PNG・WebP（アニメーション不可）</dd><dt>1枚のサイズ</dt><dd>{size(value.uploadMaxBytes)}まで</dd><dt>画像の大きさ</dt><dd>{value.maxPixels.toLocaleString()}画素・長辺 {value.maxEdge.toLocaleString()}pxまで</dd><dt>変換時間</dt><dd>{value.conversionTimeoutSeconds}秒まで</dd><dt>一時アップロードの保存枠</dt><dd>{size(value.temporaryMaxBytes)} ／ {value.temporaryMaxCount}件まで</dd><dt>未使用アップロードの有効期間</dt><dd>{value.uploadLifetimeHours}時間</dd></dl></section></>}
  </div>;
 }

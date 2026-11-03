@@ -29,6 +29,7 @@ public sealed class OperationVerification(SignInManager<AppUser> signIn, UserMan
             }
 
             AuthController.EnsureSuccess(await users.AddOrUpdatePasskeyAsync(user, PasskeyMetadata.RequireValid(result.Passkey)));
+
             return true;
         }
         catch (InvalidOperationException)

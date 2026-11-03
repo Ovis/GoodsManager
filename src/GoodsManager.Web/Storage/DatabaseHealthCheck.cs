@@ -14,10 +14,13 @@ public sealed class DatabaseHealthCheck(AppDbContext database, DatabaseRuntime r
             foreach (var directory in new[] { runtime.DirectoryPath, Path.Combine(runtime.DirectoryPath, "images"), Path.Combine(runtime.DirectoryPath, "keys"), backups.DirectoryPath, logs.DirectoryPath })
             {
                 GoodsManager.Web.Backups.BackupPaths.RejectLinks(directory);
+
                 var path = Path.Combine(directory, ".health-" + Guid.NewGuid().ToString("N"));
                 using var probe = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose | FileOptions.WriteThrough);
-                probe.WriteByte(0); probe.Flush(true);
+                probe.WriteByte(0);
+                probe.Flush(true);
             }
+
             return !await DatabaseMaintenance.HasPendingMigrationsAsync(database, cancellationToken)
                 && await database.SystemStates.AnyAsync(x => x.Id == 1, cancellationToken)
                 && !await database.Set<GoodsManager.Web.Images.SystemAlert>().AnyAsync(x => x.ResolvedAt == null && x.Code == "IMAGE_FILE_UNAVAILABLE", cancellationToken)

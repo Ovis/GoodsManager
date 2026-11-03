@@ -19,6 +19,7 @@ public sealed class MasterSnapshotTests
         await using var app = new TestApplication { ConfigureTestServices = services => services.AddDbContext<AppDbContext>(options => options.AddInterceptors(pause)) };
         using var client = Client(app);
         await SetupAsync(client);
+
         var workId = Guid.NewGuid();
         var seriesId = Guid.NewGuid();
         long before;
@@ -32,12 +33,15 @@ public sealed class MasterSnapshotTests
             await db.SaveChangesAsync();
             before = (await db.SystemStates.SingleAsync()).DataRevision;
         }
+
         var pending = client.GetAsync($"/api/v1/masters/works/{workId:D}/relations");
         try
         {
             await pause.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
             await using var writer = app.Services.CreateAsyncScope();
             var db = writer.ServiceProvider.GetRequiredService<AppDbContext>();
+
             await using var transaction = await db.Database.BeginTransactionAsync();
             var addedId = Guid.NewGuid();
             db.Add(new Series { Id = addedId, Name = "a new", NormalizedName = "a new" });
@@ -48,8 +52,10 @@ public sealed class MasterSnapshotTests
             await transaction.CommitAsync();
         }
         finally { pause.Release.TrySetResult(); }
+
         var response = await pending;
         var page = await response.Content.ReadFromJsonAsync<JsonElement>();
+
         Assert.That(page.GetProperty("totalCount").GetInt64(), Is.EqualTo(1));
         Assert.That(page.GetProperty("items").GetArrayLength(), Is.EqualTo(1));
         Assert.That(page.GetProperty("items")[0].GetProperty("id").GetGuid(), Is.EqualTo(seriesId));
@@ -68,6 +74,7 @@ public sealed class MasterSnapshotTests
         };
         using var client = Client(app);
         await SetupAsync(client);
+
         long before;
         Guid originalId;
         await using (var initial = app.Services.CreateAsyncScope())
@@ -76,17 +83,21 @@ public sealed class MasterSnapshotTests
             var tag = new Tag { Id = Guid.NewGuid(), Name = "z original", NormalizedName = "z original" };
             originalId = tag.Id;
             db.Add(tag);
+
             var state = await db.SystemStates.SingleAsync();
             state.DataRevision++;
             before = state.DataRevision;
             await db.SaveChangesAsync();
         }
+
         var pending = client.GetFromJsonAsync<JsonElement>("/api/v1/masters/tags");
         try
         {
             await pause.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
             await using var writer = app.Services.CreateAsyncScope();
             var db = writer.ServiceProvider.GetRequiredService<AppDbContext>();
+
             await using var transaction = await db.Database.BeginTransactionAsync();
             db.Add(new Tag { Id = Guid.NewGuid(), Name = "a new", NormalizedName = "a new" });
             (await db.SystemStates.SingleAsync()).DataRevision++;
@@ -94,12 +105,16 @@ public sealed class MasterSnapshotTests
             await transaction.CommitAsync();
         }
         finally { pause.Release.TrySetResult(); }
+
         var page = await pending;
+
         Assert.That(page.GetProperty("totalCount").GetInt64(), Is.EqualTo(1));
         Assert.That(page.GetProperty("items").GetArrayLength(), Is.EqualTo(1));
         Assert.That(page.GetProperty("items")[0].GetProperty("id").GetGuid(), Is.EqualTo(originalId));
         Assert.That(page.GetProperty("dataRevision").GetString(), Is.EqualTo(before.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
         var after = await client.GetFromJsonAsync<JsonElement>("/api/v1/masters/tags");
+
         Assert.That(after.GetProperty("totalCount").GetInt64(), Is.EqualTo(2));
     }
 
@@ -108,6 +123,7 @@ public sealed class MasterSnapshotTests
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int paused;
+
         public override async ValueTask<DbDataReader> ReaderExecutedAsync(DbCommand command, CommandExecutedEventData eventData, DbDataReader result, CancellationToken cancellationToken = default)
         {
             if (command.CommandText.Contains("COUNT(*)", StringComparison.Ordinal) && command.CommandText.Contains($"FROM \"{table}\"", StringComparison.Ordinal) && Interlocked.Exchange(ref paused, 1) == 0)
@@ -115,6 +131,7 @@ public sealed class MasterSnapshotTests
                 Entered.TrySetResult();
                 await Release.Task.WaitAsync(cancellationToken);
             }
+
             return result;
         }
     }

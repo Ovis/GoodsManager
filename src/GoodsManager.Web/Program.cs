@@ -1,17 +1,17 @@
-using GoodsManager.Web.Operations;
-using GoodsManager.Web;
-using GoodsManager.Web.Storage;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using GoodsManager.Web.Auth;
-using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.HttpOverrides;
 using System.Text.Json.Serialization;
+using GoodsManager.Web;
+using GoodsManager.Web.Auth;
 using GoodsManager.Web.Development;
+using GoodsManager.Web.Images;
+using GoodsManager.Web.Operations;
+using GoodsManager.Web.PhotoOcr;
 using GoodsManager.Web.Products;
 using GoodsManager.Web.Search;
-using GoodsManager.Web.Images;
-using GoodsManager.Web.PhotoOcr;
+using GoodsManager.Web.Storage;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
 
 if (args.FirstOrDefault() == "healthcheck") { Environment.ExitCode = await HealthCommand.RunAsync(WebApplication.CreateBuilder([]).Configuration); return; }
 if (args.FirstOrDefault() == "image-worker") { Environment.ExitCode = ImageConverter.RunCli(args); return; }
@@ -19,10 +19,13 @@ if (args.FirstOrDefault() == "backup")
 {
     var cli = WebApplication.CreateBuilder([]);
     Environment.ExitCode = await GoodsManager.Web.Backups.BackupCli.RunAsync(cli.Configuration, cli.Environment.ContentRootPath, args[1..]);
+
     return;
 }
+
 var recovery = args.FirstOrDefault() == "recover-account";
 var builder = WebApplication.CreateBuilder(recovery ? [] : args);
+
 // 承認した7種各100件のID条件と200コードポイントの検索値をURLで扱う。
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestLineSize = 64 * 1024);
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
@@ -30,28 +33,35 @@ builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = 
     context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
 });
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+
 builder.Services.AddSingleton(services => new DatabaseRuntime(services.GetRequiredService<IConfiguration>()["Storage:Directory"] ?? Path.Combine(builder.Environment.ContentRootPath, "data")));
 builder.Services.AddDbContext<AppDbContext>((services, options) => options.UseSqlite(services.GetRequiredService<DatabaseRuntime>().ConnectionString));
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
 builder.Services.AddSingleton<InternalHealthListener>();
 builder.Services.AddHostedService(services => services.GetRequiredService<InternalHealthListener>());
+
 builder.Services.AddSingleton<GoodsManager.Web.Backups.BackupGate>();
 builder.Services.AddSingleton<GoodsManager.Web.Backups.BackupOptions>();
 builder.Services.AddSingleton<GoodsManager.Web.Backups.BackupSignal>();
 builder.Services.AddScoped<GoodsManager.Web.Backups.BackupService>();
 builder.Services.AddHostedService<GoodsManager.Web.Backups.BackupWorker>();
+
 builder.AddAppAuthentication();
+
 builder.Logging.ClearProviders();
 builder.Services.AddSingleton<OperationalLogging>();
 builder.Services.AddHostedService<OperationalLogWorker>();
 builder.Services.AddSingleton<ILoggerProvider>(services => services.GetRequiredService<OperationalLogging>());
+
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardLimit = 1;
     options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
     // HTTPS終端・Hostの振り分け・接続制限は配置側で担保し、Secure CookieとCSRFに必要な直近1段のHTTPS情報だけを採用する。
-    options.KnownProxies.Clear(); options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+    options.KnownIPNetworks.Clear();
 });
+
 builder.Services.AddScoped<OperationVerification>();
 builder.Services.AddScoped<AccountRecovery>();
 builder.Services.AddScoped<ProductOperations>();
@@ -60,12 +70,14 @@ builder.Services.AddScoped<ProductWrites>();
 builder.Services.AddScoped<DuplicateChecks>();
 builder.Services.AddScoped<SearchProjection>();
 builder.Services.AddScoped<ProductSearch>();
+
 builder.Services.AddHttpClient("NdlBooks", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(20);
     client.DefaultRequestHeaders.UserAgent.ParseAdd("GoodsManager/1.0");
 }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton(services => new GoodsManager.Web.Books.NdlBooks(services.GetRequiredService<IHttpClientFactory>().CreateClient("NdlBooks"), services.GetRequiredService<TimeProvider>()));
+
 builder.Services.AddSingleton<ImageLimits>();
 builder.Services.AddSingleton<ImageActivity>();
 builder.Services.AddSingleton<IImageFiles, ImageFiles>();
@@ -75,7 +87,9 @@ builder.Services.AddScoped<ImageLinks>();
 builder.Services.AddScoped<ImageGc>();
 builder.Services.AddScoped<ImageAlerts>();
 builder.Services.AddHostedService<ImageWorker>();
+
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict);
+
 builder.Services.AddSingleton(new GoodsManager.Web.PhotoOcr.PhotoOcrAssets(Path.Combine(builder.Environment.ContentRootPath, "PhotoOcrAssets")));
 
 var app = builder.Build();
@@ -86,8 +100,10 @@ try
     foreach (var directory in new[] { "images", "keys" })
     {
         var path = Path.Combine(runtime.DirectoryPath, directory);
-        GoodsManager.Web.Backups.BackupPaths.RejectLinks(path); Directory.CreateDirectory(path);
+        GoodsManager.Web.Backups.BackupPaths.RejectLinks(path);
+        Directory.CreateDirectory(path);
     }
+
     await using var scope = app.Services.CreateAsyncScope();
     await DatabaseMaintenance.MigrateAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), runtime.DirectoryPath, app.Services.GetRequiredService<GoodsManager.Web.Backups.BackupOptions>(), app.Services.GetRequiredService<GoodsManager.Web.Backups.BackupGate>().KeyLock);
     await scope.ServiceProvider.GetRequiredService<SearchProjection>().RebuildAllAsync();
@@ -104,6 +120,7 @@ catch
     runtime.Dispose();
     throw;
 }
+
 app.Lifetime.ApplicationStopped.Register(runtime.Dispose);
 if (recovery)
 {
@@ -116,12 +133,14 @@ if (recovery)
         runtime.Dispose();
         await app.DisposeAsync();
     }
+
     return;
 }
 
 app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+
 app.Use(async (context, next) =>
 {
     // 認証のチャレンジが短絡した場合もAPI応答をキャッシュさせない
@@ -132,14 +151,17 @@ app.Use(async (context, next) =>
 
     await next(context);
 });
+
 // 同一ホストのプロキシ経由でも公開リスナーから重い検査を呼べない。
 app.Map("/health/ready", branch => branch.Run(context => { context.Response.StatusCode = 404; return Task.CompletedTask; }));
+
 app.Use(AuthAudit.ObserveAsync);
 app.UseRateLimiter();
 app.Use(AuthTraffic.LimitBodyAsync);
 app.UseAuthentication();
 app.UseAuthorization();
 app.Use(GoodsManager.Web.Collections.CollectionAccess.InvokeAsync);
+
 app.Use(async (context, next) =>
 {
     if (context.Request.Path.StartsWithSegments("/api"))
@@ -160,6 +182,7 @@ app.Use(async (context, next) =>
 
     await next(context);
 });
+
 app.MapCollectionPages();
 app.MapRegistrationPhotoOcr();
 app.MapControllers();
@@ -168,6 +191,7 @@ app.MapMasterCheck();
 app.MapProductCheck();
 app.MapImageCheck();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+
 app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("GoodsManager.Web.Operations").LogInformation(new EventId(1000), "運用開始 Code={Code}", "APPLICATION_READY");
 app.Run();
 

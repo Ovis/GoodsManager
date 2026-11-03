@@ -1,8 +1,8 @@
 using System.Net;
 using GoodsManager.Web.Auth;
 using GoodsManager.Web.Storage;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +21,7 @@ public sealed class AuthenticationReviewTests
     {
         var validated = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var resume = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
         await using var app = new TestApplication
         {
             ConfigureTestServices = services => services.PostConfigure<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme, options =>
@@ -39,14 +40,35 @@ public sealed class AuthenticationReviewTests
         };
         using var waiting = Client(app);
         await SetupAsync(waiting);
+
         using var changing = Client(app);
-        await SendAsync(changing, "auth/password", new { loginId = "owner", password = Password, rememberMe = false });
+        await SendAsync(changing, "auth/password", new
+        {
+            loginId = "owner",
+            password = Password,
+            rememberMe = false
+        });
         waiting.DefaultRequestHeaders.Add("X-Review-Pause", "true");
-        var pending = SendAsync(waiting, path, new { loginId = "owner", password = useNewPassword ? "changed-password" : Password, rememberMe = false });
+
+        var pending = SendAsync(waiting, path, new
+        {
+            loginId = "owner",
+            password = useNewPassword ? "changed-password" : Password,
+            rememberMe = false
+        });
         try
         {
             await validated.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            var changed = await SendAsync(changing, "account/password", new { newPassword = "changed-password", verification = new { password = Password } });
+
+            var changed = await SendAsync(changing, "account/password", new
+            {
+                newPassword = "changed-password",
+                verification = new
+                {
+                    password = Password
+                }
+            });
+
             Assert.That(changed.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
         }
         finally
@@ -55,7 +77,9 @@ public sealed class AuthenticationReviewTests
         }
 
         Assert.That((await pending).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+
         await using var scope = app.Services.CreateAsyncScope();
+
         Assert.That(await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuthTickets.CountAsync(), Is.Zero);
     }
 
@@ -68,10 +92,20 @@ public sealed class AuthenticationReviewTests
         await SetupAsync(client);
         for (var attempt = 0; attempt < 5; attempt++)
         {
-            Assert.That((await SendAsync(client, "auth/password", new { loginId = "owner", password = "x", rememberMe = false })).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+            Assert.That((await SendAsync(client, "auth/password", new
+            {
+                loginId = "owner",
+                password = "x",
+                rememberMe = false
+            })).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        Assert.That((await SendAsync(client, "auth/password", new { loginId = "owner", password = Password, rememberMe = false })).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That((await SendAsync(client, "auth/password", new
+        {
+            loginId = "owner",
+            password = Password,
+            rememberMe = false
+        })).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     /// <summary>古い要求によるチケット更新で、削除・期限切れのセッションを復活させない</summary>
@@ -82,9 +116,11 @@ public sealed class AuthenticationReviewTests
         await using var app = new TestApplication();
         using var client = Client(app);
         await SetupAsync(client);
+
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var store = scope.ServiceProvider.GetRequiredService<DatabaseTicketStore>();
+
         var key = (await db.AuthTickets.AsNoTracking().SingleAsync()).Id.ToString("D");
         var ticket = (await store.RetrieveAsync(key))!;
         if (expire)
@@ -97,6 +133,7 @@ public sealed class AuthenticationReviewTests
         }
 
         ticket.Properties.ExpiresUtc = app.Clock.GetUtcNow().AddDays(7);
+
         Assert.ThrowsAsync<AuthenticationFailureException>(() => store.RenewAsync(key, ticket));
         Assert.That(await store.RetrieveAsync(key), Is.Null);
     }

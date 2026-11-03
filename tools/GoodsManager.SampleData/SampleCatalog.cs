@@ -27,6 +27,7 @@ public sealed record SampleCatalog(Dictionary<string, string[]> MasterData, Samp
     {
         var digits = $"49012345{id:0000}";
         var sum = digits.Select((c, index) => (c - '0') * (index % 2 == 0 ? 1 : 3)).Sum();
+
         return digits + (10 - sum % 10) % 10;
     }
 }

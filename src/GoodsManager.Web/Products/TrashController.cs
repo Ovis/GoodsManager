@@ -17,9 +17,15 @@ public sealed class TrashController(AppDbContext db, ProductOperations products,
     [HttpGet("trash/products")]
     public Task<IActionResult> List() => Read(async token =>
     {
-        if (Request.Query["sort"].Count > 1 || Request.Query["sort"].Count == 1 && Request.Query["sort"] != "deletedDesc") throw MasterInput.Invalid("sort");
+        if (Request.Query["sort"].Count > 1 || Request.Query["sort"].Count == 1 && Request.Query["sort"] != "deletedDesc")
+        {
+            throw MasterInput.Invalid("sort");
+        }
+
         var values = Request.Query.ToDictionary(x => x.Key, x => x.Value);
-        values.Remove("sort"); values["inventory"] = "all";
+        values.Remove("sort");
+        values["inventory"] = "all";
+
         return await search.PageAsync(SearchQuery.Parse(new QueryCollection(values)), token, trash: true);
     });
 
@@ -27,7 +33,9 @@ public sealed class TrashController(AppDbContext db, ProductOperations products,
     [HttpGet("trash/products/{id:guid}")]
     public Task<IActionResult> Get(Guid id) => Read(async token =>
     {
-        var product = await FindTrashed(id, token); Response.Headers.ETag = ProductOperations.Etag(product);
+        var product = await FindTrashed(id, token);
+        Response.Headers.ETag = ProductOperations.Etag(product);
+
         return await products.DetailAsync(product, token);
     });
 
@@ -36,9 +44,13 @@ public sealed class TrashController(AppDbContext db, ProductOperations products,
     [RequestSizeLimit(ProductWrites.BodyLimit)]
     public Task<IActionResult> Trash(Guid id) => writes.ExecuteAsync(HttpContext, $"DELETE:/api/v1/products/{id:D}", false, async (body, now, token) =>
     {
-        _ = new InputObject(body); var product = await products.FindAsync(id, token);
+        _ = new InputObject(body);
+
+        var product = await products.FindAsync(id, token);
         ProductWrites.CheckVersion(product, Request.Headers.IfMatch.ToString());
-        product.DeletedAt = now; await products.TouchAsync(product, now, token);
+        product.DeletedAt = now;
+        await products.TouchAsync(product, now, token);
+
         return (product, new Dictionary<string, Guid>());
     }, noContent: true, changeKind: "trashed");
 
@@ -48,10 +60,15 @@ public sealed class TrashController(AppDbContext db, ProductOperations products,
     public Task<IActionResult> Restore(Guid id) => writes.ExecuteAsync(HttpContext, $"POST:/api/v1/trash/products/{id:D}/restore", false, async (body, now, token) =>
     {
         var input = ProductWrites.Parse(() => new InputObject(body, "duplicateConfirmation"));
-        var product = await FindTrashed(id, token); ProductWrites.CheckVersion(product, Request.Headers.IfMatch.ToString());
+
+        var product = await FindTrashed(id, token);
+        ProductWrites.CheckVersion(product, Request.Headers.IfMatch.ToString());
+
         var draft = await products.DraftAsync(product, token);
         await duplicates.RequireConfirmationAsync(DuplicateInput.From(draft), DuplicateConfirmation.Parse(input), "restore", id, token, excludeProductId: id);
-        product.DeletedAt = null; await products.TouchAsync(product, now, token);
+        product.DeletedAt = null;
+        await products.TouchAsync(product, now, token);
+
         return (product, new Dictionary<string, Guid>());
     }, (p, token) => products.DetailAsync(p, token), changeKind: "restored");
 
@@ -61,9 +78,16 @@ public sealed class TrashController(AppDbContext db, ProductOperations products,
     public Task<IActionResult> Purge(Guid id) => writes.ExecuteAsync(HttpContext, $"DELETE:/api/v1/trash/products/{id:D}", false, async (body, now, token) =>
     {
         _ = new InputObject(body);
-        if (Request.Headers["X-Confirm-Delete"].ToString() != id.ToString("D")) throw MasterInput.Invalid("confirmDelete");
-        var product = await FindTrashed(id, token); ProductWrites.CheckVersion(product, Request.Headers.IfMatch.ToString());
-        await products.TouchAsync(product, now, token); db.Remove(product);
+        if (Request.Headers["X-Confirm-Delete"].ToString() != id.ToString("D"))
+        {
+            throw MasterInput.Invalid("confirmDelete");
+        }
+
+        var product = await FindTrashed(id, token);
+        ProductWrites.CheckVersion(product, Request.Headers.IfMatch.ToString());
+        await products.TouchAsync(product, now, token);
+        db.Remove(product);
+
         return (product, new Dictionary<string, Guid>());
     }, noContent: true, changeKind: "purged");
 
@@ -73,9 +97,15 @@ public sealed class TrashController(AppDbContext db, ProductOperations products,
     /// <summary>詳細・件数・分類・画像を同じ読取スナップショットに固定</summary>
     private async Task<IActionResult> Read(Func<CancellationToken, Task<object>> read)
     {
-        var token = HttpContext.RequestAborted; await db.Database.OpenConnectionAsync(token);
+        var token = HttpContext.RequestAborted;
+        await db.Database.OpenConnectionAsync(token);
+
         await using var native = ((SqliteConnection)db.Database.GetDbConnection()).BeginTransaction(deferred: true);
         await using var transaction = await db.Database.UseTransactionAsync(native, token);
-        var result = await read(token); await native.CommitAsync(token); return Ok(result);
+
+        var result = await read(token);
+        await native.CommitAsync(token);
+
+        return Ok(result);
     }
 }

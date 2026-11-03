@@ -16,7 +16,9 @@ public sealed class BooksController(NdlBooks books, AppDbContext db) : Controlle
     {
         var records = await books.FindAsync(isbn, HttpContext.RequestAborted);
         var names = records.SelectMany(x => x.Publishers).Select(MasterText.Normalize).Distinct().ToArray();
+
         var organizations = await db.Set<Organization>().AsNoTracking().Where(x => names.Contains(x.NormalizedName)).OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToArrayAsync(HttpContext.RequestAborted);
+
         return Ok(new
         {
             items = records.Select(x => new

@@ -18,8 +18,14 @@ public static class AuthenticationCheck
         app.MapGet("/dev/auth-check/config", (HttpContext context, IConfiguration configuration) =>
         {
             SetHeaders(context);
+
             var origin = new Uri(configuration["Authentication:Origin"] ?? "https://localhost:7443");
-            return Results.Json(new { origin = origin.GetLeftPart(UriPartial.Authority), rpId = configuration["Authentication:RpId"] ?? origin.Host });
+
+            return Results.Json(new
+            {
+                origin = origin.GetLeftPart(UriPartial.Authority),
+                rpId = configuration["Authentication:RpId"] ?? origin.Host
+            });
         });
     }
 
@@ -29,7 +35,9 @@ public static class AuthenticationCheck
         app.MapGet(path, (HttpContext context) =>
         {
             SetHeaders(context);
+
             var stream = typeof(AuthenticationCheck).Assembly.GetManifestResourceStream("GoodsManager.Web.Development.AuthCheck." + name)!;
+
             return Results.Stream(stream, contentType);
         });
     }

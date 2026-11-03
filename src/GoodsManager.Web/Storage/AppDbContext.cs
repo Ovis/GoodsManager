@@ -1,11 +1,11 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using GoodsManager.Web.Auth;
+using GoodsManager.Web.Images;
 using GoodsManager.Web.Masters;
 using GoodsManager.Web.Products;
 using GoodsManager.Web.Search;
-using GoodsManager.Web.Images;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace GoodsManager.Web.Storage;
 
@@ -13,7 +13,10 @@ namespace GoodsManager.Web.Storage;
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityUserContext<AppUser, Guid>(options)
 {
     // nullは起動処理・CLI・ワーカー専用。HTTPの業務APIでは参加確認後に必ず設定する。
-    public Guid? CollectionId { get; set; }
+    public Guid? CollectionId
+    {
+        get; set;
+    }
     public DbSet<SystemState> SystemStates => Set<SystemState>();
     public DbSet<AuthTicket> AuthTickets => Set<AuthTicket>();
 
@@ -21,6 +24,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
         // 設計時ツールや試験でも、DIの有無に左右されず標準パスキースキーマを使用
         modelBuilder.Entity<IdentityUserPasskey<Guid>>(entity =>
         {
@@ -35,6 +39,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             entity.OwnsOne(x => x.Data).ToJson();
             entity.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId);
         });
+
         modelBuilder.Entity<AppUser>(entity =>
         {
             entity.Property(x => x.UserName).IsRequired();
@@ -47,12 +52,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
                 table.HasCheckConstraint("CK_User_Failures", "AccessFailedCount>=0");
             });
         });
+
         modelBuilder.Entity<AuthTicket>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(x => x.ExpiresAt);
         });
+
         modelBuilder.Entity<SystemState>(entity =>
         {
             entity.ToTable("SystemState", table =>
@@ -64,6 +71,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
             entity.Property(x => x.Id).ValueGeneratedNever();
             entity.HasData(new SystemState { Id = 1, DataRevision = 0, UpdatedAt = DateTimeOffset.UnixEpoch });
         });
+
         MasterSchema.Configure(modelBuilder);
         ProductSchema.Configure(modelBuilder);
         SearchSchema.Configure(modelBuilder);
@@ -71,29 +79,55 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         GoodsManager.Web.Backups.BackupSchema.Configure(modelBuilder);
         Collections.CollectionSchema.Configure(modelBuilder);
         foreach (var type in Collections.CollectionSchema.ScopedTypes)
+        {
             typeof(AppDbContext).GetMethod(nameof(ApplyCollectionFilter), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.MakeGenericMethod(type).Invoke(this, [modelBuilder]);
+        }
+
         StorageValues.ApplyConventions(modelBuilder);
     }
 
     private void ApplyCollectionFilter<T>(ModelBuilder model) where T : class => model.Entity<T>().HasQueryFilter(entity => !CollectionId.HasValue || EF.Property<Guid>(entity, "CollectionId") == CollectionId.GetValueOrDefault());
+
     private void ApplyCollectionWrites()
     {
         foreach (var entry in ChangeTracker.Entries().Where(e => Collections.CollectionSchema.ScopedTypes.Contains(e.Metadata.ClrType) && e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
         {
             var property = entry.Property("CollectionId");
-            if (entry.State == EntityState.Added && (Guid)property.CurrentValue! == Guid.Empty) property.CurrentValue = CollectionId ?? Collections.CollectionSchema.DefaultId;
+            if (entry.State == EntityState.Added && (Guid)property.CurrentValue! == Guid.Empty)
+            {
+                property.CurrentValue = CollectionId ?? Collections.CollectionSchema.DefaultId;
+            }
+
             if (CollectionId.HasValue && (Guid)property.CurrentValue! != CollectionId.Value || entry.State != EntityState.Added && property.IsModified)
+            {
                 throw new Masters.MasterProblem(403, "COLLECTION_ACCESS_DENIED");
+            }
         }
     }
-    public override int SaveChanges(bool acceptAllChangesOnSuccess) { ApplyCollectionWrites(); return base.SaveChanges(acceptAllChangesOnSuccess); }
-    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) { ApplyCollectionWrites(); return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken); }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        ApplyCollectionWrites();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        ApplyCollectionWrites();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
 }
 
 /// <summary>保全対象データの変更番号。運用履歴だけの更新では増やさない</summary>
 public sealed class SystemState
 {
     public int Id { get; set; } = 1;
-    public long DataRevision { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
+    public long DataRevision
+    {
+        get; set;
+    }
+    public DateTimeOffset UpdatedAt
+    {
+        get; set;
+    }
 }

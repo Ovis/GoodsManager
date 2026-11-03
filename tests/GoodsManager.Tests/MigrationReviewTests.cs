@@ -17,7 +17,9 @@ public sealed class MigrationReviewTests
         await using (var original = new TestApplication { PreserveData = true })
         {
             directory = original.DataDirectory;
+
             using var client = original.CreateClient();
+
             Assert.That((await original.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
@@ -26,6 +28,7 @@ public sealed class MigrationReviewTests
             : "INSERT INTO __EFMigrationsHistory(MigrationId,ProductVersion) VALUES('20990101000000_Unknown','99.0.0')");
 
         await using var restarted = new TestApplication(directory);
+
         Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
             using var client = restarted.CreateClient();
@@ -40,15 +43,20 @@ public sealed class MigrationReviewTests
     {
         await using var app = new TestApplication();
         using var client = app.CreateClient();
+
         Assert.That((await app.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
         await using var scope = app.Services.CreateAsyncScope();
         var runtime = scope.ServiceProvider.GetRequiredService<DatabaseRuntime>();
         await using var connection = new SqliteConnection(runtime.ConnectionString);
         await connection.OpenAsync();
+
         await using var command = connection.CreateCommand();
         command.CommandText = "INSERT INTO __EFMigrationsHistory(MigrationId,ProductVersion) VALUES('20990101000000_Unknown','99.0.0')";
         await command.ExecuteNonQueryAsync();
+
         var response = await app.ReadinessAsync();
+
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
         Assert.That(await response.Content.ReadAsStringAsync(), Does.Not.Contain("Unknown").And.Not.Contain(app.DataDirectory));
     }
@@ -56,8 +64,10 @@ public sealed class MigrationReviewTests
     [Test]
     public async Task StartupRejectsPreCollectionDatabaseWithoutDeletingItsData()
     {
-        await using var app = new TestApplication(); Directory.CreateDirectory(app.DataDirectory);
+        await using var app = new TestApplication();
+        Directory.CreateDirectory(app.DataDirectory);
         await ExecuteAsync(app.DataDirectory, "CREATE TABLE __EFMigrationsHistory(MigrationId TEXT PRIMARY KEY,ProductVersion TEXT NOT NULL); INSERT INTO __EFMigrationsHistory VALUES('20261018032448_InitialSystemState','10.0.0'); CREATE TABLE SavedData(Value TEXT NOT NULL); INSERT INTO SavedData VALUES('keep-me')");
+
         Assert.ThrowsAsync<InvalidOperationException>(async () => { using var client = app.CreateClient(); await client.GetAsync("/health/ready"); });
         Assert.That(await ExecuteAsync(app.DataDirectory, "SELECT Value FROM SavedData"), Is.EqualTo("keep-me"));
         Assert.That(await ExecuteAsync(app.DataDirectory, "SELECT MigrationId FROM __EFMigrationsHistory"), Is.EqualTo("20261018032448_InitialSystemState"));
@@ -68,8 +78,10 @@ public sealed class MigrationReviewTests
     {
         await using var connection = new SqliteConnection(new DatabaseRuntime(directory).ConnectionString);
         await connection.OpenAsync();
+
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
+
         return await command.ExecuteScalarAsync();
     }
 }

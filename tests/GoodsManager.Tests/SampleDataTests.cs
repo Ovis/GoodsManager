@@ -23,6 +23,7 @@ public sealed class SampleDataTests
             services.AddSingleton<IImageConverter, TestConverter>();
         }
     };
+
     private sealed class TestConverter : IImageConverter
     {
         public Task<ConvertedImage> ConvertAsync(ImageJob job, CancellationToken token)
@@ -31,12 +32,18 @@ public sealed class SampleDataTests
             return Task.FromResult(ImageConverter.Convert(job));
         }
     }
+
     private static SampleCatalog Catalog(params int[] ids)
     {
         var catalog = SampleCatalog.Load();
-        return catalog with { Products = catalog.Products.Where(product => ids.Contains(product.Id)).ToArray() };
+        return catalog with
+        {
+            Products = catalog.Products.Where(product => ids.Contains(product.Id)).ToArray()
+        };
     }
+
     private static Task<ImportResult> Import(HttpClient client, SampleCatalog catalog, string state) => new SampleDataImporter(client, catalog, state, TextWriter.Null).RunAsync();
+
     private static async Task<long> Revision(TestApplication app)
     {
         await using var scope = app.Services.CreateAsyncScope();
@@ -64,55 +71,92 @@ public sealed class SampleDataTests
     [TestCase("", false)]
     public void TargetIsLimitedToHttpsOrigins(string target, bool allowed)
     {
-        if (allowed) Assert.That(LocalTarget.Parse(target).Scheme, Is.EqualTo("https"));
-        else Assert.Throws<ArgumentException>(() => LocalTarget.Parse(target));
+        if (allowed)
+        {
+            Assert.That(LocalTarget.Parse(target).Scheme, Is.EqualTo("https"));
+        }
+        else
+        {
+            Assert.Throws<ArgumentException>(() => LocalTarget.Parse(target));
+        }
     }
 
     [Test]
     public async Task FullCatalogImportsAndAnotherJournalDoesNotDuplicateOrOverwriteEdits()
     {
-        await using var app = App(); using var client = Client(app); await SetupAsync(client);
+        await using var app = App();
+        using var client = Client(app);
+        await SetupAsync(client);
+
         var state = Path.Combine(app.DataDirectory, "sample-journal");
+
         Assert.That((await Import(client, SampleCatalog.Load(), state)).Added, Is.EqualTo(64));
+
         await using (var scope = app.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
             Assert.That(await db.Set<Product>().CountAsync(x => x.DeletedAt == null), Is.EqualTo(62));
             Assert.That(await db.Set<Product>().CountAsync(x => x.DeletedAt != null), Is.EqualTo(2));
             Assert.That(await db.Set<InventoryItem>().CountAsync(), Is.EqualTo(10));
             Assert.That(await db.Set<ProductImage>().CountAsync(), Is.EqualTo(67));
+
             var first = await db.Set<Product>().FirstAsync();
-            first.Name = "利用者が編集した名前"; await db.SaveChangesAsync();
+            first.Name = "利用者が編集した名前";
+            await db.SaveChangesAsync();
         }
+
         var before = await Revision(app);
+
         Assert.That(await Import(client, SampleCatalog.Load(), state), Is.EqualTo(new ImportResult(0, 64)));
         // 実行記録がなくても、通常商品とゴミ箱のサンプル番号で既存データを認識する。
         Assert.That(await Import(client, SampleCatalog.Load(), Path.Combine(state, "another")), Is.EqualTo(new ImportResult(0, 64)));
         Assert.That(await Revision(app), Is.EqualTo(before));
+
         var barcode = await client.GetFromJsonAsync<JsonElement>("/api/v1/products?barcode=" + SampleCatalog.Barcode(1));
+
         Assert.That(barcode.GetProperty("totalCount").GetInt64(), Is.EqualTo(1));
+
         var firstResult = barcode.GetProperty("items")[0];
+
         using var image = await client.GetAsync(firstResult.GetProperty("primaryImage").GetProperty("thumbnailUrl").GetString());
+
         Assert.That(image.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
         var files = Directory.EnumerateFiles(state, "*.json", SearchOption.AllDirectories).Select(File.ReadAllText);
+
         Assert.That(string.Join('\n', files), Does.Not.Contain(Password).And.Not.Contain("__Host-GoodsManager"));
     }
 
     [Test]
     public async Task LostCreationResponseResumesWithTheSameRequestAndDoesNotAddAnotherProduct()
     {
-        await using var app = App(); using var owner = Client(app); await SetupAsync(owner);
+        await using var app = App();
+        using var owner = Client(app);
+        await SetupAsync(owner);
+
         using var handler = new LostResponseHandler(app.Server.CreateHandler());
         using var client = new HttpClient(handler) { BaseAddress = owner.BaseAddress };
         client.DefaultRequestHeaders.Add("X-Collection-Id", GoodsManager.Web.Collections.CollectionSchema.DefaultId.ToString("D"));
-        await new SampleApi(client).SendAsync("auth/password", new { loginId = "owner", password = Password, rememberMe = false });
+        await new SampleApi(client).SendAsync("auth/password", new
+        {
+            loginId = "owner",
+            password = Password,
+            rememberMe = false
+        });
+
         var state = Path.Combine(app.DataDirectory, "resume-journal");
+
         Assert.ThrowsAsync<HttpRequestException>(async () => await Import(client, Catalog(1), state));
         Assert.That(handler.Lost, Is.True);
+
         var result = await Import(owner, Catalog(1), state);
+
         Assert.That(result.Added, Is.EqualTo(1));
+
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
         Assert.That(await db.Set<Product>().CountAsync(), Is.EqualTo(1));
         Assert.That(await db.Set<InventoryItem>().CountAsync(), Is.EqualTo(1));
     }
@@ -120,18 +164,36 @@ public sealed class SampleDataTests
     private sealed class LostResponseHandler(HttpMessageHandler inner) : DelegatingHandler(inner)
     {
         private readonly CookieContainer cookies = new();
-        public bool Lost { get; private set; }
+        public bool Lost
+        {
+            get; private set;
+        }
+
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
         {
             var uri = request.RequestUri!;
             var cookie = cookies.GetCookieHeader(uri);
-            if (cookie.Length > 0) request.Headers.Add("Cookie", cookie);
+            if (cookie.Length > 0)
+            {
+                request.Headers.Add("Cookie", cookie);
+            }
+
             var response = await base.SendAsync(request, token);
-            if (response.Headers.TryGetValues("Set-Cookie", out var values)) foreach (var value in values) cookies.SetCookies(uri, value);
+            if (response.Headers.TryGetValues("Set-Cookie", out var values))
+            {
+                foreach (var value in values)
+                {
+                    cookies.SetCookies(uri, value);
+                }
+            }
+
             if (!Lost && request.Method == HttpMethod.Post && request.RequestUri!.AbsolutePath == "/api/v1/products" && response.IsSuccessStatusCode)
             {
-                Lost = true; response.Dispose(); throw new HttpRequestException("試験用の応答切断");
+                Lost = true;
+                response.Dispose();
+                throw new HttpRequestException("試験用の応答切断");
             }
+
             return response;
         }
     }
@@ -139,26 +201,54 @@ public sealed class SampleDataTests
     [Test]
     public async Task RecreatedAccountUsesSeparateJournalOnTheSameOrigin()
     {
-        await using var first = App(); using var firstClient = Client(first); await SetupAsync(firstClient);
+        await using var first = App();
+        using var firstClient = Client(first);
+        await SetupAsync(firstClient);
+
         var state = Path.Combine(first.DataDirectory, "shared-journal");
+
         Assert.That((await Import(firstClient, Catalog(2), state)).Added, Is.EqualTo(1));
-        await using var second = App(); using var secondClient = Client(second); await SetupAsync(secondClient);
+
+        await using var second = App();
+        using var secondClient = Client(second);
+        await SetupAsync(secondClient);
+
         Assert.That((await Import(secondClient, Catalog(2), state)).Added, Is.EqualTo(1));
         Assert.That(Directory.GetDirectories(state).Length, Is.EqualTo(2));
     }
+
     [Test]
     public async Task SameAccountUsesSeparateJournalsAndImportsForEachCollection()
     {
-        await using var app = App(); using var client = Client(app); await SetupAsync(client);
-        var state = Path.Combine(app.DataDirectory, "collection-journals"); var catalog = Catalog(2);
+        await using var app = App();
+        using var client = Client(app);
+        await SetupAsync(client);
+
+        var state = Path.Combine(app.DataDirectory, "collection-journals");
+        var catalog = Catalog(2);
+
         Assert.That((await Import(client, catalog, state)).Added, Is.EqualTo(1));
+
         var csrf = await client.GetFromJsonAsync<JsonElement>("/api/v1/auth/csrf");
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/collections") { Content = JsonContent.Create(new { name = "サンプル用" }) }; request.Headers.Add("X-CSRF-Token", csrf.GetProperty("token").GetString()); request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
-        var response = await client.SendAsync(request); Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
-        var id = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString(); client.DefaultRequestHeaders.Remove("X-Collection-Id"); client.DefaultRequestHeaders.Add("X-Collection-Id", id);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/collections") { Content = JsonContent.Create(new { name = "サンプル用" }) };
+        request.Headers.Add("X-CSRF-Token", csrf.GetProperty("token").GetString());
+        request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
+
+        var response = await client.SendAsync(request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+
+        var id = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
+        client.DefaultRequestHeaders.Remove("X-Collection-Id");
+        client.DefaultRequestHeaders.Add("X-Collection-Id", id);
+
         Assert.That((await Import(client, catalog, state)).Added, Is.EqualTo(1));
-        Assert.That(await Import(client, catalog, state), Is.EqualTo(new ImportResult(0, 1))); Assert.That(Directory.GetDirectories(state).Length, Is.EqualTo(2));
-        await using var scope = app.Services.CreateAsyncScope(); Assert.That(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Product>().CountAsync(), Is.EqualTo(2));
+        Assert.That(await Import(client, catalog, state), Is.EqualTo(new ImportResult(0, 1)));
+        Assert.That(Directory.GetDirectories(state).Length, Is.EqualTo(2));
+
+        await using var scope = app.Services.CreateAsyncScope();
+
+        Assert.That(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Product>().CountAsync(), Is.EqualTo(2));
     }
 
 }

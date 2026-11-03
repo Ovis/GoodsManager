@@ -19,6 +19,7 @@ public sealed class TestAuthenticator : IDisposable
     public JsonElement Create(JsonElement options, string origin = "https://localhost:7443", string rpId = "localhost", string? challenge = null, bool verified = true)
     {
         userHandle = WebEncoders.Base64UrlDecode(options.GetProperty("user").GetProperty("id").GetString()!);
+
         var clientData = ClientData("webauthn.create", challenge ?? options.GetProperty("challenge").GetString()!, origin);
         var parameters = key.ExportParameters(false);
         byte[] cose = [0xa5, 0x01, 0x02, 0x03, 0x26, 0x20, 0x01, 0x21, 0x58, 0x20, .. parameters.Q.X!, 0x22, 0x58, 0x20, .. parameters.Q.Y!];
@@ -31,14 +32,22 @@ public sealed class TestAuthenticator : IDisposable
         stream.WriteByte(0xa0);
         WriteText(stream, "authData");
         WriteBytes(stream, authData);
+
         return JsonSerializer.SerializeToElement(new
         {
             id = Id,
             rawId = Id,
             type = "public-key",
             authenticatorAttachment = "platform",
-            clientExtensionResults = new { },
-            response = new { clientDataJSON = Encode(clientData), attestationObject = Encode(stream.ToArray()), transports = new[] { "internal" } }
+            clientExtensionResults = new
+            {
+            },
+            response = new
+            {
+                clientDataJSON = Encode(clientData),
+                attestationObject = Encode(stream.ToArray()),
+                transports = new[] { "internal" }
+            }
         });
     }
 
@@ -59,8 +68,16 @@ public sealed class TestAuthenticator : IDisposable
             rawId = Id,
             type = "public-key",
             authenticatorAttachment = "platform",
-            clientExtensionResults = new { },
-            response = new { clientDataJSON = Encode(data), authenticatorData = Encode(auth), signature = Encode(signature), userHandle = Encode(userHandle) }
+            clientExtensionResults = new
+            {
+            },
+            response = new
+            {
+                clientDataJSON = Encode(data),
+                authenticatorData = Encode(auth),
+                signature = Encode(signature),
+                userHandle = Encode(userHandle)
+            }
         });
     }
 
@@ -74,6 +91,7 @@ public sealed class TestAuthenticator : IDisposable
         SHA256.HashData(Encoding.UTF8.GetBytes(rpId)).CopyTo(data, 0);
         data[32] = flags;
         BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(33), counter);
+
         return data;
     }
 

@@ -22,7 +22,14 @@ public sealed class ProductsController(AppDbContext db, ProductOperations produc
     {
         var value = await products.InventoryAsync(product, new Dictionary<string, Guid>(), token);
         var item = value.Items.SingleOrDefault(x => x.Id == itemId) ?? throw new MasterProblem(404, "NOT_FOUND");
-        return new { productId = id, value.ProductRevision, value.Etag, item };
+
+        return new
+        {
+            productId = id,
+            value.ProductRevision,
+            value.Etag,
+            item
+        };
     });
 
     [HttpPost("{id:guid}/inventory-commands")]
@@ -31,8 +38,11 @@ public sealed class ProductsController(AppDbContext db, ProductOperations produc
     {
         var product = await products.FindAsync(id, token);
         ProductWrites.CheckVersion(product, Request.Headers.IfMatch.ToString());
+
         var commands = ProductWrites.Parse(() => InventoryCommands.Parse(body));
+
         var refs = await inventory.ApplyAsync(product, commands, now, token, Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value));
+
         return (product, refs);
     });
 
@@ -40,12 +50,14 @@ public sealed class ProductsController(AppDbContext db, ProductOperations produc
     {
         var token = HttpContext.RequestAborted;
         await db.Database.OpenConnectionAsync(token);
+
         await using var native = ((SqliteConnection)db.Database.GetDbConnection()).BeginTransaction(deferred: true);
         await using var transaction = await db.Database.UseTransactionAsync(native, token);
         var product = await products.FindAsync(id, token);
         var value = await get(product, token);
         Response.Headers.ETag = ProductOperations.Etag(product);
         await native.CommitAsync(token);
+
         return Ok(value);
     }
 }
@@ -58,16 +70,23 @@ public sealed class DevelopmentProductsController(IHostEnvironment environment, 
     [RequestSizeLimit(ProductWrites.BodyLimit)]
     public Task<IActionResult> Create()
     {
-        if (!environment.IsDevelopment()) throw new MasterProblem(404, "NOT_FOUND");
+        if (!environment.IsDevelopment())
+        {
+            throw new MasterProblem(404, "NOT_FOUND");
+        }
+
         return writes.ExecuteAsync(HttpContext, "POST:/api/v1/dev/products", true, async (body, now, token) =>
         {
             var input = ProductWrites.Parse(() =>
             {
                 var root = new InputObject(body, "product", "initialLot");
                 var lot = new InputObject(root.Get("initialLot"), "quantity", "fields");
+
                 return (Draft: InputObject.Product(root.Get("product")), Quantity: lot.Integer("quantity"), Fields: InputObject.Fields(lot.Get("fields"), true));
             });
+
             var product = await products.CreateAsync(input.Draft, input.Quantity, input.Fields, now, token);
+
             return (product, new Dictionary<string, Guid>());
         });
     }

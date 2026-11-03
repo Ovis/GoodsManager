@@ -9,8 +9,13 @@ public static class HealthCommand
         try
         {
             var port = configuration.GetValue("Operations:HealthPort", 8081);
-            if (port is < 1 or > 65535) return 1;
+            if (port is < 1 or > 65535)
+            {
+                return 1;
+            }
+
             using var client = new HttpClient(new SocketsHttpHandler { UseProxy = false, AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(5) };
+
             return (await client.GetAsync($"http://127.0.0.1:{port}/health/ready")).IsSuccessStatusCode ? 0 : 1;
         }
         catch (HttpRequestException) { return 1; }

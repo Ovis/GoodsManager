@@ -38,11 +38,21 @@ public static class AuthTraffic
             options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
                 PartitionedRateLimiter.Create<HttpContext, string>(context => Group(context) is var group && group != "none"
                     ? RateLimitPartition.GetSlidingWindowLimiter(group, key => new SlidingWindowRateLimiterOptions
-                    { PermitLimit = key == "heavy" ? limits.HeavyPerMinute : limits.ReadPerMinute, Window = TimeSpan.FromMinutes(1), SegmentsPerWindow = 6, QueueLimit = 0, AutoReplenishment = true })
+                    {
+                        PermitLimit = key == "heavy" ? limits.HeavyPerMinute : limits.ReadPerMinute,
+                        Window = TimeSpan.FromMinutes(1),
+                        SegmentsPerWindow = 6,
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    })
                     : RateLimitPartition.GetNoLimiter("none")),
                 PartitionedRateLimiter.Create<HttpContext, string>(context => Group(context) is var group && group != "none"
                     ? RateLimitPartition.GetConcurrencyLimiter(group, key => new ConcurrencyLimiterOptions
-                    { PermitLimit = key == "heavy" ? limits.HeavyConcurrency : limits.ReadConcurrency, QueueLimit = key == "heavy" ? limits.HeavyQueue : limits.ReadQueue, QueueProcessingOrder = QueueProcessingOrder.OldestFirst })
+                    {
+                        PermitLimit = key == "heavy" ? limits.HeavyConcurrency : limits.ReadConcurrency,
+                        QueueLimit = key == "heavy" ? limits.HeavyQueue : limits.ReadQueue,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                    })
                     : RateLimitPartition.GetNoLimiter("none")));
             options.OnRejected = async (rejected, cancellation) =>
             {
@@ -57,33 +67,76 @@ public static class AuthTraffic
     /// <summary>JSONを一時ファイルへ保存せず、宣言長と実際に読み取るバイト数を制限する。</summary>
     public static async Task LimitBodyAsync(HttpContext context, RequestDelegate next)
     {
-        if (Group(context) == "none") { await next(context); return; }
+        if (Group(context) == "none")
+        {
+            await next(context);
+            return;
+        }
+
         var maximum = context.RequestServices.GetRequiredService<IOptions<AuthTrafficOptions>>().Value.MaximumBodyBytes;
-        if (context.Request.ContentLength > maximum) throw new BadHttpRequestException("認証要求の本文上限", 413);
+        if (context.Request.ContentLength > maximum)
+        {
+            throw new BadHttpRequestException("認証要求の本文上限", 413);
+        }
+
         var feature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
-        if (feature is { IsReadOnly: false }) feature.MaxRequestBodySize = maximum;
+        if (feature is { IsReadOnly: false })
+        {
+            feature.MaxRequestBodySize = maximum;
+        }
+
         var original = context.Request.Body;
-        using var limited = new LimitedBody(original, maximum); context.Request.Body = limited;
-        try { await next(context); } finally { context.Request.Body = original; }
+        using var limited = new LimitedBody(original, maximum);
+        context.Request.Body = limited;
+        try
+        {
+            await next(context);
+        }
+        finally { context.Request.Body = original; }
     }
 
     private sealed class LimitedBody(Stream inner, long maximum) : Stream
     {
         private long consumed;
+
         private int Allow(int requested) => (int)Math.Min(requested, maximum - consumed + 1);
-        private int Count(int read) { consumed += read; if (consumed > maximum) throw new BadHttpRequestException("認証要求の本文上限", 413); return read; }
+
+        private int Count(int read)
+        {
+            consumed += read;
+            if (consumed > maximum)
+            {
+                throw new BadHttpRequestException("認証要求の本文上限", 413);
+            }
+
+            return read;
+        }
+
         public override int Read(byte[] buffer, int offset, int count) => Count(inner.Read(buffer, offset, Allow(count)));
+
         public override int Read(Span<byte> buffer) => Count(inner.Read(buffer[..Allow(buffer.Length)]));
+
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => Count(await inner.ReadAsync(buffer[..Allow(buffer.Length)], cancellationToken));
+
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
         public override bool CanRead => true;
         public override bool CanSeek => false;
         public override bool CanWrite => false;
         public override long Length => throw new NotSupportedException();
-        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-        public override void Flush() { }
+        public override long Position
+        {
+            get => throw new NotSupportedException(); set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
         public override void SetLength(long value) => throw new NotSupportedException();
+
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

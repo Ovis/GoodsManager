@@ -11,7 +11,10 @@ public static class LocalTarget
     {
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme != "https"
             || uri.Host.Length == 0 || uri.UserInfo.Length != 0 || uri.AbsolutePath != "/" || uri.Query.Length != 0 || uri.Fragment.Length != 0)
+        {
             throw new ArgumentException("接続先は https://example.com のような、パス・クエリ・資格情報を含まないHTTPSのオリジンを指定してください。");
+        }
+
         return uri;
     }
 
@@ -19,6 +22,7 @@ public static class LocalTarget
     public static HttpClient CreateClient(Uri origin, string? certificatePath)
     {
         Parse(origin.AbsoluteUri);
+
         var handler = new HttpClientHandler { CookieContainer = new CookieContainer(), AllowAutoRedirect = false };
         if (certificatePath is not null)
         {
@@ -29,6 +33,7 @@ public static class LocalTarget
                 && certificate.RawData.SequenceEqual(raw) && DateTime.UtcNow >= certificate.NotBefore.ToUniversalTime()
                 && DateTime.UtcNow <= certificate.NotAfter.ToUniversalTime();
         }
+
         return new HttpClient(handler) { BaseAddress = origin, Timeout = TimeSpan.FromSeconds(60) };
     }
 }

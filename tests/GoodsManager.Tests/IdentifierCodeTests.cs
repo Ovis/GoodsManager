@@ -61,9 +61,14 @@ public sealed class IdentifierCodeTests
             {
                 for (var digit = '0'; digit <= '9'; digit++)
                 {
-                    if (digit == code[index]) continue;
+                    if (digit == code[index])
+                    {
+                        continue;
+                    }
+
                     var changed = code.ToCharArray();
                     changed[index] = digit;
+
                     Assert.That(IdentifierCodes.TryNormalize(scheme, new string(changed), out _), Is.False, $"{scheme}: {new string(changed)}");
                 }
             }

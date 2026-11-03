@@ -7,6 +7,7 @@ namespace GoodsManager.SampleData;
 public sealed class SampleApi(HttpClient client)
 {
     public HttpClient Client => client;
+
     public async Task<JsonElement> ReadAsync(string path)
     {
         using var response = await client.GetAsync("/api/v1/" + path);
@@ -17,9 +18,18 @@ public sealed class SampleApi(HttpClient client)
     {
         using var request = await RequestAsync(path, method);
         request.Content = JsonContent.Create(body, options: SampleCatalog.Json);
-        if (etag is not null) request.Headers.TryAddWithoutValidation("If-Match", etag);
-        if (key.HasValue) request.Headers.Add("Idempotency-Key", key.Value.ToString());
+        if (etag is not null)
+        {
+            request.Headers.TryAddWithoutValidation("If-Match", etag);
+        }
+
+        if (key.HasValue)
+        {
+            request.Headers.Add("Idempotency-Key", key.Value.ToString());
+        }
+
         using var response = await client.SendAsync(request);
+
         return await ReadResponseAsync(response, method + " " + path);
     }
 
@@ -28,6 +38,7 @@ public sealed class SampleApi(HttpClient client)
         var csrf = await ReadAsync("auth/csrf");
         var request = new HttpRequestMessage(new HttpMethod(method), "/api/v1/" + path);
         request.Headers.Add("X-CSRF-Token", csrf.GetProperty("token").GetString());
+
         return request;
     }
 
@@ -37,13 +48,27 @@ public sealed class SampleApi(HttpClient client)
         if (!response.IsSuccessStatusCode)
         {
             string? code = null;
-            try { using var error = JsonDocument.Parse(text); code = error.RootElement.GetProperty("code").GetString(); }
+            try
+            {
+                using var error = JsonDocument.Parse(text);
+                code = error.RootElement.GetProperty("code").GetString();
+            }
             catch (Exception ex) when (ex is JsonException or KeyNotFoundException) { }
+
             // 応答本文や送信した資格情報をログに残さない。
             throw new HttpRequestException($"{operation}: HTTP {(int)response.StatusCode} {code}", null, response.StatusCode);
         }
-        if (text.Length == 0) return JsonSerializer.SerializeToElement(new { completed = true });
+
+        if (text.Length == 0)
+        {
+            return JsonSerializer.SerializeToElement(new
+            {
+                completed = true
+            });
+        }
+
         using var parsed = JsonDocument.Parse(text);
+
         return parsed.RootElement.Clone();
     }
 
@@ -54,7 +79,10 @@ public sealed class SampleApi(HttpClient client)
         {
             var value = await ReadAsync(path + (path.Contains('?') ? "&" : "?") + $"page={page}&pageSize=100");
             result.AddRange(value.GetProperty("items").EnumerateArray().Select(x => x.Clone()));
-            if (page >= value.GetProperty("totalPages").GetInt64()) return result;
+            if (page >= value.GetProperty("totalPages").GetInt64())
+            {
+                return result;
+            }
         }
     }
 }

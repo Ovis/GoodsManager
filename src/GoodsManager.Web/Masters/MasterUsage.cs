@@ -18,6 +18,7 @@ public sealed partial class MastersController
             "categories" => products.Where(p => p.CategoryId == id),
             _ => products.Where(p => false)
         };
+
         return new
         {
             activeProductCount = await query.LongCountAsync(p => p.DeletedAt == null, HttpContext.RequestAborted),

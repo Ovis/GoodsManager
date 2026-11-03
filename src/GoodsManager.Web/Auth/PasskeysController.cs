@@ -1,6 +1,6 @@
 using System.Text.Json;
-using GoodsManager.Web.Storage;
 using GoodsManager.Web.Development;
+using GoodsManager.Web.Storage;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -23,6 +23,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
         var options = await signIn.MakePasskeyRequestOptionsAsync(user);
         // ユーザー名なしの認証でも、発行時の認証世代へ結び付けて復旧前の処理を拒否
         var stamps = user is null ? string.IsNullOrEmpty(request.LoginId) ? await db.Users.ToDictionaryAsync(x => x.Id, x => x.SecurityStamp) : new Dictionary<Guid, string?>() : null;
+
         return Options(ceremonies.Begin(HttpContext, "login", user, request.RememberMe, stamps), options);
     }
 
@@ -41,6 +42,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
         try
         {
             db.ChangeTracker.Clear();
+
             var result = await AssertionAsync(request.Credential);
             if (result is null || !result.Succeeded
                 || (ceremony.UserId.HasValue && (ceremony.UserId != result.User.Id || ceremony.SecurityStamp != result.User.SecurityStamp))
@@ -57,7 +59,12 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
             var properties = new AuthenticationProperties { IsPersistent = ceremony.RememberMe, IssuedUtc = now, ExpiresUtc = expires, AllowRefresh = false };
             await signIn.SignInAsync(user, properties);
             audit.Record(AuthEvent.AUTH_PASSKEY_LOGIN, user.Id);
-            return Ok(new { user = AuthController.UserDto(user), expiresAt = properties.ExpiresUtc });
+
+            return Ok(new
+            {
+                user = AuthController.UserDto(user),
+                expiresAt = properties.ExpiresUtc
+            });
         }
         finally
         {
@@ -78,6 +85,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
 
         var user = (await users.GetUserAsync(User))!;
         var options = await signIn.MakePasskeyRequestOptionsAsync(user);
+
         return Options(ceremonies.Begin(HttpContext, request.Purpose, user), options);
     }
 
@@ -111,6 +119,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
             }
 
             var options = await signIn.MakePasskeyCreationOptionsAsync(new PasskeyUserEntity { Id = user.Id.ToString("D"), Name = user.UserName!, DisplayName = user.UserName! });
+
             return Options(ceremonies.Begin(HttpContext, "register", user), options);
         }
         finally
@@ -180,8 +189,11 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
             AuthController.EnsureSuccess(await users.AddOrUpdatePasskeyAsync(user, PasskeyMetadata.RequireValid(result.Passkey)));
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
+
             audit.Record(AuthEvent.AUTH_PASSKEY_ADDED, user.Id);
+
             Response.Headers.ETag = AuthenticationEtags.Passkey(user, result.Passkey.CredentialId);
+
             return Created("/api/v1/account/passkeys/" + PasskeyCeremonies.CredentialId(result.Passkey.CredentialId), Dto(result.Passkey, user));
         }
         finally
@@ -226,8 +238,11 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
             AuthController.EnsureSuccess(await users.AddOrUpdatePasskeyAsync(user, passkey));
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
+
             audit.Record(AuthEvent.AUTH_PASSKEY_RENAMED, user.Id);
+
             Response.Headers.ETag = AuthenticationEtags.Passkey(user, passkey.CredentialId);
+
             return Ok(Dto(passkey, user));
         }
         finally
@@ -272,6 +287,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
             audit.Record(AuthEvent.AUTH_PASSKEY_REMOVED, user.Id);
+
             return NoContent();
         }
         finally

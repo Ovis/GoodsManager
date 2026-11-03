@@ -2,10 +2,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using GoodsManager.Web.Auth;
-using GoodsManager.Web.Masters;
-using GoodsManager.Web.Storage;
-using GoodsManager.Web.Search;
 using GoodsManager.Web.Images;
+using GoodsManager.Web.Masters;
+using GoodsManager.Web.Search;
+using GoodsManager.Web.Storage;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,47 +24,97 @@ public sealed class ProductWrites(AppDbContext db, SignInManager<AppUser> signIn
     {
         var request = context.Request;
         var token = context.RequestAborted;
-        if (!request.HasJsonContentType()) throw new MasterProblem(415, "UNSUPPORTED_MEDIA_TYPE");
+        if (!request.HasJsonContentType())
+        {
+            throw new MasterProblem(415, "UNSUPPORTED_MEDIA_TYPE");
+        }
+
         var bytes = new byte[BodyLimit + 1];
         var length = 0;
         while (length < bytes.Length)
         {
             var count = await request.Body.ReadAsync(bytes.AsMemory(length), token);
-            if (count == 0) break;
+            if (count == 0)
+            {
+                break;
+            }
+
             length += count;
         }
-        if (length > BodyLimit) throw new MasterProblem(413, "REQUEST_TOO_LARGE");
-        if (!Guid.TryParseExact(request.Headers["Idempotency-Key"].ToString(), "D", out var key) || key == Guid.Empty) throw InputObject.Invalid("idempotencyKey");
+
+        if (length > BodyLimit)
+        {
+            throw new MasterProblem(413, "REQUEST_TOO_LARGE");
+        }
+
+        if (!Guid.TryParseExact(request.Headers["Idempotency-Key"].ToString(), "D", out var key) || key == Guid.Empty)
+        {
+            throw InputObject.Invalid("idempotencyKey");
+        }
+
         var bodyHash = Convert.ToHexStringLower(SHA256.HashData(bytes.AsSpan(0, length)));
         var conditions = new List<string> { bodyHash, request.Headers.IfMatch.ToString() };
-        if (request.Headers.ContainsKey("X-Confirm-Delete")) conditions.Add(request.Headers["X-Confirm-Delete"].ToString());
+        if (request.Headers.ContainsKey("X-Confirm-Delete"))
+        {
+            conditions.Add(request.Headers["X-Confirm-Delete"].ToString());
+        }
+
         var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(conditions))));
         await gate.Semaphore.WaitAsync(token);
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(token);
             var user = await AuthenticationState.GetCurrentUserAsync(db, signIn, context.User);
-            if (user is null) throw new MasterProblem(401, "SESSION_EXPIRED");
+            if (user is null)
+            {
+                throw new MasterProblem(401, "SESSION_EXPIRED");
+            }
+
             var now = StorageValues.FromMilliseconds(clock.GetUtcNow().ToUnixTimeMilliseconds());
+
             var previous = await db.Set<IdempotencyRecord>().SingleOrDefaultAsync(x => x.UserId == user.Id && x.OperationScope == scope && x.Key == key, token);
             if (previous is not null && previous.ExpiresAt > now)
             {
-                if (previous.RequestHash != hash) throw new MasterProblem(409, "IDEMPOTENCY_KEY_REUSED");
+                if (previous.RequestHash != hash)
+                {
+                    throw new MasterProblem(409, "IDEMPOTENCY_KEY_REUSED");
+                }
+
                 return Stored(context, previous);
             }
-            if (previous is not null) db.Entry(previous).State = EntityState.Detached;
+
+            if (previous is not null)
+            {
+                db.Entry(previous).State = EntityState.Detached;
+            }
+
             await db.Set<IdempotencyRecord>().Where(x => x.ExpiresAt <= now).ExecuteDeleteAsync(token);
+
             JsonDocument document;
-            try { document = JsonDocument.Parse(bytes.AsMemory(0, length)); }
+            try
+            {
+                document = JsonDocument.Parse(bytes.AsMemory(0, length));
+            }
             catch (JsonException) { throw InputObject.Invalid("body"); }
+
             using var parsed = document;
+
             var result = await action(document.RootElement, now, token);
             var entry = db.Entry(result.Product);
-            if (entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted) db.Add(new ProductChange { Id = Guid.NewGuid(), ProductId = result.Product.Id, Revision = result.Product.Revision, Kind = create ? "created" : changeKind, OccurredAt = now });
+            if (entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            {
+                db.Add(new ProductChange { Id = Guid.NewGuid(), ProductId = result.Product.Id, Revision = result.Product.Revision, Kind = create ? "created" : changeKind, OccurredAt = now });
+            }
+
             await db.SaveChangesAsync(token);
             await projection.RebuildAsync([result.Product.Id], token);
-            var body = noContent ? null : responseBody is not null ? await responseBody(result.Product, token) : create ? await products.DetailAsync(result.Product, token) : (await products.InventoryAsync(result.Product, result.Refs, token)) with { DeduplicatedCount = imageLinks.DeduplicatedCount };
+
+            var body = noContent ? null : responseBody is not null ? await responseBody(result.Product, token) : create ? await products.DetailAsync(result.Product, token) : (await products.InventoryAsync(result.Product, result.Refs, token)) with
+            {
+                DeduplicatedCount = imageLinks.DeduplicatedCount
+            };
             var completedAt = StorageValues.FromMilliseconds(clock.GetUtcNow().ToUnixTimeMilliseconds());
+
             var saved = new IdempotencyRecord
             {
                 UserId = user.Id,
@@ -81,25 +131,47 @@ public sealed class ProductWrites(AppDbContext db, SignInManager<AppUser> signIn
             db.Add(saved);
             await db.SaveChangesAsync(token);
             await transaction.CommitAsync(token);
+
             return Stored(context, saved);
         }
         finally { gate.Semaphore.Release(); }
     }
+
     private static IActionResult Stored(HttpContext context, IdempotencyRecord saved)
     {
-        if (saved.ResponseStatus == 204) return new StatusCodeResult(204);
+        if (saved.ResponseStatus == 204)
+        {
+            return new StatusCodeResult(204);
+        }
+
         context.Response.Headers.ETag = saved.ResponseEtag;
-        if (saved.Location is not null) context.Response.Headers.Location = saved.Location;
+        if (saved.Location is not null)
+        {
+            context.Response.Headers.Location = saved.Location;
+        }
+
         return new ContentResult { StatusCode = saved.ResponseStatus, ContentType = "application/json; charset=utf-8", Content = saved.ResponseJson };
     }
+
     public static void CheckVersion(Product product, string condition)
     {
-        if (condition.Length == 0) throw new MasterProblem(428, "PRECONDITION_REQUIRED");
-        if (condition != ProductOperations.Etag(product)) throw new MasterProblem(412, "REVISION_MISMATCH");
+        if (condition.Length == 0)
+        {
+            throw new MasterProblem(428, "PRECONDITION_REQUIRED");
+        }
+
+        if (condition != ProductOperations.Etag(product))
+        {
+            throw new MasterProblem(412, "REVISION_MISMATCH");
+        }
     }
+
     public static T Parse<T>(Func<T> parse)
     {
-        try { return parse(); }
+        try
+        {
+            return parse();
+        }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException or ArgumentException or OverflowException) { throw InputObject.Invalid("body"); }
     }
 }

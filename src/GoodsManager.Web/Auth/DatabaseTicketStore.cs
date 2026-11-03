@@ -27,6 +27,7 @@ public sealed class DatabaseTicketStore(IServiceScopeFactory scopes, IDataProtec
             ProtectedTicket = protector.Protect(TicketSerializer.Default.Serialize(ticket))
         });
         await db.SaveChangesAsync();
+
         return id.ToString("D");
     }
 
@@ -39,6 +40,7 @@ public sealed class DatabaseTicketStore(IServiceScopeFactory scopes, IDataProtec
         var bytes = protector.Protect(TicketSerializer.Default.Serialize(ticket));
         await using var scope = scopes.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
         // 読取後の失効との競合も、条件付きUPDATEの1文で判定する
         var updated = await db.AuthTickets.Where(x => x.Id == id && x.UserId == userId && x.ExpiresAt > clock.GetUtcNow())
             .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.ExpiresAt, expires).SetProperty(x => x.ProtectedTicket, bytes));
@@ -58,6 +60,7 @@ public sealed class DatabaseTicketStore(IServiceScopeFactory scopes, IDataProtec
 
         await using var scope = scopes.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
         var row = await db.AuthTickets.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
         if (row is null || row.ExpiresAt <= clock.GetUtcNow())
         {

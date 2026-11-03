@@ -13,10 +13,19 @@ public sealed class PhotoOcrAssets(string directory)
 {
     public string DirectoryPath { get; } = Path.GetFullPath(directory);
     public bool Available => new[] { "workers/ocr.worker.js", "models/PP-OCRv5_mobile_det_onnx_infer.tar", "models/PP-OCRv5_mobile_rec_onnx_infer.tar", "runtime/ort/ort-wasm-simd-threaded.wasm" }.All(x => File.Exists(Path.Combine(DirectoryPath, x)));
+
     public string? Resolve(string asset)
     {
-        if (asset.Contains('\\') || asset.Split('/').Any(x => x is ".." or "." or "")) return null;
-        if (!(asset.StartsWith("workers/", StringComparison.Ordinal) || asset.StartsWith("assets/", StringComparison.Ordinal) || asset.StartsWith("models/", StringComparison.Ordinal) || asset.StartsWith("runtime/ort/", StringComparison.Ordinal) || asset.StartsWith("notices/", StringComparison.Ordinal))) return null;
+        if (asset.Contains('\\') || asset.Split('/').Any(x => x is ".." or "." or ""))
+        {
+            return null;
+        }
+
+        if (!(asset.StartsWith("workers/", StringComparison.Ordinal) || asset.StartsWith("assets/", StringComparison.Ordinal) || asset.StartsWith("models/", StringComparison.Ordinal) || asset.StartsWith("runtime/ort/", StringComparison.Ordinal) || asset.StartsWith("notices/", StringComparison.Ordinal)))
+        {
+            return null;
+        }
+
         try
         {
             var path = Path.GetFullPath(Path.Combine(DirectoryPath, asset));
@@ -47,16 +56,33 @@ public static class PhotoOcrHosting
         app.MapGet("/registration-photo-ocr/{accountId:guid}/{collectionId:guid}/{**asset}", async (HttpContext context, AppDbContext db, PhotoOcrAssets assets, Guid accountId, Guid collectionId, string? asset) =>
         {
             context.Response.Headers.CacheControl = "private, no-store";
-            if (!Guid.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out var current) || current != accountId) return Results.StatusCode(409);
-            if (!await db.Set<CollectionMember>().AnyAsync(x => x.UserId == current && x.CollectionId == collectionId && (x.Role == "manager" || x.Role == "editor"), context.RequestAborted)) return Results.NotFound();
+            if (!Guid.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out var current) || current != accountId)
+            {
+                return Results.StatusCode(409);
+            }
+
+            if (!await db.Set<CollectionMember>().AnyAsync(x => x.UserId == current && x.CollectionId == collectionId && (x.Role == "manager" || x.Role == "editor"), context.RequestAborted))
+            {
+                return Results.NotFound();
+            }
+
             var path = asset is null ? null : assets.Resolve(asset);
-            if (path is null) return Results.NotFound();
+            if (path is null)
+            {
+                return Results.NotFound();
+            }
+
             context.Response.Headers.XContentTypeOptions = "nosniff";
             context.Response.Headers["Referrer-Policy"] = "no-referrer";
+
             var eval = asset == "workers/ocr.worker.js" ? "'unsafe-eval'" : "'wasm-unsafe-eval'";
             context.Response.Headers.ContentSecurityPolicy = $"default-src 'none'; script-src 'self' {eval}; worker-src 'self'; connect-src 'self'; img-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'";
             new FileExtensionContentTypeProvider().TryGetContentType(path, out var type);
-            if (type?.StartsWith("text/", StringComparison.Ordinal) == true || type is "application/javascript" or "application/json") type += "; charset=utf-8";
+            if (type?.StartsWith("text/", StringComparison.Ordinal) == true || type is "application/javascript" or "application/json")
+            {
+                type += "; charset=utf-8";
+            }
+
             return Results.File(path, type ?? "application/octet-stream");
         }).RequireAuthorization();
     }

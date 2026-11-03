@@ -6,6 +6,9 @@ public sealed class PasskeyCleanupWorker(PasskeyCeremonies ceremonies, TimeProvi
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30), clock);
-        while (await timer.WaitForNextTickAsync(stoppingToken)) ceremonies.PruneExpired();
+        while (await timer.WaitForNextTickAsync(stoppingToken))
+        {
+            ceremonies.PruneExpired();
+        }
     }
 }

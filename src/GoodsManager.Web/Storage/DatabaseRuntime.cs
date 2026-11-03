@@ -6,8 +6,14 @@ namespace GoodsManager.Web.Storage;
 public sealed class DatabaseRuntime : IDisposable
 {
     private FileStream? lease;
-    public string DirectoryPath { get; }
-    public string ConnectionString { get; }
+    public string DirectoryPath
+    {
+        get;
+    }
+    public string ConnectionString
+    {
+        get;
+    }
 
     public DatabaseRuntime(string directory)
     {
@@ -33,7 +39,8 @@ public sealed class DatabaseRuntime : IDisposable
         lease = new FileStream(Path.Combine(DirectoryPath, "instance.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         if (!allowInterruptedRestore && File.Exists(Path.Combine(DirectoryPath, "restore-state.json")))
         {
-            Dispose(); throw new InvalidOperationException("未完了の復元記録が残っているため、停止中にbackup rollbackで確認する必要がある");
+            Dispose();
+            throw new InvalidOperationException("未完了の復元記録が残っているため、停止中にbackup rollbackで確認する必要がある");
         }
     }
 

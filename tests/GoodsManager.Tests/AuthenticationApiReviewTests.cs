@@ -20,10 +20,17 @@ public sealed class AuthenticationApiReviewTests
         await using var app = new TestApplication();
         using var client = Client(app);
         await SetupAsync(client);
-        var response = await SendAsync(client, "account", new { loginId = "changed" }, HttpMethod.Put, etag);
+
+        var response = await SendAsync(client, "account", new
+        {
+            loginId = "changed"
+        }, HttpMethod.Put, etag);
+
         Assert.That((int)response.StatusCode, Is.EqualTo(status));
+
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
         Assert.That((await db.Users.SingleAsync()).UserName, Is.EqualTo("owner"));
         Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(1)); // 初期カテゴリはスキーマの初期データ。アカウント作成で1回増える
     }
@@ -35,25 +42,52 @@ public sealed class AuthenticationApiReviewTests
         await using var app = new TestApplication();
         using var first = Client(app);
         await SetupAsync(first);
+
         using var second = Client(app);
-        await SendAsync(second, "auth/password", new { loginId = "owner", password = Password, rememberMe = false });
+        await SendAsync(second, "auth/password", new
+        {
+            loginId = "owner",
+            password = Password,
+            rememberMe = false
+        });
+
         var session = await first.GetAsync("/api/v1/auth/session");
         var version = session.Headers.ETag!.ToString();
+
         var expires = (await session.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("expiresAt").GetString();
         var responses = await Task.WhenAll(
-            SendAsync(first, "account", new { loginId = "owner-first" }, HttpMethod.Put, version),
-            SendAsync(second, "account", new { loginId = "owner-second" }, HttpMethod.Put, version));
+            SendAsync(first, "account", new
+            {
+                loginId = "owner-first"
+            }, HttpMethod.Put, version),
+            SendAsync(second, "account", new
+            {
+                loginId = "owner-second"
+            }, HttpMethod.Put, version));
+
         Assert.That(responses.Select(response => response.StatusCode), Is.EquivalentTo(new[] { HttpStatusCode.OK, HttpStatusCode.PreconditionFailed }));
+
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
         var user = await db.Users.SingleAsync();
+
         Assert.That(user.UserName, Is.AnyOf("owner-first", "owner-second"));
         Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(2));
+
         var after = await first.GetFromJsonAsync<JsonElement>("/api/v1/auth/session");
+
         Assert.That(after.GetProperty("expiresAt").GetString(), Is.EqualTo(expires));
         Assert.That(after.GetProperty("user").GetProperty("loginId").GetString(), Is.EqualTo(user.UserName));
+
         using var login = Client(app);
-        Assert.That((await SendAsync(login, "auth/password", new { loginId = user.UserName!.ToUpperInvariant(), password = Password, rememberMe = false })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        Assert.That((await SendAsync(login, "auth/password", new
+        {
+            loginId = user.UserName!.ToUpperInvariant(),
+            password = Password,
+            rememberMe = false
+        })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     /// <summary>無変更の編集や不正値で、変更番号と版を不要に更新しない</summary>
@@ -63,17 +97,28 @@ public sealed class AuthenticationApiReviewTests
         await using var app = new TestApplication();
         using var client = Client(app);
         await SetupAsync(client);
+
         var session = await client.GetAsync("/api/v1/auth/session");
         var version = session.Headers.ETag!.ToString();
-        var unchanged = await SendAsync(client, "account", new { loginId = "owner" }, HttpMethod.Put, version);
+
+        var unchanged = await SendAsync(client, "account", new
+        {
+            loginId = "owner"
+        }, HttpMethod.Put, version);
+
         Assert.That(unchanged.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(unchanged.Headers.ETag!.ToString(), Is.EqualTo(version));
+
         foreach (var name in new[] { "name\0", new string('a', 65), "日本語" })
         {
-            Assert.That((await SendAsync(client, "account", new { loginId = name }, HttpMethod.Put, version)).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That((await SendAsync(client, "account", new
+            {
+                loginId = name
+            }, HttpMethod.Put, version)).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         }
 
         await using var scope = app.Services.CreateAsyncScope();
+
         Assert.That((await scope.ServiceProvider.GetRequiredService<AppDbContext>().SystemStates.SingleAsync()).DataRevision, Is.EqualTo(1));
     }
 
@@ -87,12 +132,23 @@ public sealed class AuthenticationApiReviewTests
         await using var app = new TestApplication();
         using var client = Client(app);
         await SetupAsync(client);
+
         using var authenticator = new TestAuthenticator();
         await RegisterAsync(client, authenticator);
+
         var response = await SendAsync(client, "account/passkeys/" + authenticator.Id,
-            delete ? (object)new { password = Password } : new { displayName = "変更" }, delete ? HttpMethod.Delete : HttpMethod.Put, version);
+            delete ? (object)new
+            {
+                password = Password
+            } : new
+            {
+                displayName = "変更"
+            }, delete ? HttpMethod.Delete : HttpMethod.Put, version);
+
         Assert.That((int)response.StatusCode, Is.EqualTo(status));
+
         var rows = await client.GetFromJsonAsync<JsonElement>("/api/v1/account/passkeys");
+
         Assert.That(rows.GetArrayLength(), Is.EqualTo(1));
         Assert.That(rows[0].GetProperty("displayName").GetString(), Is.EqualTo("元の名前"));
     }
@@ -104,19 +160,42 @@ public sealed class AuthenticationApiReviewTests
         await using var app = new TestApplication();
         using var first = Client(app);
         await SetupAsync(first);
+
         using var authenticator = new TestAuthenticator();
         await RegisterAsync(first, authenticator);
+
         using var second = Client(app);
-        await SendAsync(second, "auth/password", new { loginId = "owner", password = Password, rememberMe = false });
+        await SendAsync(second, "auth/password", new
+        {
+            loginId = "owner",
+            password = Password,
+            rememberMe = false
+        });
+
         var version = await PasskeyTests.EtagAsync(first, authenticator.Id);
         var responses = await Task.WhenAll(
-            SendAsync(first, "account/passkeys/" + authenticator.Id, new { displayName = "名前1" }, HttpMethod.Put, version),
-            SendAsync(second, "account/passkeys/" + authenticator.Id, new { displayName = "名前2" }, HttpMethod.Put, version));
+            SendAsync(first, "account/passkeys/" + authenticator.Id, new
+            {
+                displayName = "名前1"
+            }, HttpMethod.Put, version),
+            SendAsync(second, "account/passkeys/" + authenticator.Id, new
+            {
+                displayName = "名前2"
+            }, HttpMethod.Put, version));
+
         Assert.That(responses.Select(response => response.StatusCode), Is.EquivalentTo(new[] { HttpStatusCode.OK, HttpStatusCode.PreconditionFailed }));
-        Assert.That((await SendAsync(second, "account/passkeys/" + authenticator.Id, new { password = Password }, HttpMethod.Delete, version)).StatusCode, Is.EqualTo(HttpStatusCode.PreconditionFailed));
-        Assert.That((await SendAsync(second, "account/passkeys/" + authenticator.Id, new { password = Password }, HttpMethod.Delete, await PasskeyTests.EtagAsync(second, authenticator.Id))).StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+        Assert.That((await SendAsync(second, "account/passkeys/" + authenticator.Id, new
+        {
+            password = Password
+        }, HttpMethod.Delete, version)).StatusCode, Is.EqualTo(HttpStatusCode.PreconditionFailed));
+        Assert.That((await SendAsync(second, "account/passkeys/" + authenticator.Id, new
+        {
+            password = Password
+        }, HttpMethod.Delete, await PasskeyTests.EtagAsync(second, authenticator.Id))).StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
         Assert.That(await db.UserPasskeys.CountAsync(), Is.Zero);
         Assert.That((await db.SystemStates.SingleAsync()).DataRevision, Is.EqualTo(4));
     }
@@ -128,14 +207,20 @@ public sealed class AuthenticationApiReviewTests
         await using var app = new TestApplication();
         using var client = Client(app);
         await SetupAsync(client);
+
         var version = (await client.GetAsync("/api/v1/auth/session")).Headers.ETag!.ToString();
         await using (var scope = app.Services.CreateAsyncScope())
         {
             await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.ExecuteSqlRawAsync("UPDATE SystemState SET DataRevision=9223372036854775807");
         }
 
-        Assert.That((await SendAsync(client, "account", new { loginId = "changed" }, HttpMethod.Put, version)).StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        Assert.That((await SendAsync(client, "account", new
+        {
+            loginId = "changed"
+        }, HttpMethod.Put, version)).StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+
         var after = await client.GetAsync("/api/v1/auth/session");
+
         Assert.That(after.Headers.ETag!.ToString(), Is.EqualTo(version));
         Assert.That((await after.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("user").GetProperty("loginId").GetString(), Is.EqualTo("owner"));
     }
@@ -143,9 +228,21 @@ public sealed class AuthenticationApiReviewTests
     /// <summary>標準ハンドラーで試験用認証器を登録</summary>
     private static async Task RegisterAsync(HttpClient client, TestAuthenticator authenticator)
     {
-        var response = await SendAsync(client, "account/passkeys/options", new { verification = new { password = Password } });
+        var response = await SendAsync(client, "account/passkeys/options", new
+        {
+            verification = new
+            {
+                password = Password
+            }
+        });
         var options = await response.Content.ReadFromJsonAsync<JsonElement>();
-        response = await SendAsync(client, "account/passkeys", new { challengeId = options.GetProperty("challengeId"), credential = authenticator.Create(options.GetProperty("publicKeyOptions")), displayName = "元の名前" });
+        response = await SendAsync(client, "account/passkeys", new
+        {
+            challengeId = options.GetProperty("challengeId"),
+            credential = authenticator.Create(options.GetProperty("publicKeyOptions")),
+            displayName = "元の名前"
+        });
+
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
     }
 }

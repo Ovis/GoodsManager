@@ -20,6 +20,7 @@ public sealed class AuthenticationCheckTests
         await using var factory = new TestApplication();
         using var client = factory.CreateClient();
         using var response = await client.GetAsync(path);
+
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
@@ -41,9 +42,11 @@ public sealed class AuthenticationCheckTests
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = environment });
         builder.WebHost.UseTestServer();
+
         await using var app = builder.Build();
         app.MapAuthenticationCheck();
         await app.StartAsync();
+
         using var client = app.GetTestClient();
         foreach (var path in new[] { "/dev/auth-check", "/dev/auth-check/auth-check.js", "/dev/auth-check/passkey-serialization.js", "/dev/auth-check/auth-check.css", "/dev/auth-check/config" })
         {

@@ -18,16 +18,32 @@ public static class InventoryCommands
     {
         var root = new InputObject(body, "commands");
         var raw = root.Array("commands");
-        if (raw.Length is < 1 or > 100) throw InputObject.Invalid("commands");
+        if (raw.Length is < 1 or > 100)
+        {
+            throw InputObject.Invalid("commands");
+        }
+
         var commands = raw.Select(ParseOne).ToArray();
-        if (commands.OfType<ExtractItems>().Sum(x => (long)x.ItemRefs.Length) > 100) throw InputObject.Invalid("itemRefs");
-        if (commands.OfType<ReplaceItemImages>().Sum(x => (long)x.Entries.Count(e => e.TemporaryUploadId.HasValue)) > 100) throw InputObject.Invalid("entries");
+        if (commands.OfType<ExtractItems>().Sum(x => (long)x.ItemRefs.Length) > 100)
+        {
+            throw InputObject.Invalid("itemRefs");
+        }
+
+        if (commands.OfType<ReplaceItemImages>().Sum(x => (long)x.Entries.Count(e => e.TemporaryUploadId.HasValue)) > 100)
+        {
+            throw InputObject.Invalid("entries");
+        }
+
         return commands;
     }
 
     private static InventoryCommand ParseOne(JsonElement body)
     {
-        if (body.ValueKind != JsonValueKind.Object || !body.TryGetProperty("type", out var discriminator) || discriminator.ValueKind != JsonValueKind.String) throw InputObject.Invalid("type");
+        if (body.ValueKind != JsonValueKind.Object || !body.TryGetProperty("type", out var discriminator) || discriminator.ValueKind != JsonValueKind.String)
+        {
+            throw InputObject.Invalid("type");
+        }
+
         var type = discriminator.GetString();
         var allowed = type switch
         {
@@ -42,6 +58,7 @@ public static class InventoryCommands
         };
         var x = new InputObject(body, allowed);
         var fields = x.Has("fields") ? InputObject.Fields(x.Get("fields"), type == "createLot") : OwnershipPatch.Empty;
+
         return type switch
         {
             "createLot" => x.Has("fields") ? new CreateLot(x.Text("clientRef"), x.Integer("quantity"), fields) : throw InputObject.Invalid("fields"),

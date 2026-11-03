@@ -10,11 +10,23 @@ namespace GoodsManager.Tests;
 /// <summary>試験ごとに実ファイルDBと鍵の保存先を分離</summary>
 public sealed class TestApplication : WebApplicationFactory<Program>
 {
-    public string DataDirectory { get; }
-    public bool PreserveData { get; set; }
-    public string? AuthenticationOrigin { get; init; }
+    public string DataDirectory
+    {
+        get;
+    }
+    public bool PreserveData
+    {
+        get; set;
+    }
+    public string? AuthenticationOrigin
+    {
+        get; init;
+    }
     public TestClock Clock { get; } = new();
-    public Action<IServiceCollection>? ConfigureTestServices { get; init; }
+    public Action<IServiceCollection>? ConfigureTestServices
+    {
+        get; init;
+    }
 
     /// <summary>再起動試験だけ既存の一時領域を再利用</summary>
     public TestApplication(string? dataDirectory = null)
@@ -30,6 +42,7 @@ public sealed class TestApplication : WebApplicationFactory<Program>
             builder.ConfigureHostConfiguration(configuration => configuration.AddInMemoryCollection(
                 new Dictionary<string, string?> { ["Authentication:Origin"] = AuthenticationOrigin }));
         }
+
         return base.CreateHost(builder);
     }
 

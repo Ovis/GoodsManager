@@ -21,36 +21,44 @@ public static class AuthConfiguration
         builder.Services.AddAuthTraffic();
         builder.Services.AddSingleton<PasskeyCeremonies>();
         builder.Services.AddHostedService<PasskeyCleanupWorker>();
+
         builder.Services.AddDataProtection().SetApplicationName("GoodsManager");
         builder.Services.AddOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>()
             .Configure<DatabaseRuntime, ILoggerFactory, GoodsManager.Web.Backups.BackupGate>((options, runtime, loggerFactory, gate) =>
                 options.XmlRepository = new GoodsManager.Web.Backups.BackupKeyRepository(new Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository(new DirectoryInfo(Path.Combine(runtime.DirectoryPath, "keys")), loggerFactory), gate));
+
         builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
         builder.Services.AddIdentityCore<AppUser>(options =>
         {
             options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
             options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-";
+
             options.Password.RequiredLength = 1;
             options.Password.RequireDigit = false;
             options.Password.RequireLowercase = false;
             options.Password.RequireUppercase = false;
             options.Password.RequireNonAlphanumeric = false;
+
             options.Lockout.MaxFailedAccessAttempts = 5;
             options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
         }).AddEntityFrameworkStores<AppDbContext>().AddSignInManager().AddDefaultTokenProviders();
         builder.Services.AddScoped<IPasswordValidator<AppUser>, CodePointPasswordValidator>();
+
         builder.Services.AddSingleton<DatabaseTicketStore>();
         builder.Services.AddOptions<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme)
             .Configure<DatabaseTicketStore, TimeProvider>((options, store, clock) =>
             {
                 options.SessionStore = store;
                 options.TimeProvider = clock;
+
                 options.Cookie.Name = "__Host-GoodsManager";
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SameSite = SameSiteMode.Lax;
+
                 options.SlidingExpiration = false;
                 options.ExpireTimeSpan = TimeSpan.FromDays(7);
+
                 options.Events.OnValidatePrincipal = async context =>
                 {
                     var manager = context.HttpContext.RequestServices.GetRequiredService<SignInManager<AppUser>>();
@@ -61,16 +69,20 @@ public static class AuthConfiguration
                         await manager.SignOutAsync();
                     }
                 };
+
                 options.Events.OnRedirectToLogin = context => WriteAuthProblemAsync(context.HttpContext, 401, "AUTHENTICATION_REQUIRED");
                 options.Events.OnRedirectToAccessDenied = context => WriteAuthProblemAsync(context.HttpContext, 403, "FORBIDDEN");
             });
+
         builder.Services.AddAntiforgery(options =>
         {
             options.HeaderName = "X-CSRF-Token";
             options.Cookie.Name = "__Host-GoodsManager-Csrf";
             options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         });
+
         builder.Services.AddAuthorization();
+
         var origin = builder.Configuration["Authentication:Origin"] ?? (builder.Environment.IsDevelopment() ? "https://localhost:7443" : null);
         if (!Uri.TryCreate(origin, UriKind.Absolute, out var originUri) || originUri.Scheme != "https" || originUri.AbsolutePath != "/" || originUri.Query.Length > 0 || originUri.Fragment.Length > 0 || originUri.UserInfo.Length > 0)
         {
@@ -95,6 +107,7 @@ public static class AuthConfiguration
             options.Cookie.Name = "__Host-GoodsManager-PasskeyState";
             options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             options.Cookie.HttpOnly = true;
+
             options.SlidingExpiration = false;
             options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
             options.TimeProvider = clock;

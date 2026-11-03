@@ -36,8 +36,14 @@ public static class DatabaseMaintenance
                 command.CommandText = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
                 if (Convert.ToInt64(await command.ExecuteScalarAsync()) > 0)
                 {
-                    if (backupOptions is null) CreateSnapshot(connection, dataDirectory);
-                    else CreateFullSnapshot(connection, dataDirectory, backupOptions, keyLock ?? new object());
+                    if (backupOptions is null)
+                    {
+                        CreateSnapshot(connection, dataDirectory);
+                    }
+                    else
+                    {
+                        CreateFullSnapshot(connection, dataDirectory, backupOptions, keyLock ?? new object());
+                    }
                 }
 
                 // 検証済みの退避が完成してから移行する。移行中の例外は握り潰さない
@@ -56,6 +62,7 @@ public static class DatabaseMaintenance
     public static async Task<bool> HasPendingMigrationsAsync(DbContext context, CancellationToken cancellationToken = default)
     {
         var known = context.Database.GetMigrations().ToArray();
+
         var applied = (await context.Database.GetAppliedMigrationsAsync(cancellationToken)).ToArray();
         if (!applied.SequenceEqual(known.Take(applied.Length)))
         {
@@ -105,6 +112,7 @@ public static class DatabaseMaintenance
         }
 
         command.CommandText = "PRAGMA foreign_key_check";
+
         await using var reader = await command.ExecuteReaderAsync();
         if (await reader.ReadAsync())
         {
@@ -124,8 +132,11 @@ public static class DatabaseMaintenance
     public static void CreateFullSnapshot(SqliteConnection source, string dataDirectory, GoodsManager.Web.Backups.BackupOptions options, object keyLock)
     {
         var directory = Path.Combine(dataDirectory, "pre-migration");
-        GoodsManager.Web.Backups.BackupPaths.RejectLinks(directory); Directory.CreateDirectory(directory);
-        var id = Guid.NewGuid(); var stage = Path.Combine(directory, id.ToString("N"));
+        GoodsManager.Web.Backups.BackupPaths.RejectLinks(directory);
+        Directory.CreateDirectory(directory);
+
+        var id = Guid.NewGuid();
+        var stage = Path.Combine(directory, id.ToString("N"));
         try
         {
             var keys = GoodsManager.Web.Backups.BackupSnapshot.ReadKeys(dataDirectory, keyLock);

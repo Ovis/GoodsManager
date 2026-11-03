@@ -13,6 +13,7 @@ public sealed class HostTests
     {
         await using var factory = new TestApplication();
         using var client = factory.CreateClient();
+
         Assert.That((await client.GetAsync("/health/live")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That((await client.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         Assert.That((await factory.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.OK));
@@ -30,9 +31,12 @@ public sealed class HostTests
         var webRoot = Path.Combine(factory.DataDirectory, "webroot");
         Directory.CreateDirectory(webRoot);
         await File.WriteAllTextAsync(Path.Combine(webRoot, "index.html"), "<!doctype html><title>Setup page</title>");
+
         await using var configured = factory.WithWebHostBuilder(builder => builder.UseWebRoot(webRoot));
         using var client = configured.CreateClient();
+
         var response = await client.GetAsync(path);
+
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/html"));
         Assert.That(response.Headers.CacheControl?.NoStore, Is.True);
@@ -47,7 +51,9 @@ public sealed class HostTests
     {
         await using var factory = new TestApplication();
         using var client = factory.CreateClient();
+
         var response = await client.GetAsync("/api/v1/missing");
+
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));

@@ -6,7 +6,10 @@ namespace GoodsManager.Web.Masters;
 
 public sealed class MasterProblem(int status, string code, string? field = null) : Exception(code)
 {
-    public object? Details { get; init; }
+    public object? Details
+    {
+        get; init;
+    }
 
     public int Status { get; } = status;
     public string Code { get; } = code;
@@ -29,11 +32,16 @@ public static class MasterText
             }
             else
             {
-                if (space) output.Append(' ');
+                if (space)
+                {
+                    output.Append(' ');
+                }
+
                 output.Append(rune);
                 space = false;
             }
         }
+
         return output.ToString();
     }
 }
@@ -52,24 +60,52 @@ public sealed record MasterInput(string Name, string? WebsiteUrl, string? Memo, 
                 "tags" => ["name"],
                 _ => throw new MasterProblem(404, "NOT_FOUND")
             };
-            if (json.ValueKind != JsonValueKind.Object) throw Invalid();
+            if (json.ValueKind != JsonValueKind.Object)
+            {
+                throw Invalid();
+            }
+
             var seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (var property in json.EnumerateObject())
             {
-                if (!fields.Contains(property.Name) || !seen.Add(property.Name)) throw Invalid();
+                if (!fields.Contains(property.Name) || !seen.Add(property.Name))
+                {
+                    throw Invalid();
+                }
             }
-            if (!seen.Contains("name") || (update && fields.Any(x => !seen.Contains(x)))) throw Invalid();
-            if (json.GetProperty("name").ValueKind != JsonValueKind.String) throw Invalid("name");
+
+            if (!seen.Contains("name") || (update && fields.Any(x => !seen.Contains(x))))
+            {
+                throw Invalid();
+            }
+
+            if (json.GetProperty("name").ValueKind != JsonValueKind.String)
+            {
+                throw Invalid("name");
+            }
+
             var name = json.GetProperty("name").GetString();
-            if (!StorageValues.IsValidText(name, 1, 200) || string.IsNullOrWhiteSpace(name)) throw Invalid("name");
+            if (!StorageValues.IsValidText(name, 1, 200) || string.IsNullOrWhiteSpace(name))
+            {
+                throw Invalid("name");
+            }
+
             var url = OptionalText(json, "websiteUrl", 2048);
             if (url is not null && (!(url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 || !Uri.TryCreate(url, UriKind.Absolute, out var uri) || string.IsNullOrEmpty(uri.Host)
-                || url.Contains('\\') || url.Any(c => char.IsWhiteSpace(c) || char.IsControl(c)))) throw Invalid("websiteUrl");
+                || url.Contains('\\') || url.Any(c => char.IsWhiteSpace(c) || char.IsControl(c))))
+            {
+                throw Invalid("websiteUrl");
+            }
+
             var memo = OptionalText(json, "memo", 4000);
             Guid? parent = json.TryGetProperty("parentId", out var parentJson) && parentJson.ValueKind != JsonValueKind.Null ? ReadId(parentJson) : null;
             var order = json.TryGetProperty("sortOrder", out var sortJson) ? sortJson.GetInt32() : 0;
-            if (order < 0) throw Invalid("sortOrder");
+            if (order < 0)
+            {
+                throw Invalid("sortOrder");
+            }
+
             return new(name!, url, memo, parent, order);
         }
         catch (Exception ex) when (ex is InvalidOperationException or FormatException or JsonException or OverflowException or ArgumentException)
@@ -89,9 +125,18 @@ public sealed record MasterInput(string Name, string? WebsiteUrl, string? Memo, 
 
     private static string? OptionalText(JsonElement json, string key, int max)
     {
-        if (!json.TryGetProperty(key, out var item) || item.ValueKind == JsonValueKind.Null) return null;
-        if (item.ValueKind != JsonValueKind.String) throw Invalid(key);
+        if (!json.TryGetProperty(key, out var item) || item.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        if (item.ValueKind != JsonValueKind.String)
+        {
+            throw Invalid(key);
+        }
+
         var text = item.GetString();
+
         return StorageValues.IsValidText(text, 0, max) ? text : throw Invalid(key);
     }
 

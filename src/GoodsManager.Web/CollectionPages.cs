@@ -1,4 +1,5 @@
 using Microsoft.Net.Http.Headers;
+
 namespace GoodsManager.Web;
 
 public static class CollectionPages
@@ -12,6 +13,7 @@ public static class CollectionPages
                 context.Context.Response.Headers.CacheControl = context.Context.Request.Path.StartsWithSegments("/assets") ? "public,max-age=31536000,immutable" : "no-store";
             }
         });
+
         async Task Index(HttpContext context)
         {
             var file = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), "index.html");
@@ -20,6 +22,10 @@ public static class CollectionPages
             context.Response.Headers[HeaderNames.XContentTypeOptions] = "nosniff";
             await Results.File(file, "text/html; charset=utf-8").ExecuteAsync(context);
         }
-        foreach (var path in new[] { "/", "/collection", "/collections", "/login", "/setup", "/account", "/settings", "/settings/images", "/register", "/masters", "/backups", "/trash", "/trash/products/{id:guid}", "/products/{id:guid}", "/products/{id:guid}/items/{itemId:guid}" }) app.MapGet(path, Index);
+
+        foreach (var path in new[] { "/", "/collection", "/collections", "/login", "/setup", "/account", "/settings", "/settings/images", "/register", "/masters", "/backups", "/trash", "/trash/products/{id:guid}", "/products/{id:guid}", "/products/{id:guid}/items/{itemId:guid}" })
+        {
+            app.MapGet(path, Index);
+        }
     }
 }

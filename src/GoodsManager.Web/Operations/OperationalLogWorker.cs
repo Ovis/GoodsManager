@@ -8,7 +8,10 @@ public sealed class OperationalLogWorker(OperationalLogging logs) : BackgroundSe
     {
         using var timer = new PeriodicTimer(TimeSpan.FromHours(1));
         var logger = logs.CreateLogger("GoodsManager.Web.Operations");
-        do { logger.LogInformation(new EventId(1001), "ログ保全 Code={Code}", "LOG_MAINTENANCE"); }
+        do
+        {
+            logger.LogInformation(new EventId(1001), "ログ保全 Code={Code}", "LOG_MAINTENANCE");
+        }
         while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 }

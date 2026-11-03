@@ -14,75 +14,207 @@ public sealed class AuthAuditTests
     [Test]
     public async Task CriticalAuditFallsBackToConsoleWhenFileStorageFails()
     {
-        await using var app = new TestApplication(); using var client = Client(app);
-        var path = Path.Combine(app.DataDirectory, "audit-file-failure"); var output = new StringWriter();
-        using var logs = new OperationalLogging(path, app.Clock, output); using var factory = new LoggerFactory([logs]);
-        Directory.Delete(path); await File.WriteAllTextAsync(path, "blocked");
-        var audit = new AuthAudit(factory.CreateLogger<AuthAudit>(), app.Clock); var user = Guid.NewGuid();
+        await using var app = new TestApplication();
+        using var client = Client(app);
+        var path = Path.Combine(app.DataDirectory, "audit-file-failure");
+        var output = new StringWriter();
+        using var logs = new OperationalLogging(path, app.Clock, output);
+        using var factory = new LoggerFactory([logs]);
+        Directory.Delete(path);
+        await File.WriteAllTextAsync(path, "blocked");
+
+        var audit = new AuthAudit(factory.CreateLogger<AuthAudit>(), app.Clock);
+        var user = Guid.NewGuid();
+
         Assert.DoesNotThrow(() => audit.Record(AuthEvent.AUTH_PASSWORD_CHANGED, user));
-        Assert.That(logs.FileFailed, Is.True); Assert.That(output.ToString(), Does.Contain("AUTH_PASSWORD_CHANGED").And.Contain("LOG_STORAGE_FAILED").And.Contain(user.ToString()));
+        Assert.That(logs.FileFailed, Is.True);
+        Assert.That(output.ToString(), Does.Contain("AUTH_PASSWORD_CHANGED").And.Contain("LOG_STORAGE_FAILED").And.Contain(user.ToString()));
     }
+
     [Test]
     public async Task AccountEventsAreTraceableWithoutPasswordsTokensNamesOrCredentials()
     {
-        await using var app = new TestApplication(); using var owner = Client(app);
-        var token = File.ReadLines(Path.Combine(app.DataDirectory, "setup-token.txt")).First(); await SetupAsync(owner);
-        var session = await owner.GetFromJsonAsync<JsonElement>("/api/v1/auth/session"); var id = session.GetProperty("user").GetProperty("id").GetGuid();
+        await using var app = new TestApplication();
+        using var owner = Client(app);
+        var token = File.ReadLines(Path.Combine(app.DataDirectory, "setup-token.txt")).First();
+        await SetupAsync(owner);
+
+        var session = await owner.GetFromJsonAsync<JsonElement>("/api/v1/auth/session");
+        var id = session.GetProperty("user").GetProperty("id").GetGuid();
         using var anonymous = Client(app);
-        await SendAsync(anonymous, "auth/password", new { loginId = "private.unknown.login", password = "private-incorrect-password" });
-        await SendAsync(anonymous, "auth/password", new { loginId = "owner", password = "private-incorrect-password" });
-        await SendAsync(owner, "auth/password", new { loginId = "owner", password = Password });
+        await SendAsync(anonymous, "auth/password", new
+        {
+            loginId = "private.unknown.login",
+            password = "private-incorrect-password"
+        });
+        await SendAsync(anonymous, "auth/password", new
+        {
+            loginId = "owner",
+            password = "private-incorrect-password"
+        });
+        await SendAsync(owner, "auth/password", new
+        {
+            loginId = "owner",
+            password = Password
+        });
+
         using var authenticator = new TestAuthenticator();
-        var registration = await (await SendAsync(owner, "account/passkeys/options", new { verification = new { password = Password } })).Content.ReadFromJsonAsync<JsonElement>();
+
+        var registration = await (await SendAsync(owner, "account/passkeys/options", new
+        {
+            verification = new
+            {
+                password = Password
+            }
+        })).Content.ReadFromJsonAsync<JsonElement>();
         var credential = authenticator.Create(registration.GetProperty("publicKeyOptions"));
-        Assert.That((await SendAsync(owner, "account/passkeys", new { challengeId = registration.GetProperty("challengeId"), credential, displayName = "private-passkey-name" })).StatusCode, Is.EqualTo(HttpStatusCode.Created));
-        await SendAsync(owner, "account/passkeys/" + authenticator.Id, new { displayName = "private-renamed-key" }, HttpMethod.Put, await PasskeyTests.EtagAsync(owner, authenticator.Id));
-        var options = await (await SendAsync(anonymous, "auth/passkey/options", new { loginId = "owner", rememberMe = false })).Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.That((await SendAsync(owner, "account/passkeys", new
+        {
+            challengeId = registration.GetProperty("challengeId"),
+            credential,
+            displayName = "private-passkey-name"
+        })).StatusCode, Is.EqualTo(HttpStatusCode.Created));
+
+        await SendAsync(owner, "account/passkeys/" + authenticator.Id, new
+        {
+            displayName = "private-renamed-key"
+        }, HttpMethod.Put, await PasskeyTests.EtagAsync(owner, authenticator.Id));
+
+        var options = await (await SendAsync(anonymous, "auth/passkey/options", new
+        {
+            loginId = "owner",
+            rememberMe = false
+        })).Content.ReadFromJsonAsync<JsonElement>();
         var signed = authenticator.Get(options.GetProperty("publicKeyOptions"));
-        Assert.That((await SendAsync(anonymous, "auth/passkey/verify", new { challengeId = options.GetProperty("challengeId"), credential = signed })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
-        await SendAsync(anonymous, "auth/passkey/verify", new { challengeId = options.GetProperty("challengeId"), credential = signed });
-        Assert.That((await SendAsync(owner, "account/passkeys/" + authenticator.Id, new { password = Password }, HttpMethod.Delete, await PasskeyTests.EtagAsync(owner, authenticator.Id))).StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        Assert.That((await SendAsync(anonymous, "auth/passkey/verify", new
+        {
+            challengeId = options.GetProperty("challengeId"),
+            credential = signed
+        })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        await SendAsync(anonymous, "auth/passkey/verify", new
+        {
+            challengeId = options.GetProperty("challengeId"),
+            credential = signed
+        });
+
+        Assert.That((await SendAsync(owner, "account/passkeys/" + authenticator.Id, new
+        {
+            password = Password
+        }, HttpMethod.Delete, await PasskeyTests.EtagAsync(owner, authenticator.Id))).StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
         session = await owner.GetFromJsonAsync<JsonElement>("/api/v1/auth/session");
-        await SendAsync(owner, "account", new { loginId = "private.changed.login" }, HttpMethod.Put, session.GetProperty("user").GetProperty("etag").GetString());
-        Assert.That((await SendAsync(owner, "account/password", new { newPassword = "private-new-password", verification = new { password = Password } })).StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
-        using var next = Client(app); await SendAsync(next, "auth/password", new { loginId = "private.changed.login", password = "private-new-password" });
+        await SendAsync(owner, "account", new
+        {
+            loginId = "private.changed.login"
+        }, HttpMethod.Put, session.GetProperty("user").GetProperty("etag").GetString());
+
+        Assert.That((await SendAsync(owner, "account/password", new
+        {
+            newPassword = "private-new-password",
+            verification = new
+            {
+                password = Password
+            }
+        })).StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        using var next = Client(app);
+        await SendAsync(next, "auth/password", new
+        {
+            loginId = "private.changed.login",
+            password = "private-new-password"
+        });
+
         Assert.That((await SendAsync(next, "auth/revoke-all")).StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
         app.Services.GetRequiredService<AuthAudit>().Flush();
-        var text = ReadLogs(app); var records = Records(text); var codes = records.Where(x => x.TryGetProperty("errorCode", out _)).Select(x => x.GetProperty("errorCode").GetString()).ToArray();
-        foreach (var expected in new[] { "AUTH_SETUP_CREATED", "AUTH_PASSWORD_LOGIN", "AUTH_PASSWORD_FAILED", "AUTH_PASSKEY_ADDED", "AUTH_PASSKEY_RENAMED", "AUTH_PASSKEY_REMOVED", "AUTH_PASSKEY_LOGIN", "AUTH_PASSKEY_FAILED", "AUTH_LOGIN_ID_CHANGED", "AUTH_PASSWORD_CHANGED", "AUTH_ALL_SESSIONS_REVOKED" }) Assert.That(codes, Does.Contain(expected));
+
+        var text = ReadLogs(app);
+        var records = Records(text);
+        var codes = records.Where(x => x.TryGetProperty("errorCode", out _)).Select(x => x.GetProperty("errorCode").GetString()).ToArray();
+        foreach (var expected in new[] { "AUTH_SETUP_CREATED", "AUTH_PASSWORD_LOGIN", "AUTH_PASSWORD_FAILED", "AUTH_PASSKEY_ADDED", "AUTH_PASSKEY_RENAMED", "AUTH_PASSKEY_REMOVED", "AUTH_PASSKEY_LOGIN", "AUTH_PASSKEY_FAILED", "AUTH_LOGIN_ID_CHANGED", "AUTH_PASSWORD_CHANGED", "AUTH_ALL_SESSIONS_REVOKED" })
+        {
+            Assert.That(codes, Does.Contain(expected));
+        }
+
         foreach (var secret in new[] { token, Password, "private-incorrect-password", "private-new-password", "private.unknown.login", "private.changed.login", "private-passkey-name", "private-renamed-key", authenticator.Id, credential.GetRawText(), signed.GetRawText() })
+        {
             Assert.That(text.Contains(secret, StringComparison.Ordinal), Is.False, "認証監査に入力や認証データを含めない");
-        foreach (var record in records.Where(x => x.TryGetProperty("errorCode", out var code) && code.GetString() == "AUTH_PASSWORD_CHANGED")) Assert.That(record.GetProperty("UserId").GetGuid(), Is.EqualTo(id));
+        }
+
+        foreach (var record in records.Where(x => x.TryGetProperty("errorCode", out var code) && code.GetString() == "AUTH_PASSWORD_CHANGED"))
+        {
+            Assert.That(record.GetProperty("UserId").GetGuid(), Is.EqualTo(id));
+        }
+
         var failures = records.Where(x => x.TryGetProperty("errorCode", out var code) && code.GetString() == "AUTH_PASSWORD_FAILED").ToArray();
+
         Assert.That(failures.Any(x => x.TryGetProperty("UserId", out var user) && user.GetGuid() == id), Is.True);
     }
 
     [Test]
     public async Task PasswordLockAndRequestRejectionHaveFixedAuditEvents()
     {
-        await using var app = new TestApplication(); using var owner = Client(app); await SetupAsync(owner); using var client = Client(app);
-        for (var i = 0; i < 5; i++) await SendAsync(client, "auth/password", new { loginId = "owner", password = "wrong" });
-        await client.PostAsJsonAsync("/api/v1/setup", new { loginId = "private.body", password = "private-body-password" });
-        var text = ReadLogs(app); Assert.That(text, Does.Contain("AUTH_PASSWORD_LOCKED").And.Contain("AUTH_REQUEST_REJECTED"));
+        await using var app = new TestApplication();
+        using var owner = Client(app);
+        await SetupAsync(owner);
+
+        using var client = Client(app);
+        for (var i = 0; i < 5; i++)
+        {
+            await SendAsync(client, "auth/password", new
+            {
+                loginId = "owner",
+                password = "wrong"
+            });
+        }
+
+        await client.PostAsJsonAsync("/api/v1/setup", new
+        {
+            loginId = "private.body",
+            password = "private-body-password"
+        });
+
+        var text = ReadLogs(app);
+
+        Assert.That(text, Does.Contain("AUTH_PASSWORD_LOCKED").And.Contain("AUTH_REQUEST_REJECTED"));
         Assert.That(text, Does.Not.Contain("private.body").And.Not.Contain("private-body-password"));
     }
 
     [Test]
     public async Task AggregationBoundsGroupsPreservesCountsAndFlushesOnShutdown()
     {
-        await using var app = new TestApplication(); using var client = Client(app);
-        var output = new StringWriter(); using var logs = new OperationalLogging(Path.Combine(app.DataDirectory, "audit-unit"), app.Clock, output);
-        using var factory = new LoggerFactory([logs]); var audit = new AuthAudit(factory.CreateLogger<AuthAudit>(), app.Clock);
-        for (var i = 0; i < 10000; i++) audit.Record(AuthEvent.AUTH_PASSWORD_FAILED, Guid.NewGuid());
-        Assert.That(audit.GroupCount, Is.EqualTo(AuthAudit.MaximumGroups + 1)); Assert.That(Records(output.ToString()).Length, Is.EqualTo(AuthAudit.MaximumGroups + 1));
+        await using var app = new TestApplication();
+        using var client = Client(app);
+        var output = new StringWriter();
+        using var logs = new OperationalLogging(Path.Combine(app.DataDirectory, "audit-unit"), app.Clock, output);
+        using var factory = new LoggerFactory([logs]);
+        var audit = new AuthAudit(factory.CreateLogger<AuthAudit>(), app.Clock);
+        for (var i = 0; i < 10000; i++)
+        {
+            audit.Record(AuthEvent.AUTH_PASSWORD_FAILED, Guid.NewGuid());
+        }
+
+        Assert.That(audit.GroupCount, Is.EqualTo(AuthAudit.MaximumGroups + 1));
+        Assert.That(Records(output.ToString()).Length, Is.EqualTo(AuthAudit.MaximumGroups + 1));
+
         audit.Record(AuthEvent.AUTH_ALL_SESSIONS_REVOKED, Guid.NewGuid());
-        using var worker = new AuthAuditWorker(audit, app.Clock); await worker.StartAsync(CancellationToken.None); await worker.StopAsync(CancellationToken.None);
+
+        using var worker = new AuthAuditWorker(audit, app.Clock);
+        await worker.StartAsync(CancellationToken.None);
+        await worker.StopAsync(CancellationToken.None);
+
         var records = Records(output.ToString());
+
         Assert.That(records.Where(x => x.GetProperty("errorCode").GetString() == "AUTH_PASSWORD_FAILED").Sum(x => x.GetProperty("Count").GetInt64()), Is.EqualTo(10000));
-        Assert.That(audit.GroupCount, Is.Zero); Assert.That(records.Count(x => x.GetProperty("errorCode").GetString() == "AUTH_ALL_SESSIONS_REVOKED"), Is.EqualTo(1));
+        Assert.That(audit.GroupCount, Is.Zero);
+        Assert.That(records.Count(x => x.GetProperty("errorCode").GetString() == "AUTH_ALL_SESSIONS_REVOKED"), Is.EqualTo(1));
         Assert.That(records.Length, Is.LessThanOrEqualTo(AuthAudit.MaximumGroups + 3));
     }
 
     private static string ReadLogs(TestApplication app) => string.Join("", Directory.EnumerateFiles(Path.Combine(app.DataDirectory, "logs"), "*.jsonl").Select(File.ReadAllText));
+
     private static JsonElement[] Records(string text) => text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(x => { using var document = JsonDocument.Parse(x); return document.RootElement.Clone(); }).ToArray();
 }

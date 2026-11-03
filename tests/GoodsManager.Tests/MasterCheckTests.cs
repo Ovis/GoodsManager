@@ -17,6 +17,7 @@ public sealed class MasterCheckTests
         await using var factory = new TestApplication();
         using var client = factory.CreateClient();
         using var response = await client.GetAsync(path);
+
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
@@ -37,11 +38,15 @@ public sealed class MasterCheckTests
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = environment });
         builder.WebHost.UseTestServer();
+
         await using var app = builder.Build();
         app.MapMasterCheck();
         await app.StartAsync();
+
         using var client = app.GetTestClient();
         foreach (var path in new[] { "/dev/master-check", "/dev/master-check/master-check.js", "/dev/master-check/requests.mjs", "/dev/master-check/master-check.css" })
+        {
             Assert.That((await client.GetAsync(path)).StatusCode, Is.EqualTo(HttpStatusCode.NotFound), path);
+        }
     }
 }
