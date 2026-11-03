@@ -114,37 +114,3 @@ test('コレクション管理の要求はアカウントに結び付け、設�
     assert.deepEqual(JSON.parse(calls[0].options.body),{name:'コピー先',importFrom:'source'});
     assert.equal(state.items[0].id,'new');
 });
-
-const {MasterRequests}=await import('../../src/GoodsManager.Web/Development/MasterCheck/requests.mjs');
-
-test('開発確認画面でも送信済み要求の所属とアカウントを変えない',async()=>{
-    let owner='one',collection='A';
-    const calls=[];
-    const state=new MasterRequests({fetcher:async(path,options)=>{
-            calls.push({path,options});
-            if(path.endsWith('/auth/session'))return json({user:{id:owner}});
-            if(path.endsWith('/collections'))return json({items:[{id:collection,name:collection}]});
-            if(path.endsWith('/auth/csrf'))return json({token:'token'});
-
-            return json({id:'saved'});
-        }});
-    await state.connect();
-    await state.write('masters/tags','POST',{name:'Aのタグ'});
-    owner='two';
-    collection='B';
-    await state.connect();
-    await state.replay();
-
-    const sent=calls.filter(x=>x.options.method==='POST');
-
-    assert.equal(sent[0].options.headers['X-Collection-Id'],'A');
-    assert.equal(sent[1].options.headers['X-Collection-Id'],'A');
-    assert.equal(sent[1].options.headers['X-Account-Id'],'one');
-});
-
-test('複数ある開発確認先を暗黙の先頭項目にしない',async()=>{
-    const state=new MasterRequests({fetcher:async path=>json(path.endsWith('/auth/session')?{user:{id:'one'}}:{items:[{id:'A'},{id:'B'}]})});
-    await assert.rejects(state.connect(),/collectionId/);
-
-    assert.equal(state.context,null);
-});

@@ -7,6 +7,23 @@ namespace GoodsManager.Tests;
 /// <summary>公開ヘルス確認とAPIの応答形式を検証</summary>
 public sealed class HostTests
 {
+    /// <summary>通常画面へ置き換えた確認ページと、その埋め込み資源を開発環境でも公開しない。</summary>
+    [Test]
+    public async Task RetiredDevelopmentPagesAndAssetsAreNotPublished()
+    {
+        await using var factory = new TestApplication();
+        using var client = factory.CreateClient();
+
+        foreach (var path in new[] { "/dev/auth-check", "/dev/master-check", "/dev/product-check", "/dev/image-check" })
+        {
+            using var response = await client.GetAsync(path);
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound), path);
+        }
+
+        Assert.That(typeof(Program).Assembly.GetManifestResourceNames().Any(name => name.Contains(".Development.", StringComparison.Ordinal)), Is.False);
+    }
+
     /// <summary>直接HTMLと画面URLのGET・HEADに同じヘッダーを付け、アセットへHTML用CSPを広げない。</summary>
     [Test]
     public async Task HtmlHeadersAreConsistentForDirectFilesAndPagesWithoutChangingAssets()

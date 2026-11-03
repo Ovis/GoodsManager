@@ -62,6 +62,8 @@ public sealed class TestApplication : WebApplicationFactory<Program>
             configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Storage:Directory"] = DataDirectory, ["Backups:WorkerEnabled"] = "false", ["Operations:HealthPort"] = "0" }));
         builder.ConfigureServices(services =>
         {
+            // 商品準備用の入口は試験アセンブリからだけ登録し、配布アプリには含めない。
+            services.AddControllers().AddApplicationPart(typeof(ProductFixtureController).Assembly);
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
             ConfigureTestServices?.Invoke(services);

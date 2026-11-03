@@ -61,33 +61,3 @@ public sealed class ProductsController(AppDbContext db, ProductOperations produc
         return Ok(value);
     }
 }
-
-/// <summary>重複確認・画像を接続するP08の正式登録APIとは分けた、開発確認用の作成入口。</summary>
-[Authorize]
-public sealed class DevelopmentProductsController(IHostEnvironment environment, ProductOperations products, ProductWrites writes) : ControllerBase
-{
-    [HttpPost("api/v1/dev/products")]
-    [RequestSizeLimit(ProductWrites.BodyLimit)]
-    public Task<IActionResult> Create()
-    {
-        if (!environment.IsDevelopment())
-        {
-            throw new MasterProblem(404, "NOT_FOUND");
-        }
-
-        return writes.ExecuteAsync(HttpContext, "POST:/api/v1/dev/products", true, async (body, now, token) =>
-        {
-            var input = ProductWrites.Parse(() =>
-            {
-                var root = new InputObject(body, "product", "initialLot");
-                var lot = new InputObject(root.Get("initialLot"), "quantity", "fields");
-
-                return (Draft: InputObject.Product(root.Get("product")), Quantity: lot.Integer("quantity"), Fields: InputObject.Fields(lot.Get("fields"), true));
-            });
-
-            var product = await products.CreateAsync(input.Draft, input.Quantity, input.Fields, now, token);
-
-            return (product, new Dictionary<string, Guid>());
-        });
-    }
-}

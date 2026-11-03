@@ -1,7 +1,6 @@
 using System.Text.Json.Serialization;
 using GoodsManager.Web;
 using GoodsManager.Web.Auth;
-using GoodsManager.Web.Development;
 using GoodsManager.Web.Images;
 using GoodsManager.Web.Operations;
 using GoodsManager.Web.PhotoOcr;
@@ -186,10 +185,6 @@ app.Use(async (context, next) =>
 app.MapCollectionPages();
 app.MapRegistrationPhotoOcr();
 app.MapControllers();
-app.MapAuthenticationCheck();
-app.MapMasterCheck();
-app.MapProductCheck();
-app.MapImageCheck();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 
 app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("GoodsManager.Web.Operations").LogInformation(new EventId(1000), "運用開始 Code={Code}", "APPLICATION_READY");
