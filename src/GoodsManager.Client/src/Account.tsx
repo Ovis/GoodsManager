@@ -1,3 +1,5 @@
+import {LoginIdSettings} from './LoginIdSettings';
+import type {LoginIdStore} from './LoginIdStore';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { AccountState } from './account-state.mjs';
 import { passkeyCapabilities } from './passkey-browser';
@@ -96,8 +98,8 @@ function PasskeyAction({store,loginId}:{store:AccountState;loginId:string}) {
 }
 
 /** 認証の秘密はこの画面のフォームだけに置き、画面を離れたら破棄する。 */
-export function Account({store,loginId}:{store:AccountState;loginId:string}) {
-  useSyncExternalStore(store.subscribe,store.snapshot);
+export function Account({store,loginId,identity}:{store:AccountState;loginId:string;identity:LoginIdStore}) {
+  useSyncExternalStore(store.subscribe,store.snapshot);useSyncExternalStore(identity.subscribe,identity.snapshot);
   useEffect(()=>{window.scrollTo(0,0);void store.load();return()=>store.cancelCeremony();},[store]);
   useEffect(()=>{const before=(event:BeforeUnloadEvent)=>{if(store.busy){event.preventDefault();event.returnValue='';}};addEventListener('beforeunload',before);return()=>removeEventListener('beforeunload',before);},[store]);
   return <div className="account-page management">
@@ -106,6 +108,7 @@ export function Account({store,loginId}:{store:AccountState;loginId:string}) {
     {store.notice&&<p role="status" className="success-message">{store.notice}</p>}
     {store.busy&&<p role="status">本人確認・変更処理中…</p>}
     {store.needsRefresh&&<p className="note">変更操作を止めています。「最新一覧を取得」で登録状態を確認してください。</p>}
+    <LoginIdSettings store={identity} disabled={store.busy||store.loading}/><fieldset className="account-operation-group" disabled={identity.locked}>
     <PasswordForm store={store} loginId={loginId}/>
     <section className="panel" aria-labelledby="passkeys-heading"><h2 id="passkeys-heading">登録済みパスキー</h2>
       <p>複数の端末やパスワード管理アプリを登録できます。</p>
@@ -115,6 +118,6 @@ export function Account({store,loginId}:{store:AccountState;loginId:string}) {
       <ul className="account-passkeys">{store.passkeys.map(entry=><li key={entry.id}><div><strong>{entry.displayName}</strong><small>登録日時：{new Date(entry.createdAt).toLocaleString('ja-JP')}</small></div><div className="management-actions"><button className="btn small" disabled={store.locked||!!store.action} onClick={()=>store.open('rename',entry)}>名前を変更</button><button className="btn small danger" disabled={store.locked||!!store.action} onClick={()=>store.open('delete',entry)}>削除</button></div></li>)}</ul>
       {store.action&&<PasskeyAction key={store.action.kind+':'+store.action.original.id} store={store} loginId={loginId}/>}
       <PasskeyAddForm store={store} loginId={loginId}/>
-    </section>
+    </section></fieldset>
   </div>;
 }
