@@ -100,21 +100,29 @@ public sealed class AuthAuditTests
     [Test]
     public async Task CriticalAuditFallsBackToConsoleWhenFileStorageFails()
     {
-        await using var app = new TestApplication();
-        using var client = Client(app);
-        var path = Path.Combine(app.DataDirectory, "audit-file-failure");
-        var output = new StringWriter();
-        using var logs = new OperationalLogging(path, app.Clock, output);
+        var directory = Path.Combine(Path.GetTempPath(), "GoodsManager.Tests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "audit-file-failure");
+        var clock = new TestClock();
+        using var output = new StringWriter();
+        using var logs = new OperationalLogging(path, clock, output);
         using var factory = new LoggerFactory([logs]);
-        Directory.Delete(path);
-        await File.WriteAllTextAsync(path, "blocked");
 
-        var audit = new AuthAudit(factory.CreateLogger<AuthAudit>(), app.Clock);
-        var user = Guid.NewGuid();
+        try
+        {
+            Directory.Delete(path);
+            await File.WriteAllTextAsync(path, "blocked");
 
-        Assert.DoesNotThrow(() => audit.Record(AuthEvent.AUTH_PASSWORD_CHANGED, user));
-        Assert.That(logs.FileFailed, Is.True);
-        Assert.That(output.ToString(), Does.Contain("AUTH_PASSWORD_CHANGED").And.Contain("LOG_STORAGE_FAILED").And.Contain(user.ToString()));
+            var audit = new AuthAudit(factory.CreateLogger<AuthAudit>(), clock);
+            var user = Guid.NewGuid();
+
+            Assert.DoesNotThrow(() => audit.Record(AuthEvent.AUTH_PASSWORD_CHANGED, user));
+            Assert.That(logs.FileFailed, Is.True);
+            Assert.That(output.ToString(), Does.Contain("AUTH_PASSWORD_CHANGED").And.Contain("LOG_STORAGE_FAILED").And.Contain(user.ToString()));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     /// <summary>アカウント操作を内部IDで追跡でき、入力値やWebAuthnデータがログに残らないことを確認する。</summary>
@@ -275,32 +283,40 @@ public sealed class AuthAuditTests
     [Test]
     public async Task AggregationBoundsGroupsPreservesCountsAndFlushesOnShutdown()
     {
-        await using var app = new TestApplication();
-        using var client = Client(app);
-        var output = new StringWriter();
-        using var logs = new OperationalLogging(Path.Combine(app.DataDirectory, "audit-unit"), app.Clock, output);
+        var directory = Path.Combine(Path.GetTempPath(), "GoodsManager.Tests", Guid.NewGuid().ToString("N"));
+        var clock = new TestClock();
+        using var output = new StringWriter();
+        using var logs = new OperationalLogging(directory, clock, output);
         using var factory = new LoggerFactory([logs]);
-        var audit = new AuthAudit(factory.CreateLogger<AuthAudit>(), app.Clock);
-        for (var i = 0; i < 10000; i++)
+
+        try
         {
-            audit.Record(AuthEvent.AUTH_PASSWORD_FAILED, Guid.NewGuid());
+            var audit = new AuthAudit(factory.CreateLogger<AuthAudit>(), clock);
+            for (var i = 0; i < 10000; i++)
+            {
+                audit.Record(AuthEvent.AUTH_PASSWORD_FAILED, Guid.NewGuid());
+            }
+
+            Assert.That(audit.GroupCount, Is.EqualTo(AuthAudit.MaximumGroups + 1));
+            Assert.That(Records(output.ToString()).Length, Is.EqualTo(AuthAudit.MaximumGroups + 1));
+
+            audit.Record(AuthEvent.AUTH_ALL_SESSIONS_REVOKED, Guid.NewGuid());
+
+            using var worker = new AuthAuditWorker(audit, clock);
+            await worker.StartAsync(CancellationToken.None);
+            await worker.StopAsync(CancellationToken.None);
+
+            var records = Records(output.ToString());
+
+            Assert.That(records.Where(x => x.GetProperty("errorCode").GetString() == "AUTH_PASSWORD_FAILED").Sum(x => x.GetProperty("Count").GetInt64()), Is.EqualTo(10000));
+            Assert.That(audit.GroupCount, Is.Zero);
+            Assert.That(records.Count(x => x.GetProperty("errorCode").GetString() == "AUTH_ALL_SESSIONS_REVOKED"), Is.EqualTo(1));
+            Assert.That(records.Length, Is.LessThanOrEqualTo(AuthAudit.MaximumGroups + 3));
         }
-
-        Assert.That(audit.GroupCount, Is.EqualTo(AuthAudit.MaximumGroups + 1));
-        Assert.That(Records(output.ToString()).Length, Is.EqualTo(AuthAudit.MaximumGroups + 1));
-
-        audit.Record(AuthEvent.AUTH_ALL_SESSIONS_REVOKED, Guid.NewGuid());
-
-        using var worker = new AuthAuditWorker(audit, app.Clock);
-        await worker.StartAsync(CancellationToken.None);
-        await worker.StopAsync(CancellationToken.None);
-
-        var records = Records(output.ToString());
-
-        Assert.That(records.Where(x => x.GetProperty("errorCode").GetString() == "AUTH_PASSWORD_FAILED").Sum(x => x.GetProperty("Count").GetInt64()), Is.EqualTo(10000));
-        Assert.That(audit.GroupCount, Is.Zero);
-        Assert.That(records.Count(x => x.GetProperty("errorCode").GetString() == "AUTH_ALL_SESSIONS_REVOKED"), Is.EqualTo(1));
-        Assert.That(records.Length, Is.LessThanOrEqualTo(AuthAudit.MaximumGroups + 3));
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     /// <summary>隔離アプリが出力した監査ファイルを連結して照合する。</summary>
