@@ -8,6 +8,18 @@ namespace GoodsManager.Tests;
 public sealed class AccountSettingsTests
 {
     [Test]
+    public async Task RevokeAllInvalidatesCurrentAndOtherSessionsWithoutChangingPassword()
+    {
+        await using var app = new TestApplication(); using var first = Client(app); await SetupAsync(first);
+        using var second = Client(app); await SendAsync(second, "auth/password", new { loginId = "owner", password = Password });
+        Assert.That((await SendAsync(first, "auth/revoke-all")).StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+        Assert.That((await first.GetAsync("/api/v1/auth/session")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That((await second.GetAsync("/api/v1/auth/session")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        using var next = Client(app);
+        Assert.That((await SendAsync(next, "auth/password", new { loginId = "owner", password = Password })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
+
+    [Test]
     public async Task LoginIdChangeKeepsSessionsAndPasswordAndRejectsOldEtag()
     {
         await using var app = new TestApplication(); using var first = Client(app); await SetupAsync(first);

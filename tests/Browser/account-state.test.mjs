@@ -15,6 +15,20 @@ function setup(behavior=async()=>undefined,browser={assertion:async()=>({signed:
   return {state,calls,logins};
 }
 
+test('全端末ログアウトは明示確認後だけ実行し、成功時は現在の端末もログイン画面へ戻す',async()=>{
+ const {state,calls,logins}=setup();await state.load();assert.equal(await state.revokeAll(false),false);assert.equal(calls.length,1);
+ assert.equal(await state.revokeAll(true),true);assert.equal(calls.at(-1).path,'/auth/revoke-all');assert.equal(calls.at(-1).method,'POST');assert.deepEqual(calls.at(-1).body,{});
+ assert.equal(calls.length,2);assert.equal(state.loaded,false);assert.deepEqual(state.passkeys,[]);assert.match(logins[0],/この端末を含む/);
+});
+test('全端末ログアウトの不明結果は自動再送せず、結果不明の案内で再ログインへ進む',async()=>{
+ const {state,calls,logins}=setup(async()=>{throw new TypeError('offline');});await state.load();await state.revokeAll(true);
+ assert.equal(calls.filter(x=>x.path==='/auth/revoke-all').length,1);assert.equal(state.uncertain,'revokeAll');assert.match(logins[0],/結果を確認できません/);assert.equal(state.loaded,false);
+});
+test('全端末ログアウトが明確に拒否された場合は成功扱いにせず現在の画面を維持する',async()=>{
+ const {state,logins}=setup(async()=>{throw {status:403,code:'CSRF_FAILED'};});await state.load();assert.equal(await state.revokeAll(true),false);
+ assert.equal(logins.length,0);assert.equal(state.loaded,true);assert.equal(state.passkeys.length,1);assert.ok(state.error);
+});
+
 test('パスワードのコードポイント・確認不一致は送信前に拒否し、成功後だけ再ログインへ進む',async()=>{
   assert.equal(passwordError('😀'.repeat(12),'😀'.repeat(12)),'');
   assert.ok(passwordError('x'.repeat(129),'x'.repeat(129)));

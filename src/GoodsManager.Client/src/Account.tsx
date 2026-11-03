@@ -1,6 +1,6 @@
 import {LoginIdSettings} from './LoginIdSettings';
 import type {LoginIdStore} from './LoginIdStore';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AccountState } from './account-state.mjs';
 import { passkeyCapabilities } from './passkey-browser';
 
@@ -97,6 +97,13 @@ function PasskeyAction({store,loginId}:{store:AccountState;loginId:string}) {
   </section>;
 }
 
+function RevokeAllSessions({store}:{store:AccountState}){
+ const [open,setOpen]=useState(false),[ack,setAck]=useState(false),dialog=useRef<HTMLDialogElement>(null);
+ useEffect(()=>{if(open)dialog.current?.showModal();else dialog.current?.close();},[open]);
+ const close=()=>{if(!store.busy){setOpen(false);setAck(false);}};
+ return <section className="panel"><h2>ログイン中の端末</h2><p>ほかの端末のログインもまとめて解除できます。この端末もログアウトし、すべての端末で再ログインが必要になります。パスワードと登録済みパスキーは変更しません。</p><button type="button" className="btn danger" disabled={store.busy||store.loading} onClick={()=>{store.error='';store.notify();setAck(false);setOpen(true);}}>全端末からログアウト</button><dialog ref={dialog} className="registration-dialog" aria-labelledby="revoke-all-heading" onCancel={event=>{event.preventDefault();close();}}><h2 id="revoke-all-heading">すべての端末からログアウト</h2><p>この端末を含む、ログイン中のすべての端末でログイン状態を解除します。</p><label className="registration-ack"><input type="checkbox" checked={ack} disabled={store.busy} onChange={event=>setAck(event.target.checked)}/>すべての端末で再ログインが必要になることを確認しました</label>{store.error&&<p role="alert" className="error-message">{store.error}</p>}<div className="editor-actions"><button type="button" className="btn" disabled={store.busy} onClick={close}>キャンセル</button><button type="button" className="btn danger" disabled={!ack||store.busy} onClick={()=>void store.revokeAll(ack)}>確認して全端末からログアウト</button></div></dialog></section>;
+}
+
 /** 認証の秘密はこの画面のフォームだけに置き、画面を離れたら破棄する。 */
 export function Account({store,loginId,identity}:{store:AccountState;loginId:string;identity:LoginIdStore}) {
   useSyncExternalStore(store.subscribe,store.snapshot);useSyncExternalStore(identity.subscribe,identity.snapshot);
@@ -118,6 +125,6 @@ export function Account({store,loginId,identity}:{store:AccountState;loginId:str
       <ul className="account-passkeys">{store.passkeys.map(entry=><li key={entry.id}><div><strong>{entry.displayName}</strong><small>登録日時：{new Date(entry.createdAt).toLocaleString('ja-JP')}</small></div><div className="management-actions"><button className="btn small" disabled={store.locked||!!store.action} onClick={()=>store.open('rename',entry)}>名前を変更</button><button className="btn small danger" disabled={store.locked||!!store.action} onClick={()=>store.open('delete',entry)}>削除</button></div></li>)}</ul>
       {store.action&&<PasskeyAction key={store.action.kind+':'+store.action.original.id} store={store} loginId={loginId}/>}
       <PasskeyAddForm store={store} loginId={loginId}/>
-    </section></fieldset>
+    </section><RevokeAllSessions store={store}/></fieldset>
   </div>;
 }

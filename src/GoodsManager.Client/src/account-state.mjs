@@ -59,14 +59,15 @@ export class AccountState {
     return {challengeId:options.challengeId,credential:await this.browser.assertion(options.publicKeyOptions,this.controller.signal)};
   }
   async execute(kind,work,success){
-    if(this.locked)return false;
+    if(this.busy||this.loading||(kind!=='revokeAll'&&this.locked))return false;
+    const endsSession=kind==='password'||kind==='revokeAll';
     this.busy=true;this.error='';this.notice='';this.controller=new AbortController();this.notify();
     let submitted=false,succeeded=false;
     try{
       await work(()=>{submitted=true;});succeeded=true;this.action=null;
-      if(kind==='password'){
+      if(endsSession){
         this.passkeys=[];this.loaded=false;
-        this.onRequireLogin('パスワードを変更しました。すべての端末のログインを解除しました。新しいパスワードでログインしてください。');
+        this.onRequireLogin(kind==='revokeAll'?'この端末を含むすべての端末からログアウトしました。再度ログインしてください。':'パスワードを変更しました。すべての端末のログインを解除しました。新しいパスワードでログインしてください。');
       }else{this.notice=success;this.needsRefresh=true;}
     }catch(error){
       this.error=accountError(error);
@@ -78,15 +79,19 @@ export class AccountState {
       if(unknown){
         this.uncertain=kind;
         this.error='変更結果を確認できません。自動再送はしていません。最新一覧を取得して結果を確認してください。';
-        if(kind==='password'){
+        if(endsSession){
           this.passkeys=[];this.action=null;this.loaded=false;
-          this.onRequireLogin('パスワード変更の結果を確認できません。自動再送はしていません。新しいパスワードでログインし、変更されていなければ元のパスワードを確認してください。');
+          this.onRequireLogin(kind==='revokeAll'?'全端末のログアウト結果を確認できません。自動再送はしていません。再度ログインし、必要に応じて全端末のログアウトを実行してください。':'パスワード変更の結果を確認できません。自動再送はしていません。新しいパスワードでログインし、変更されていなければ元のパスワードを確認してください。');
         }
       }
     }finally{this.busy=false;this.controller=null;this.notify();}
     // 保存直後の一覧更新だけは、その操作の成功通知を残す。
-    if(succeeded&&kind!=='password')await this.load({keepNotice:true});
+    if(succeeded&&!endsSession)await this.load({keepNotice:true});
     return succeeded;
+  }
+  async revokeAll(confirmed=false){
+    if(!confirmed||this.busy||this.loading||this.action)return false;
+    return this.execute('revokeAll',async submitted=>{submitted();await this.request('/auth/revoke-all',{method:'POST',body:'{}'});},'');
   }
   async changePassword(password,confirmation,method,current){
     if(this.locked||this.action)return false;
