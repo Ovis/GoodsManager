@@ -6,7 +6,7 @@ namespace GoodsManager.Web.Auth;
 public enum AuthEvent
 {
     AUTH_SETUP_CREATED = 2200, AUTH_SETUP_REJECTED,
-    AUTH_PASSWORD_LOGIN = 2210, AUTH_PASSWORD_FAILED, AUTH_PASSWORD_LOCKED,
+    AUTH_PASSWORD_LOGIN = 2210, AUTH_PASSWORD_FAILED, AUTH_PASSWORD_LOCKED, AUTH_PASSWORD_VERIFICATION_FAILED,
     AUTH_PASSKEY_LOGIN = 2220, AUTH_PASSKEY_FAILED,
     AUTH_PASSWORD_CHANGED = 2230, AUTH_LOGIN_ID_CHANGED, AUTH_CHANGE_REJECTED, AUTH_ACCOUNT_RECOVERED,
     AUTH_PASSKEY_ADDED = 2240, AUTH_PASSKEY_REMOVED, AUTH_PASSKEY_RENAMED,
@@ -42,7 +42,7 @@ public sealed class AuthAudit(ILogger<AuthAudit> logger, TimeProvider clock)
             throw new ArgumentOutOfRangeException(nameof(kind));
         }
 
-        if (kind is not (AuthEvent.AUTH_SETUP_REJECTED or AuthEvent.AUTH_PASSWORD_FAILED or AuthEvent.AUTH_PASSKEY_FAILED
+        if (kind is not (AuthEvent.AUTH_SETUP_REJECTED or AuthEvent.AUTH_PASSWORD_FAILED or AuthEvent.AUTH_PASSWORD_VERIFICATION_FAILED or AuthEvent.AUTH_PASSKEY_FAILED
             or AuthEvent.AUTH_CHANGE_REJECTED or AuthEvent.AUTH_RATE_LIMITED or AuthEvent.AUTH_REQUEST_REJECTED))
         {
             Write(kind, userId, 1, false, clock.GetUtcNow(), clock.GetUtcNow());

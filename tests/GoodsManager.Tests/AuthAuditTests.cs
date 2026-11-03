@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using GoodsManager.Web.Auth;
 using GoodsManager.Web.Operations;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using static GoodsManager.Tests.AuthenticationTests;
@@ -11,6 +12,63 @@ namespace GoodsManager.Tests;
 
 public sealed class AuthAuditTests
 {
+    /// <summary>本人確認の失敗を操作間で数え、ロックへの遷移だけを一度記録する。</summary>
+    [TestCase("password")]
+    [TestCase("passkey-add")]
+    [TestCase("passkey-delete")]
+    public async Task OperationPasswordFailuresAuditOneLockTransition(string operation)
+    {
+        await using var app = new TestApplication();
+        using var owner = Client(app);
+        await SetupAsync(owner);
+        using var authenticator = new TestAuthenticator();
+        var enrollment = await (await SendAsync(owner, "account/passkeys/options", new
+        {
+            verification = new
+            {
+                password = Password
+            }
+        }))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        Assert.That((await SendAsync(owner, "account/passkeys", new
+        {
+            challengeId = enrollment.GetProperty("challengeId"),
+            credential = authenticator.Create(enrollment.GetProperty("publicKeyOptions")),
+            displayName = "本人確認の試験用"
+        })).StatusCode, Is.EqualTo(HttpStatusCode.Created));
+
+        for (var i = 0; i < 7; i++)
+        {
+            var verification = new
+            {
+                password = "private-incorrect-verification"
+            };
+            var response = operation switch
+            {
+                "password" => await SendAsync(owner, "account/password", new { newPassword = "private-new-password", verification }),
+                "passkey-add" => await SendAsync(owner, "account/passkeys/options", new { verification }),
+                _ => await SendAsync(owner, "account/passkeys/" + authenticator.Id, verification, HttpMethod.Delete, await PasskeyTests.EtagAsync(owner, authenticator.Id))
+            };
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        }
+
+        await using var scope = app.Services.CreateAsyncScope();
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+        var user = await users.FindByNameAsync("owner") ?? throw new InvalidOperationException("試験ユーザーが存在しない");
+        Assert.That(await users.IsLockedOutAsync(user), Is.True);
+        app.Services.GetRequiredService<AuthAudit>().Flush();
+
+        var text = ReadLogs(app);
+        var events = Records(text).Where(x => x.TryGetProperty("errorCode", out _)).ToArray();
+        Assert.That(events.Where(x => x.GetProperty("errorCode").GetString() == "AUTH_PASSWORD_VERIFICATION_FAILED")
+            .Sum(x => x.GetProperty("Count").GetInt64()), Is.EqualTo(7));
+        Assert.That(events.Count(x => x.GetProperty("errorCode").GetString() == "AUTH_PASSWORD_LOCKED"), Is.EqualTo(1));
+        Assert.That(events.Where(x => x.GetProperty("errorCode").GetString() == "AUTH_PASSWORD_LOCKED")
+            .Select(x => x.GetProperty("UserId").GetGuid()), Is.All.EqualTo(user.Id));
+        Assert.That(text, Does.Not.Contain("AUTH_CHANGE_REJECTED").And.Not.Contain("AUTH_PASSKEY_FAILED")
+            .And.Not.Contain("AUTH_REQUEST_REJECTED").And.Not.Contain("private-incorrect-verification").And.Not.Contain("private-new-password"));
+    }
+
     [Test]
     public async Task CriticalAuditFallsBackToConsoleWhenFileStorageFails()
     {
