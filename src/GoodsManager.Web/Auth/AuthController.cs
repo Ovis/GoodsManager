@@ -27,7 +27,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
     {
         if (!ValidLoginId(request.LoginId))
         {
-            return Failure(400, "VALIDATION_FAILED");
+            return Failure(400, "VALIDATION_FAILED", kind: AuthEvent.AUTH_SETUP_REJECTED);
         }
 
         AppUser user;
@@ -37,12 +37,12 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
             await using var transaction = await db.Database.BeginTransactionAsync();
             if (await db.Users.AnyAsync())
             {
-                return Failure(409, "SETUP_COMPLETED");
+                return Failure(409, "SETUP_COMPLETED", kind: AuthEvent.AUTH_SETUP_REJECTED);
             }
 
             if (!setupToken.Verify(request.SetupToken))
             {
-                return Failure(403, "SETUP_TOKEN_INVALID");
+                return Failure(403, "SETUP_TOKEN_INVALID", kind: AuthEvent.AUTH_SETUP_REJECTED);
             }
 
             user = new AppUser { Id = Guid.NewGuid(), UserName = request.LoginId, LockoutEnabled = true, IsAdministrator = true };
@@ -50,7 +50,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
             var result = await users.CreateAsync(user, request.Password);
             if (!result.Succeeded)
             {
-                return Failure(400, "VALIDATION_FAILED");
+                return Failure(400, "VALIDATION_FAILED", kind: AuthEvent.AUTH_SETUP_REJECTED);
             }
 
             db.Add(new Collections.CollectionMember { CollectionId = Collections.CollectionSchema.DefaultId, UserId = user.Id, Role = "manager" });
@@ -80,7 +80,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
     {
         if (!StorageValues.IsValidText(request.Password, 0, 128))
         {
-            return Failure(401, "INVALID_CREDENTIALS");
+            return Failure(401, "INVALID_CREDENTIALS", kind: AuthEvent.AUTH_PASSWORD_FAILED);
         }
 
         AppUser? snapshot;
@@ -98,7 +98,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
             ? users.PasswordHasher.HashPassword(snapshot, request.Password) : null;
         if (snapshot is null)
         {
-            return Failure(401, "INVALID_CREDENTIALS");
+            return Failure(401, "INVALID_CREDENTIALS", kind: AuthEvent.AUTH_PASSWORD_FAILED);
         }
 
         await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
@@ -107,14 +107,14 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
             db.ChangeTracker.Clear();
             if (User.Identity?.IsAuthenticated == true && await AuthenticationState.GetCurrentUserAsync(db, signIn, User) is null)
             {
-                return Failure(401, "INVALID_CREDENTIALS", snapshot?.Id);
+                return Failure(401, "INVALID_CREDENTIALS", snapshot?.Id, kind: AuthEvent.AUTH_PASSWORD_FAILED);
             }
 
             var user = await users.FindByIdAsync(snapshot.Id.ToString("D"));
             if (user is null || user.PasswordHash != snapshot.PasswordHash || user.SecurityStamp != snapshot.SecurityStamp || user.NormalizedUserName != snapshot.NormalizedUserName
                 || !await signIn.CanSignInAsync(user) || await users.IsLockedOutAsync(user))
             {
-                return Failure(401, "INVALID_CREDENTIALS", snapshot?.Id);
+                return Failure(401, "INVALID_CREDENTIALS", snapshot?.Id, kind: AuthEvent.AUTH_PASSWORD_FAILED);
             }
 
             if (verified == PasswordVerificationResult.Failed)
@@ -126,7 +126,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
                     audit.Record(AuthEvent.AUTH_PASSWORD_LOCKED, user.Id);
                 }
 
-                return Failure(401, "INVALID_CREDENTIALS", snapshot?.Id);
+                return Failure(401, "INVALID_CREDENTIALS", snapshot?.Id, kind: AuthEvent.AUTH_PASSWORD_FAILED);
             }
 
             if (upgraded is not null)
@@ -334,10 +334,8 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
     internal static object UserDto(AppUser user) => new { id = user.Id, loginId = user.UserName, user.IsAdministrator, etag = AuthenticationEtags.Account(user) };
 
     /// <summary>認証処理のエラーを共通形式で返す</summary>
-    internal ObjectResult Failure(int status, string code, Guid? userId = null)
+    internal ObjectResult Failure(int status, string code, Guid? userId = null, AuthEvent kind = AuthEvent.AUTH_CHANGE_REJECTED)
     {
-        var kind = string.Equals(Request.Path.Value, "/api/v1/auth/password", StringComparison.OrdinalIgnoreCase) ? AuthEvent.AUTH_PASSWORD_FAILED
-            : string.Equals(Request.Path.Value, "/api/v1/setup", StringComparison.OrdinalIgnoreCase) ? AuthEvent.AUTH_SETUP_REJECTED : AuthEvent.AUTH_CHANGE_REJECTED;
         audit.Failure(HttpContext, kind, userId);
 
         return Problem(statusCode: status, title: "認証処理を確認してください", extensions: new Dictionary<string, object?> { ["code"] = code });

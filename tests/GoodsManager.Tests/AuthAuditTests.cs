@@ -12,6 +12,32 @@ namespace GoodsManager.Tests;
 
 public sealed class AuthAuditTests
 {
+    /// <summary>MVCが同じ操作へ解決するURLは、表記によらず同じ失敗イベントに集計する。</summary>
+    [TestCase("auth/password", "AUTH_PASSWORD_FAILED", HttpStatusCode.Unauthorized)]
+    [TestCase("auth/password/", "AUTH_PASSWORD_FAILED", HttpStatusCode.Unauthorized)]
+    [TestCase("AUTH/PASSWORD", "AUTH_PASSWORD_FAILED", HttpStatusCode.Unauthorized)]
+    [TestCase("setup", "AUTH_SETUP_REJECTED", HttpStatusCode.Forbidden)]
+    [TestCase("setup/", "AUTH_SETUP_REJECTED", HttpStatusCode.Forbidden)]
+    [TestCase("SETUP", "AUTH_SETUP_REJECTED", HttpStatusCode.Forbidden)]
+    public async Task AuditClassificationUsesTheActionInsteadOfTheRawPath(string path, string expectedEvent, HttpStatusCode status)
+    {
+        await using var app = new TestApplication();
+        using var client = Client(app);
+        var response = await SendAsync(client, path, new
+        {
+            loginId = "unknown",
+            password = Password,
+            setupToken = "invalid"
+        });
+        Assert.That(response.StatusCode, Is.EqualTo(status));
+        app.Services.GetRequiredService<AuthAudit>().Flush();
+
+        var events = Records(ReadLogs(app)).Where(x => x.TryGetProperty("errorCode", out var code)
+            && code.GetString() is "AUTH_PASSWORD_FAILED" or "AUTH_SETUP_REJECTED" or "AUTH_CHANGE_REJECTED" or "AUTH_REQUEST_REJECTED").ToArray();
+        Assert.That(events.Select(x => x.GetProperty("errorCode").GetString()), Is.EqualTo(new[] { expectedEvent }));
+        Assert.That(events.Single().GetProperty("Count").GetInt64(), Is.EqualTo(1));
+    }
+
     /// <summary>本人確認の失敗を操作間で数え、ロックへの遷移だけを一度記録する。</summary>
     [TestCase("password")]
     [TestCase("passkey-add")]
