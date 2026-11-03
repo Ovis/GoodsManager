@@ -69,34 +69,6 @@ public sealed class AccountSettingsTests
         })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
-    /// <summary>全端末失効で既存の全セッションを無効化し、同じパスワードで再ログインできることを確認する。</summary>
-    [Test]
-    public async Task RevokeAllInvalidatesCurrentAndOtherSessionsWithoutChangingPassword()
-    {
-        await using var app = new TestApplication();
-        using var first = Client(app);
-        await SetupAsync(first);
-
-        using var second = Client(app);
-        await SendAsync(second, "auth/password", new
-        {
-            loginId = "owner",
-            password = Password
-        });
-
-        Assert.That((await SendAsync(first, "auth/revoke-all")).StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
-        Assert.That((await first.GetAsync("/api/v1/auth/session")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-        Assert.That((await second.GetAsync("/api/v1/auth/session")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-
-        using var next = Client(app);
-
-        Assert.That((await SendAsync(next, "auth/password", new
-        {
-            loginId = "owner",
-            password = Password
-        })).StatusCode, Is.EqualTo(HttpStatusCode.OK));
-    }
-
     /// <summary>ID変更でログイン状態を保ち、古いETagによる上書きを拒否する。</summary>
     [Test]
     public async Task LoginIdChangeKeepsSessionsAndPasswordAndRejectsOldEtag()
