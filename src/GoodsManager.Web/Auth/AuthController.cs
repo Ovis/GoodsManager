@@ -188,7 +188,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
 
             await using var transaction = await db.Database.BeginTransactionAsync();
             EnsureSuccess(await users.UpdateSecurityStampAsync(user));
-            await db.AuthTickets.ExecuteDeleteAsync();
+            await db.AuthTickets.Where(x => x.UserId == user.Id).ExecuteDeleteAsync();
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
             await signIn.SignOutAsync();
@@ -229,7 +229,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
                 return Failure(400, "VALIDATION_FAILED");
             }
 
-            await db.AuthTickets.ExecuteDeleteAsync();
+            await db.AuthTickets.Where(x => x.UserId == user.Id).ExecuteDeleteAsync();
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
             await signIn.SignOutAsync();
