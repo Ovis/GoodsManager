@@ -134,6 +134,7 @@ app.Use(async (context, next) =>
 });
 // 同一ホストのプロキシ経由でも公開リスナーから重い検査を呼べない。
 app.Map("/health/ready", branch => branch.Run(context => { context.Response.StatusCode = 404; return Task.CompletedTask; }));
+app.Use(AuthAudit.ObserveAsync);
 app.UseRateLimiter();
 app.Use(AuthTraffic.LimitBodyAsync);
 app.UseAuthentication();

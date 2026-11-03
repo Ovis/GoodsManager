@@ -11,7 +11,7 @@ namespace GoodsManager.Web.Auth;
 /// <summary>初期セットアップと標準Identityを使ったパスワード認証</summary>
 [ApiController]
 [Route("api/v1")]
-public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, SignInManager<AppUser> signIn, AuthWriteGate gate, TimeProvider clock) : ControllerBase
+public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, SignInManager<AppUser> signIn, AuthWriteGate gate, TimeProvider clock, AuthAudit audit) : ControllerBase
 {
     /// <summary>ユーザー情報を公開せず、初期登録の要否だけを返す</summary>
     [HttpGet("setup/status")]
@@ -54,6 +54,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
             setupToken.Invalidate();
+            audit.Record(AuthEvent.AUTH_SETUP_CREATED, user.Id);
             await IssueCookieAsync(user, false);
             return Created("/api/v1/auth/session", new { user = UserDto(user) });
         }
@@ -89,20 +90,22 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
         {
             db.ChangeTracker.Clear();
             if (User.Identity?.IsAuthenticated == true && await AuthenticationState.GetCurrentUserAsync(db, signIn, User) is null)
-                return Failure(401, "INVALID_CREDENTIALS");
+                return Failure(401, "INVALID_CREDENTIALS", snapshot?.Id);
             var user = await users.FindByIdAsync(snapshot.Id.ToString("D"));
             if (user is null || user.PasswordHash != snapshot.PasswordHash || user.SecurityStamp != snapshot.SecurityStamp || user.NormalizedUserName != snapshot.NormalizedUserName
-                || !await signIn.CanSignInAsync(user) || await users.IsLockedOutAsync(user)) return Failure(401, "INVALID_CREDENTIALS");
+                || !await signIn.CanSignInAsync(user) || await users.IsLockedOutAsync(user)) return Failure(401, "INVALID_CREDENTIALS", snapshot?.Id);
             if (verified == PasswordVerificationResult.Failed)
             {
                 // 最新の失敗回数に対して直列に更新し、並行要求でロックを取りこぼさない。
                 EnsureSuccess(await users.AccessFailedAsync(user));
-                return Failure(401, "INVALID_CREDENTIALS");
+                if (await users.IsLockedOutAsync(user)) audit.Record(AuthEvent.AUTH_PASSWORD_LOCKED, user.Id);
+                return Failure(401, "INVALID_CREDENTIALS", snapshot?.Id);
             }
             if (upgraded is not null) { user.PasswordHash = upgraded; EnsureSuccess(await users.UpdateAsync(user)); }
             EnsureSuccess(await users.ResetAccessFailedCountAsync(user));
             // 失効との順序を確定するため、最終確認からチケット保存は同じゲートで保護する。
             var expiresAt = await IssueCookieAsync(user, request.RememberMe);
+            audit.Record(AuthEvent.AUTH_PASSWORD_LOGIN, user.Id);
             return Ok(new { user = UserDto(user), expiresAt });
         }
         finally { gate.Semaphore.Release(); }
@@ -151,6 +154,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
                 EnsureSuccess(await users.UpdateAsync(user));
                 await IncrementRevisionAsync();
                 await transaction.CommitAsync();
+                audit.Record(AuthEvent.AUTH_LOGIN_ID_CHANGED, user.Id);
             }
 
             Response.Headers.ETag = AuthenticationEtags.Account(user);
@@ -170,7 +174,9 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
         await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
         try
         {
+            var userId = AuthAudit.UserId(User);
             await signIn.SignOutAsync();
+            audit.Record(AuthEvent.AUTH_LOGOUT, userId);
             return NoContent();
         }
         finally
@@ -198,6 +204,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
             await db.AuthTickets.Where(x => x.UserId == user.Id).ExecuteDeleteAsync();
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
+            audit.Record(AuthEvent.AUTH_ALL_SESSIONS_REVOKED, user.Id);
             await signIn.SignOutAsync();
             return NoContent();
         }
@@ -239,6 +246,7 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
             await db.AuthTickets.Where(x => x.UserId == user.Id).ExecuteDeleteAsync();
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
+            audit.Record(AuthEvent.AUTH_PASSWORD_CHANGED, user.Id);
             await signIn.SignOutAsync();
             return NoContent();
         }
@@ -271,7 +279,13 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
     internal static object UserDto(AppUser user) => new { id = user.Id, loginId = user.UserName, user.IsAdministrator, etag = AuthenticationEtags.Account(user) };
 
     /// <summary>認証処理のエラーを共通形式で返す</summary>
-    internal ObjectResult Failure(int status, string code) => Problem(statusCode: status, title: "認証処理を確認してください", extensions: new Dictionary<string, object?> { ["code"] = code });
+    internal ObjectResult Failure(int status, string code, Guid? userId = null)
+    {
+        var kind = string.Equals(Request.Path.Value, "/api/v1/auth/password", StringComparison.OrdinalIgnoreCase) ? AuthEvent.AUTH_PASSWORD_FAILED
+            : string.Equals(Request.Path.Value, "/api/v1/setup", StringComparison.OrdinalIgnoreCase) ? AuthEvent.AUTH_SETUP_REJECTED : AuthEvent.AUTH_CHANGE_REJECTED;
+        audit.Failure(HttpContext, kind, userId);
+        return Problem(statusCode: status, title: "認証処理を確認してください", extensions: new Dictionary<string, object?> { ["code"] = code });
+    }
 
     /// <summary>標準ストアの保存失敗を成功扱いしない</summary>
     internal static void EnsureSuccess(IdentityResult result)

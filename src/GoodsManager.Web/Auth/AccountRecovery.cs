@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace GoodsManager.Web.Auth;
 
 /// <summary>停止中CLIのパスワード再設定。HTTPへは公開しない</summary>
-public sealed class AccountRecovery(AppDbContext db, UserManager<AppUser> users, TimeProvider clock)
+public sealed class AccountRecovery(AppDbContext db, UserManager<AppUser> users, TimeProvider clock, AuthAudit audit)
 {
     /// <summary>パスキーの保持・削除を明示して、パスワード・全端末失効を一括確定</summary>
     public async Task<IdentityResult> ResetAsync(string password, bool clearPasskeys, string? loginId = null)
@@ -40,6 +40,7 @@ public sealed class AccountRecovery(AppDbContext db, UserManager<AppUser> users,
         await db.AuthTickets.Where(x => x.UserId == user.Id).ExecuteDeleteAsync();
         await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE SystemState SET DataRevision=DataRevision+1, UpdatedAt={StorageValues.ToMilliseconds(clock.GetUtcNow())} WHERE Id=1");
         await transaction.CommitAsync();
+        audit.Record(AuthEvent.AUTH_ACCOUNT_RECOVERED, user.Id);
         return result;
     }
 

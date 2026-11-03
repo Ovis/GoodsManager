@@ -13,7 +13,7 @@ namespace GoodsManager.Web.Auth;
 /// <summary>Identity標準の暗号検証とストアを使用するパスキーAPI</summary>
 [ApiController]
 [Route("api/v1")]
-public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> users, SignInManager<AppUser> signIn, PasskeyCeremonies ceremonies, OperationVerification verification, AuthWriteGate gate, TimeProvider clock, IHostEnvironment environment) : ControllerBase
+public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> users, SignInManager<AppUser> signIn, PasskeyCeremonies ceremonies, OperationVerification verification, AuthWriteGate gate, TimeProvider clock, IHostEnvironment environment, AuthAudit audit) : ControllerBase
 {
     /// <summary>ログイン保持をチャレンジに結び付け、標準の認証選択肢を発行</summary>
     [HttpPost("auth/passkey/options")]
@@ -46,7 +46,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
                 || (ceremony.UserId.HasValue && (ceremony.UserId != result.User.Id || ceremony.SecurityStamp != result.User.SecurityStamp))
                 || (ceremony.UserStamps is { } stamps && (!stamps.TryGetValue(result.User.Id, out var stamp) || stamp != result.User.SecurityStamp)))
             {
-                return Failure(401, "INVALID_CREDENTIALS");
+                return Failure(401, "INVALID_CREDENTIALS", ceremony.UserId);
             }
 
             user = result.User;
@@ -56,6 +56,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
             var expires = now.AddDays(ceremony.RememberMe ? 30 : 7);
             var properties = new AuthenticationProperties { IsPersistent = ceremony.RememberMe, IssuedUtc = now, ExpiresUtc = expires, AllowRefresh = false };
             await signIn.SignInAsync(user, properties);
+            audit.Record(AuthEvent.AUTH_PASSKEY_LOGIN, user.Id);
             return Ok(new { user = AuthController.UserDto(user), expiresAt = properties.ExpiresUtc });
         }
         finally
@@ -156,6 +157,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
             {
                 if (environment.IsDevelopment())
                 {
+                    audit.Failure(HttpContext, AuthEvent.AUTH_PASSKEY_FAILED, user.Id);
                     // 例外本文には入力値が含まれ得るため、固定分類と型名だけを返す
                     return Problem(statusCode: 400, title: "パスキーの操作を確認してください", extensions: new Dictionary<string, object?>
                     {
@@ -178,6 +180,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
             AuthController.EnsureSuccess(await users.AddOrUpdatePasskeyAsync(user, PasskeyMetadata.RequireValid(result.Passkey)));
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
+            audit.Record(AuthEvent.AUTH_PASSKEY_ADDED, user.Id);
             Response.Headers.ETag = AuthenticationEtags.Passkey(user, result.Passkey.CredentialId);
             return Created("/api/v1/account/passkeys/" + PasskeyCeremonies.CredentialId(result.Passkey.CredentialId), Dto(result.Passkey, user));
         }
@@ -223,6 +226,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
             AuthController.EnsureSuccess(await users.AddOrUpdatePasskeyAsync(user, passkey));
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
+            audit.Record(AuthEvent.AUTH_PASSKEY_RENAMED, user.Id);
             Response.Headers.ETag = AuthenticationEtags.Passkey(user, passkey.CredentialId);
             return Ok(Dto(passkey, user));
         }
@@ -267,6 +271,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
             AuthController.EnsureSuccess(await users.RemovePasskeyAsync(user, passkey.CredentialId));
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
+            audit.Record(AuthEvent.AUTH_PASSKEY_REMOVED, user.Id);
             return NoContent();
         }
         finally
@@ -298,7 +303,11 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
     private Task IncrementRevisionAsync() => db.Database.ExecuteSqlInterpolatedAsync($"UPDATE SystemState SET DataRevision=DataRevision+1, UpdatedAt={StorageValues.ToMilliseconds(clock.GetUtcNow())} WHERE Id=1");
 
     /// <summary>秘密を含まない失敗応答</summary>
-    private ObjectResult Failure(int status, string code) => Problem(statusCode: status, title: "パスキーの操作を確認してください", extensions: new Dictionary<string, object?> { ["code"] = code });
+    private ObjectResult Failure(int status, string code, Guid? userId = null)
+    {
+        audit.Failure(HttpContext, AuthEvent.AUTH_PASSKEY_FAILED, userId);
+        return Problem(statusCode: status, title: "パスキーの操作を確認してください", extensions: new Dictionary<string, object?> { ["code"] = code });
+    }
 }
 
 public sealed record PasskeyLoginOptions(string? LoginId, bool RememberMe);

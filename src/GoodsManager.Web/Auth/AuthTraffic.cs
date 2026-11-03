@@ -46,6 +46,7 @@ public static class AuthTraffic
                     : RateLimitPartition.GetNoLimiter("none")));
             options.OnRejected = async (rejected, cancellation) =>
             {
+                rejected.HttpContext.RequestServices.GetRequiredService<AuthAudit>().Failure(rejected.HttpContext, AuthEvent.AUTH_RATE_LIMITED);
                 rejected.HttpContext.Response.Headers.RetryAfter = rejected.Lease.TryGetMetadata(MetadataName.RetryAfter, out var wait)
                     ? Math.Max(1, (int)Math.Ceiling(wait.TotalSeconds)).ToString(CultureInfo.InvariantCulture) : "60";
                 await Results.Problem(statusCode: 429, title: "認証処理が混み合っています。しばらく待ってからやり直してください", extensions: new Dictionary<string, object?> { ["code"] = "AUTH_RATE_LIMITED" }).ExecuteAsync(rejected.HttpContext);

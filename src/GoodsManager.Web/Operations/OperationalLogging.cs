@@ -55,7 +55,10 @@ public sealed partial class OperationalLogging : ILoggerProvider
             foreach (var pair in values)
             {
                 // テンプレート自体も動的入力の可能性があるため、メッセージは保存しない。
-                if (pair.Key is "Id" or "UploadId" or "FileId" or "RunId" or "OperationId" && pair.Value is Guid id) fields[pair.Key] = id;
+                if (pair.Key is "Id" or "UploadId" or "FileId" or "RunId" or "OperationId" or "UserId" && pair.Value is Guid id) fields[pair.Key] = id;
+                else if (pair.Key == "Count" && pair.Value is long count && count > 0) fields[pair.Key] = count;
+                else if (pair.Key == "Aggregated" && pair.Value is bool aggregated) fields[pair.Key] = aggregated;
+                else if (pair.Key is "WindowStart" or "WindowEnd" && pair.Value is DateTimeOffset time) fields[pair.Key] = time;
                 else if (pair.Key is "Code" or "ErrorCode" && pair.Value is string code && CodePattern().IsMatch(code)) fields["errorCode"] = code;
                 else if (pair.Key is "TraceId" or "ExceptionType" or "Type" && pair.Value is string value && value.Length <= 128 && value.All(c => char.IsAsciiLetterOrDigit(c) || c is ':' or '-' or '_')) fields[pair.Key] = value;
             }
