@@ -120,15 +120,15 @@ public sealed class OperationsTests
     public async Task ReadinessDetectsWritableDirectoryFailureAndRecovery()
     {
         await using var app = new TestApplication(); using var client = app.CreateClient();
-        Assert.That((await client.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await app.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var images = Path.Combine(app.DataDirectory, "images"); var held = images + ".held";
         Directory.Move(images, held); File.WriteAllText(images, "blocked");
         try
         {
-            Assert.That((await client.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+            Assert.That((await app.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
             Assert.That((await client.GetAsync("/health/live")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
         finally { File.Delete(images); Directory.Move(held, images); }
-        Assert.That((await client.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await app.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 }

@@ -70,7 +70,7 @@ public sealed class MasterMigrationTests
         }
         await using var second = new TestApplication(directory);
         using var client = Client(second);
-        Assert.That((await client.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await second.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await using var afterScope = second.Services.CreateAsyncScope();
         var after = afterScope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.That(await after.Set<Category>().CountAsync(), Is.EqualTo(9));

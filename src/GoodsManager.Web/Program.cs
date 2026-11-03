@@ -13,7 +13,7 @@ using GoodsManager.Web.Search;
 using GoodsManager.Web.Images;
 using GoodsManager.Web.PhotoOcr;
 
-if (args.FirstOrDefault() == "healthcheck") { Environment.ExitCode = await HealthCommand.RunAsync(); return; }
+if (args.FirstOrDefault() == "healthcheck") { Environment.ExitCode = await HealthCommand.RunAsync(WebApplication.CreateBuilder([]).Configuration); return; }
 if (args.FirstOrDefault() == "image-worker") { Environment.ExitCode = ImageConverter.RunCli(args); return; }
 if (args.FirstOrDefault() == "backup")
 {
@@ -33,6 +33,8 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddSingleton(services => new DatabaseRuntime(services.GetRequiredService<IConfiguration>()["Storage:Directory"] ?? Path.Combine(builder.Environment.ContentRootPath, "data")));
 builder.Services.AddDbContext<AppDbContext>((services, options) => options.UseSqlite(services.GetRequiredService<DatabaseRuntime>().ConnectionString));
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
+builder.Services.AddSingleton<InternalHealthListener>();
+builder.Services.AddHostedService(services => services.GetRequiredService<InternalHealthListener>());
 builder.Services.AddSingleton<GoodsManager.Web.Backups.BackupGate>();
 builder.Services.AddSingleton<GoodsManager.Web.Backups.BackupOptions>();
 builder.Services.AddSingleton<GoodsManager.Web.Backups.BackupSignal>();
@@ -130,6 +132,8 @@ app.Use(async (context, next) =>
 
     await next(context);
 });
+// 同一ホストのプロキシ経由でも公開リスナーから重い検査を呼べない。
+app.Map("/health/ready", branch => branch.Run(context => { context.Response.StatusCode = 404; return Task.CompletedTask; }));
 app.UseRateLimiter();
 app.Use(AuthTraffic.LimitBodyAsync);
 app.UseAuthentication();
@@ -163,7 +167,6 @@ app.MapMasterCheck();
 app.MapProductCheck();
 app.MapImageCheck();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
-app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("GoodsManager.Web.Operations").LogInformation(new EventId(1000), "運用開始 Code={Code}", "APPLICATION_READY");
 app.Run();
 

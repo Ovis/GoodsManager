@@ -18,7 +18,7 @@ public sealed class MigrationReviewTests
         {
             directory = original.DataDirectory;
             using var client = original.CreateClient();
-            Assert.That((await client.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That((await original.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         await ExecuteAsync(directory, lockRemains
@@ -40,7 +40,7 @@ public sealed class MigrationReviewTests
     {
         await using var app = new TestApplication();
         using var client = app.CreateClient();
-        Assert.That((await client.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await app.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await using var scope = app.Services.CreateAsyncScope();
         var runtime = scope.ServiceProvider.GetRequiredService<DatabaseRuntime>();
         await using var connection = new SqliteConnection(runtime.ConnectionString);
@@ -48,7 +48,7 @@ public sealed class MigrationReviewTests
         await using var command = connection.CreateCommand();
         command.CommandText = "INSERT INTO __EFMigrationsHistory(MigrationId,ProductVersion) VALUES('20990101000000_Unknown','99.0.0')";
         await command.ExecuteNonQueryAsync();
-        var response = await client.GetAsync("/health/ready");
+        var response = await app.ReadinessAsync();
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
         Assert.That(await response.Content.ReadAsStringAsync(), Does.Not.Contain("Unknown").And.Not.Contain(app.DataDirectory));
     }

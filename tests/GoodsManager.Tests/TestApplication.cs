@@ -37,13 +37,20 @@ public sealed class TestApplication : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureAppConfiguration((_, configuration) =>
-            configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Storage:Directory"] = DataDirectory, ["Backups:WorkerEnabled"] = "false" }));
+            configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Storage:Directory"] = DataDirectory, ["Backups:WorkerEnabled"] = "false", ["Operations:HealthPort"] = "0" }));
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
             ConfigureTestServices?.Invoke(services);
         });
+    }
+
+    /// <summary>公開TestServerとは別の内部専用HTTPリスナーで準備検査を呼ぶ。</summary>
+    public async Task<HttpResponseMessage> ReadinessAsync()
+    {
+        using var client = new HttpClient(new SocketsHttpHandler { UseProxy = false, AllowAutoRedirect = false });
+        return await client.GetAsync(Services.GetRequiredService<GoodsManager.Web.Operations.InternalHealthListener>().ReadinessUri);
     }
 
     /// <summary>ホストと接続プールを解放した後、試験用ファイルを削除</summary>

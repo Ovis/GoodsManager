@@ -181,7 +181,7 @@ public sealed class ImageTests
         var stored = await Db(async db => await db.Set<ImageFile>().SingleAsync(x => db.Set<ImageAsset>().Any(a => a.Id == entry.GetProperty("assetId").GetGuid() && a.DisplayFileId == x.Id)));
         var files = app.Services.GetRequiredService<IImageFiles>(); var bytes = await File.ReadAllBytesAsync(files.Resolve(stored.RelativePath)); files.Delete(stored.RelativePath);
         Assert.That((await client.GetAsync(entry.GetProperty("displayUrl").GetString())).StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
-        Assert.That((await client.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+        Assert.That((await app.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
         var alerts = await client.GetFromJsonAsync<JsonElement>("/api/v1/system/alerts"); Assert.That(alerts.GetProperty("entries").GetArrayLength(), Is.EqualTo(1)); Assert.That(alerts.ToString(), Does.Not.Contain(app.DataDirectory));
         await File.WriteAllBytesAsync(files.Resolve(stored.RelativePath), bytes); Assert.That((await client.GetAsync(entry.GetProperty("displayUrl").GetString())).StatusCode, Is.EqualTo(HttpStatusCode.OK)); Assert.That((await client.GetFromJsonAsync<JsonElement>("/api/v1/system/alerts")).GetProperty("entries").GetArrayLength(), Is.Zero);
     }

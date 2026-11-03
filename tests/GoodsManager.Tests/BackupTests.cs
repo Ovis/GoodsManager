@@ -252,7 +252,7 @@ public sealed class BackupTests
         }
         Assert.That(File.Exists(imagePath), Is.True);
         app = new TestApplication(app.DataDirectory); owner.Dispose(); owner = Client(app);
-        Assert.That((await owner.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await app.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     /// <summary>WALの未コミット更新を含むプロセスを終了しても数量と変更番号を失わない</summary>
@@ -262,7 +262,7 @@ public sealed class BackupTests
         var revision = await Revision(); app.PreserveData = true; await app.DisposeAsync();
         await KillAtBoundary("transaction", app.DataDirectory);
         app = new TestApplication(app.DataDirectory); owner.Dispose(); owner = Client(app);
-        Assert.That((await owner.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await app.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(await Revision(), Is.EqualTo(revision));
         await using var scope = app.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.That(await db.Set<InventoryLot>().SumAsync(x => x.Quantity), Is.EqualTo(2));
@@ -351,7 +351,7 @@ public sealed class BackupTests
             Assert.That(await File.ReadAllBytesAsync(Path.Combine(previous, "goods-manager.db-wal")), Is.EqualTo(new byte[] { 4, 5 }));
         }
         app = new TestApplication(app.DataDirectory); owner.Dispose(); owner = Client(app);
-        Assert.That((await owner.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await app.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
     /// <summary>本人の履歴とZIPは匿名取得不可。認証済みでもCSRFなしでは受付しない</summary>
@@ -426,7 +426,7 @@ public sealed class BackupTests
             await new BackupRestore(runtime, Options()).RestoreAsync(archive, default);
         }
         app = new TestApplication(app.DataDirectory); owner.Dispose(); owner = Client(app);
-        Assert.That((await owner.GetAsync("/health/ready")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await app.ReadinessAsync()).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         await using var scope = app.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.That(await db.Set<BackupSettings>().CountAsync(), Is.EqualTo(1)); Assert.That(await db.Set<ProductImage>().CountAsync(), Is.EqualTo(1)); Assert.That(db.Database.HasPendingModelChanges(), Is.False);
         Assert.That(await db.Set<GoodsManager.Web.Collections.CollectionSpace>().CountAsync(), Is.EqualTo(2)); Assert.That(await db.Set<GoodsManager.Web.Collections.CollectionMember>().CountAsync(), Is.EqualTo(2)); Assert.That((await db.Users.SingleAsync()).IsAdministrator, Is.True);
