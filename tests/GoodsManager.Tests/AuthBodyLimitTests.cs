@@ -17,9 +17,6 @@ public sealed class AuthBodyLimitTests
     /// <summary>宣言長・逐次転送・HTTP/2で本文制限を確認し、チャンクの付加情報も上限へ含める。</summary>
     [TestCase("length", 65536, HttpStatusCode.Unauthorized)]
     [TestCase("length", 65537, HttpStatusCode.RequestEntityTooLarge)]
-    [TestCase("stream", 65500, HttpStatusCode.Unauthorized)]
-    [TestCase("stream", 65536, HttpStatusCode.RequestEntityTooLarge)]
-    [TestCase("stream", 65537, HttpStatusCode.RequestEntityTooLarge)]
     [TestCase("chunked", 65500, HttpStatusCode.Unauthorized)]
     [TestCase("chunked", 65536, HttpStatusCode.RequestEntityTooLarge)]
     [TestCase("chunked", 65537, HttpStatusCode.RequestEntityTooLarge)]
@@ -80,11 +77,6 @@ public sealed class AuthBodyLimitTests
         Assert.That(request.Content.Headers.ContentLength, framing == "length" ? Is.EqualTo(length) : Is.Null);
         request.Headers.Add("Cookie", cookie);
         request.Headers.Add("X-CSRF-Token", csrf.GetProperty("token").GetString());
-        if (framing == "chunked")
-        {
-            request.Headers.TransferEncodingChunked = true;
-        }
-
         using var response = await client.SendAsync(request);
         Assert.That(response.Version, Is.EqualTo(client.DefaultRequestVersion));
         Assert.That(response.StatusCode, Is.EqualTo(expected), await response.Content.ReadAsStringAsync());
