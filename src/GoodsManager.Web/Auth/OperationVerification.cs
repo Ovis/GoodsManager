@@ -15,7 +15,7 @@ public sealed class OperationVerification(SignInManager<AppUser> signIn, UserMan
         }
 
         if (request.ChallengeId is not { } id || request.Credential is not { } credential
-            || ceremonies.Consume(context, id, purpose, user) is null || await users.IsLockedOutAsync(user))
+            || ceremonies.Consume(context, id, purpose, user) is null)
         {
             return false;
         }

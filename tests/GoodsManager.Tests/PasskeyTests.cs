@@ -14,6 +14,91 @@ namespace GoodsManager.Tests;
 /// <summary>試験用認証器の実署名をIdentity標準ハンドラーで検証</summary>
 public sealed class PasskeyTests
 {
+    /// <summary>パスワードロックを保持したまま、実署名による本人確認で設定変更できることを確認する。</summary>
+    [TestCase("password")]
+    [TestCase("passkey-add")]
+    [TestCase("passkey-delete")]
+    public async Task PasswordLockDoesNotPreventPasskeyOperationVerification(string operation)
+    {
+        await using var app = new TestApplication();
+        using var owner = Client(app);
+        await SetupAsync(owner);
+        using var first = new TestAuthenticator();
+        using var second = new TestAuthenticator();
+        await RegisterAsync(owner, first, "本人確認用");
+        await RegisterAsync(owner, second, "削除対象");
+
+        using var client = Client(app);
+        for (var i = 0; i < 5; i++)
+        {
+            await SendAsync(client, "auth/password", new
+            {
+                loginId = "owner",
+                password = "wrong"
+            });
+        }
+
+        var login = await (await SendAsync(client, "auth/passkey/options", new
+        {
+            loginId = "owner",
+            rememberMe = false
+        }))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        var response = await SendAsync(client, "auth/passkey/verify", new
+        {
+            challengeId = login.GetProperty("challengeId"),
+            credential = first.Get(login.GetProperty("publicKeyOptions"))
+        });
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var proof = await (await SendAsync(client, "auth/reauthenticate", new
+        {
+            purpose = operation == "passkey-delete" ? operation + ":" + second.Id : operation
+        })).Content.ReadFromJsonAsync<JsonElement>();
+        var verification = new
+        {
+            challengeId = proof.GetProperty("challengeId"),
+            credential = first.Get(proof.GetProperty("publicKeyOptions"))
+        };
+
+        if (operation == "password")
+        {
+            response = await SendAsync(client, "account/password", new
+            {
+                newPassword = "changed-password-123",
+                verification
+            });
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent), await response.Content.ReadAsStringAsync());
+        }
+        else if (operation == "passkey-add")
+        {
+            response = await SendAsync(client, "account/passkeys/options", new
+            {
+                verification
+            });
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
+            var enrollment = await response.Content.ReadFromJsonAsync<JsonElement>();
+            using var added = new TestAuthenticator();
+            response = await SendAsync(client, "account/passkeys", new
+            {
+                challengeId = enrollment.GetProperty("challengeId"),
+                credential = added.Create(enrollment.GetProperty("publicKeyOptions")),
+                displayName = "追加端末"
+            });
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created), await response.Content.ReadAsStringAsync());
+        }
+        else
+        {
+            response = await SendAsync(client, "account/passkeys/" + second.Id, verification, HttpMethod.Delete, await EtagAsync(client, second.Id));
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent), await response.Content.ReadAsStringAsync());
+        }
+
+        await using var scope = app.Services.CreateAsyncScope();
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+        var user = await users.FindByNameAsync("owner") ?? throw new InvalidOperationException("試験ユーザーが存在しない");
+        Assert.That(await users.IsLockedOutAsync(user), Is.True);
+    }
+
     [Test]
     public async Task PasswordLockDoesNotPreventValidPasskeyLoginOrClearPasswordLock()
     {
