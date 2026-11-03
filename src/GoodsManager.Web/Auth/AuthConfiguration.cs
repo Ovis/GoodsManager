@@ -15,6 +15,8 @@ public static class AuthConfiguration
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<AuthWriteGate>();
         builder.Services.AddSingleton<SetupToken>();
+        builder.Services.AddSingleton<PasswordProbe>();
+        builder.Services.AddAuthTraffic();
         builder.Services.AddSingleton<PasskeyCeremonies>();
         builder.Services.AddHostedService<PasskeyCleanupWorker>();
         builder.Services.AddDataProtection().SetApplicationName("GoodsManager");

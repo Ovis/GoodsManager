@@ -64,44 +64,48 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
 
     }
 
-    /// <summary>失敗回数の更新を直列化し、存在しないIDと誤パスワードを同じ応答にする</summary>
+    /// <summary>ハッシュ計算だけを共通ゲートの外へ移し、計算後に認証世代・ハッシュ・失敗回数を再照合する。</summary>
     [HttpPost("auth/password")]
-    public async Task<IActionResult> PasswordLogin(LoginRequest request)
+    public async Task<IActionResult> PasswordLogin(LoginRequest request, [FromServices] PasswordProbe probe)
     {
-        AppUser? user;
+        if (!StorageValues.IsValidText(request.Password, 0, 128)) return Failure(401, "INVALID_CREDENTIALS");
+        AppUser? snapshot;
         await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
         try
         {
-            // 匿名ログインでも既存クッキーの検証で追跡された古いパスワードハッシュを破棄
             db.ChangeTracker.Clear();
-            if (!StorageValues.IsValidText(request.Password, 0, 128))
+            snapshot = ValidLoginId(request.LoginId) ? await users.FindByNameAsync(request.LoginId) : null;
+        }
+        finally { gate.Semaphore.Release(); }
+
+        // この区間はDBへ書き込まない。匿名IDでも既知IDでも同じ標準検証処理を使う。
+        var verified = users.PasswordHasher.VerifyHashedPassword(snapshot ?? new AppUser(), snapshot?.PasswordHash ?? probe.Hash, request.Password);
+        var upgraded = verified == PasswordVerificationResult.SuccessRehashNeeded && snapshot is not null
+            ? users.PasswordHasher.HashPassword(snapshot, request.Password) : null;
+        if (snapshot is null) return Failure(401, "INVALID_CREDENTIALS");
+
+        await gate.Semaphore.WaitAsync(HttpContext.RequestAborted);
+        try
+        {
+            db.ChangeTracker.Clear();
+            if (User.Identity?.IsAuthenticated == true && await AuthenticationState.GetCurrentUserAsync(db, signIn, User) is null)
+                return Failure(401, "INVALID_CREDENTIALS");
+            var user = await users.FindByIdAsync(snapshot.Id.ToString("D"));
+            if (user is null || user.PasswordHash != snapshot.PasswordHash || user.SecurityStamp != snapshot.SecurityStamp || user.NormalizedUserName != snapshot.NormalizedUserName
+                || !await signIn.CanSignInAsync(user) || await users.IsLockedOutAsync(user)) return Failure(401, "INVALID_CREDENTIALS");
+            if (verified == PasswordVerificationResult.Failed)
             {
+                // 最新の失敗回数に対して直列に更新し、並行要求でロックを取りこぼさない。
+                EnsureSuccess(await users.AccessFailedAsync(user));
                 return Failure(401, "INVALID_CREDENTIALS");
             }
-
-            user = ValidLoginId(request.LoginId) ? await users.FindByNameAsync(request.LoginId) : null;
-            if (user is null)
-            {
-                // IDの有無によるハッシュ検証時間の大きな差を抑える
-                var dummy = new AppUser();
-                users.PasswordHasher.HashPassword(dummy, request.Password);
-                return Failure(401, "INVALID_CREDENTIALS");
-            }
-
-            if (!(await signIn.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true)).Succeeded)
-            {
-                return Failure(401, "INVALID_CREDENTIALS");
-            }
-
-            // 失効との順序を確定するため、認証確認からチケット保存まで同じゲートで保護
+            if (upgraded is not null) { user.PasswordHash = upgraded; EnsureSuccess(await users.UpdateAsync(user)); }
+            EnsureSuccess(await users.ResetAccessFailedCountAsync(user));
+            // 失効との順序を確定するため、最終確認からチケット保存は同じゲートで保護する。
             var expiresAt = await IssueCookieAsync(user, request.RememberMe);
             return Ok(new { user = UserDto(user), expiresAt });
         }
-        finally
-        {
-            gate.Semaphore.Release();
-        }
-
+        finally { gate.Semaphore.Release(); }
     }
 
     /// <summary>標準認証チケットの期限と保持設定を返す</summary>

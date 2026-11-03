@@ -130,6 +130,8 @@ app.Use(async (context, next) =>
 
     await next(context);
 });
+app.UseRateLimiter();
+app.Use(AuthTraffic.LimitBodyAsync);
 app.UseAuthentication();
 app.UseAuthorization();
 app.Use(GoodsManager.Web.Collections.CollectionAccess.InvokeAsync);

@@ -42,7 +42,7 @@ public sealed class PasskeysController(AppDbContext db, UserManager<AppUser> use
         {
             db.ChangeTracker.Clear();
             var result = await AssertionAsync(request.Credential);
-            if (result is null || !result.Succeeded || await users.IsLockedOutAsync(result.User)
+            if (result is null || !result.Succeeded
                 || (ceremony.UserId.HasValue && (ceremony.UserId != result.User.Id || ceremony.SecurityStamp != result.User.SecurityStamp))
                 || (ceremony.UserStamps is { } stamps && (!stamps.TryGetValue(result.User.Id, out var stamp) || stamp != result.User.SecurityStamp)))
             {

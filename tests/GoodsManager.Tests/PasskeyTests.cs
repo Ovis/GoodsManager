@@ -14,6 +14,20 @@ namespace GoodsManager.Tests;
 /// <summary>試験用認証器の実署名をIdentity標準ハンドラーで検証</summary>
 public sealed class PasskeyTests
 {
+    [Test]
+    public async Task PasswordLockDoesNotPreventValidPasskeyLoginOrClearPasswordLock()
+    {
+        await using var app = new TestApplication(); using var owner = Client(app); await SetupAsync(owner);
+        using var authenticator = new TestAuthenticator(); await RegisterAsync(owner, authenticator, "試験端末");
+        using var anonymous = Client(app);
+        for (var i = 0; i < 5; i++) await SendAsync(anonymous, "auth/password", new { loginId = "owner", password = "wrong" });
+        Assert.That((await SendAsync(anonymous, "auth/password", new { loginId = "owner", password = Password })).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        var options = await (await SendAsync(anonymous, "auth/passkey/options", new { loginId = "owner", rememberMe = false })).Content.ReadFromJsonAsync<JsonElement>();
+        var response = await SendAsync(anonymous, "auth/passkey/verify", new { challengeId = options.GetProperty("challengeId"), credential = authenticator.Get(options.GetProperty("publicKeyOptions")) });
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        await using var scope = app.Services.CreateAsyncScope(); var users = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+        Assert.That(await users.IsLockedOutAsync((await users.FindByNameAsync("owner"))!), Is.True);
+    }
     /// <summary>空でも拡張結果が必須であり、正しいJSONなら標準検証で登録できることを確認</summary>
     [Test]
     public async Task RegistrationRequiresClientExtensionResultsEvenWhenEmpty()
