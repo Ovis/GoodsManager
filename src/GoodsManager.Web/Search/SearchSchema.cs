@@ -31,10 +31,10 @@ public static class SearchSchema
             e.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        model.Entity<Product>().HasIndex(x => new { x.CreatedAt, x.Id }).IsDescending(true, false).HasFilter("DeletedAt IS NULL");
+        model.Entity<Product>().HasIndex("CollectionId", nameof(Product.CreatedAt), nameof(Product.Id)).IsDescending(false, true, false).HasFilter("DeletedAt IS NULL");
 
-        model.Entity<Product>().HasIndex(x => new { x.UpdatedAt, x.Id }).IsDescending(true, false).HasFilter("DeletedAt IS NULL");
+        model.Entity<Product>().HasIndex("CollectionId", nameof(Product.UpdatedAt), nameof(Product.Id)).IsDescending(false, true, false).HasFilter("DeletedAt IS NULL");
 
-        model.Entity<Product>().HasIndex(x => new { x.NormalizedName, x.Id }).HasFilter("DeletedAt IS NULL");
+        model.Entity<Product>().HasIndex("CollectionId", nameof(Product.NormalizedName), nameof(Product.Id)).HasFilter("DeletedAt IS NULL");
     }
 }

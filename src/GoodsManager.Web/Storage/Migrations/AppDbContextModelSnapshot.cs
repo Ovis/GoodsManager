@@ -424,8 +424,6 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectionId");
-
                     b.HasIndex("DisplayFileId");
 
                     b.HasIndex("OriginalFileId");
@@ -583,8 +581,6 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("CollectionId");
 
-                    b.HasIndex("CollectionId");
-
                     b.ToTable("ImageSettings", null, t =>
                         {
                             t.HasCheckConstraint("CK_ImageSettings_CollectionId_Storage", "typeof(\"CollectionId\") = 'text' AND length(\"CollectionId\") = 36 AND instr(\"CollectionId\", char(0)) = 0 AND substr(\"CollectionId\",9,1) = '-' AND substr(\"CollectionId\",14,1) = '-' AND substr(\"CollectionId\",19,1) = '-' AND substr(\"CollectionId\",24,1) = '-' AND length(replace(\"CollectionId\",'-','')) = 32 AND replace(\"CollectionId\",'-','') NOT GLOB '*[^0-9a-f]*'");
@@ -642,8 +638,6 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CollectionId");
 
                     b.HasIndex("CollectionId", "ImageAssetId");
 
@@ -706,8 +700,6 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CollectionId");
 
                     b.HasIndex("ProductId")
                         .IsUnique()
@@ -868,8 +860,6 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectionId");
-
                     b.HasIndex("ReplayUntil");
 
                     b.HasIndex("UserId");
@@ -964,13 +954,9 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectionId");
+                    b.HasIndex("CollectionId", "NormalizedName", "Id");
 
-                    b.HasIndex("CollectionId", "ParentCategoryId");
-
-                    b.HasIndex("NormalizedName", "Id");
-
-                    b.HasIndex("ParentCategoryId", "SortOrder", "Id");
+                    b.HasIndex("CollectionId", "ParentCategoryId", "SortOrder", "Id");
 
                     b.ToTable("Categories", null, t =>
                         {
@@ -1590,9 +1576,7 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectionId");
-
-                    b.HasIndex("NormalizedName", "Id");
+                    b.HasIndex("CollectionId", "NormalizedName", "Id");
 
                     b.ToTable("Characters", null, t =>
                         {
@@ -1630,8 +1614,6 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
 
                     b.HasKey("CharacterId", "WorkId");
-
-                    b.HasIndex("CollectionId");
 
                     b.HasIndex("CollectionId", "CharacterId");
 
@@ -1689,8 +1671,6 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("CollectionId", "UserId", "OperationScope", "Key");
-
-                    b.HasIndex("CollectionId");
 
                     b.HasIndex("ExpiresAt");
 
@@ -1765,9 +1745,7 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectionId");
-
-                    b.HasIndex("NormalizedName", "Id");
+                    b.HasIndex("CollectionId", "NormalizedName", "Id");
 
                     b.ToTable("Organizations", null, t =>
                         {
@@ -1830,9 +1808,7 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectionId");
-
-                    b.HasIndex("NormalizedName", "Id");
+                    b.HasIndex("CollectionId", "NormalizedName", "Id");
 
                     b.ToTable("Series", null, t =>
                         {
@@ -1887,9 +1863,7 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectionId");
-
-                    b.HasIndex("NormalizedName", "Id");
+                    b.HasIndex("CollectionId", "NormalizedName", "Id");
 
                     b.ToTable("Tags", null, t =>
                         {
@@ -1944,9 +1918,7 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectionId");
-
-                    b.HasIndex("NormalizedName", "Id");
+                    b.HasIndex("CollectionId", "NormalizedName", "Id");
 
                     b.ToTable("Works", null, t =>
                         {
@@ -1984,8 +1956,6 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
 
                     b.HasKey("WorkId", "SeriesId");
-
-                    b.HasIndex("CollectionId");
 
                     b.HasIndex("CollectionId", "SeriesId");
 
@@ -2043,8 +2013,6 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CollectionId");
 
                     b.HasIndex("CollectionId", "ProductId");
 
@@ -2127,8 +2095,6 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CollectionId");
 
                     b.HasIndex("CollectionId", "ProductId");
 
@@ -2222,26 +2188,24 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectionId");
-
                     b.HasIndex("CollectionId", "CategoryId");
 
                     b.HasIndex("CollectionId", "ManufacturerId");
 
                     b.HasIndex("CollectionId", "SellerId");
 
-                    b.HasIndex("CreatedAt", "Id")
-                        .IsDescending(true, false)
+                    b.HasIndex("CollectionId", "CreatedAt", "Id")
+                        .IsDescending(false, true, false)
                         .HasFilter("DeletedAt IS NULL");
 
-                    b.HasIndex("NormalizedName", "Id")
+                    b.HasIndex("CollectionId", "NormalizedName", "Id")
                         .HasFilter("DeletedAt IS NULL");
 
-                    b.HasIndex("UpdatedAt", "Id")
-                        .IsDescending(true, false)
+                    b.HasIndex("CollectionId", "UpdatedAt", "Id")
+                        .IsDescending(false, true, false)
                         .HasFilter("DeletedAt IS NULL");
 
-                    b.HasIndex("DeletedAt", "NormalizedName", "Id");
+                    b.HasIndex("CollectionId", "DeletedAt", "NormalizedName", "Id");
 
                     b.ToTable("Products", null, t =>
                         {
@@ -2346,8 +2310,6 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("ProductId", "CharacterId");
 
-                    b.HasIndex("CollectionId");
-
                     b.HasIndex("CharacterId", "ProductId");
 
                     b.HasIndex("CollectionId", "CharacterId");
@@ -2402,8 +2364,6 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CollectionId");
 
                     b.HasIndex("CollectionId", "ProductId");
 
@@ -2467,8 +2427,6 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectionId");
-
                     b.HasIndex("CollectionId", "ProductId");
 
                     b.HasIndex("ProductId", "Id");
@@ -2506,8 +2464,6 @@ namespace GoodsManager.Web.Storage.Migrations
 
                     b.HasKey("ProductId", "TagId");
 
-                    b.HasIndex("CollectionId");
-
                     b.HasIndex("CollectionId", "ProductId");
 
                     b.HasIndex("CollectionId", "TagId");
@@ -2538,8 +2494,6 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasDefaultValue("c011ec70-0000-4000-8000-000000000001");
 
                     b.HasKey("ProductId", "WorkId");
-
-                    b.HasIndex("CollectionId");
 
                     b.HasIndex("CollectionId", "ProductId");
 
@@ -2590,8 +2544,6 @@ namespace GoodsManager.Web.Storage.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("ProductId");
-
-                    b.HasIndex("CollectionId");
 
                     b.HasIndex("CollectionId", "ProductId");
 

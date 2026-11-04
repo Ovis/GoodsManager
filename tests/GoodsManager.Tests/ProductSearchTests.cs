@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using GoodsManager.Web.Collections;
 using GoodsManager.Web.Masters;
 using GoodsManager.Web.Products;
 using GoodsManager.Web.Search;
@@ -356,7 +357,8 @@ public sealed class ProductSearchTests
         await db.Database.OpenConnectionAsync();
 
         await using var command = db.Database.GetDbConnection().CreateCommand();
-        command.CommandText = "EXPLAIN QUERY PLAN SELECT p.ProductId FROM Products p WHERE p.DeletedAt IS NULL ORDER BY p.CreatedAt DESC,p.ProductId ASC LIMIT 50";
+        command.CommandText = "EXPLAIN QUERY PLAN SELECT p.ProductId FROM Products p WHERE p.CollectionId=$collection AND p.DeletedAt IS NULL ORDER BY p.CreatedAt DESC,p.ProductId ASC LIMIT 50";
+        command.Parameters.Add(new SqliteParameter("$collection", CollectionSchema.DefaultId.ToString("D")));
 
         var steps = new List<string>();
         await using (var reader = await command.ExecuteReaderAsync())
@@ -369,7 +371,8 @@ public sealed class ProductSearchTests
 
         TestContext.Out.WriteLine(string.Join("; ", steps));
 
-        Assert.That(steps.Any(x => x.Contains("IX_Products_CreatedAt_ProductId", StringComparison.Ordinal)), Is.True);
+        Assert.That(steps.Any(x => x.Contains("IX_Products_CollectionId_CreatedAt_ProductId", StringComparison.Ordinal)
+            && x.Contains("CollectionId=?", StringComparison.Ordinal)), Is.True);
         Assert.That(steps.Any(x => x.Contains("TEMP B-TREE", StringComparison.Ordinal)), Is.False);
     }
 }

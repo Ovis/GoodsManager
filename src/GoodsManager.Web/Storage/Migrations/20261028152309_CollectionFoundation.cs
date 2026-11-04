@@ -1483,39 +1483,19 @@ namespace GoodsManager.Web.Storage.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Categories_CollectionId",
+                name: "IX_Categories_CollectionId_NormalizedName_CategoryId",
                 table: "Categories",
-                column: "CollectionId");
+                columns: new[] { "CollectionId", "NormalizedName", "CategoryId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Categories_CollectionId_ParentCategoryId",
+                name: "IX_Categories_CollectionId_ParentCategoryId_SortOrder_CategoryId",
                 table: "Categories",
-                columns: new[] { "CollectionId", "ParentCategoryId" });
+                columns: new[] { "CollectionId", "ParentCategoryId", "SortOrder", "CategoryId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Categories_NormalizedName_CategoryId",
-                table: "Categories",
-                columns: new[] { "NormalizedName", "CategoryId" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Categories_ParentCategoryId_SortOrder_CategoryId",
-                table: "Categories",
-                columns: new[] { "ParentCategoryId", "SortOrder", "CategoryId" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Characters_CollectionId",
+                name: "IX_Characters_CollectionId_NormalizedName_CharacterId",
                 table: "Characters",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Characters_NormalizedName_CharacterId",
-                table: "Characters",
-                columns: new[] { "NormalizedName", "CharacterId" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_CharacterWorks_CollectionId",
-                table: "CharacterWorks",
-                column: "CollectionId");
+                columns: new[] { "CollectionId", "NormalizedName", "CharacterId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_CharacterWorks_CollectionId_CharacterId",
@@ -1538,11 +1518,6 @@ namespace GoodsManager.Web.Storage.Migrations
                 columns: new[] { "UserId", "CollectionId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_IdempotencyRecords_CollectionId",
-                table: "IdempotencyRecords",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_IdempotencyRecords_ExpiresAt",
                 table: "IdempotencyRecords",
                 column: "ExpiresAt");
@@ -1551,11 +1526,6 @@ namespace GoodsManager.Web.Storage.Migrations
                 name: "IX_IdempotencyRecords_UserId",
                 table: "IdempotencyRecords",
                 column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ImageAssets_CollectionId",
-                table: "ImageAssets",
-                column: "CollectionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ImageAssets_CollectionId_SourceSha256_PolicyHash",
@@ -1596,16 +1566,6 @@ namespace GoodsManager.Web.Storage.Migrations
                 columns: new[] { "State", "DeleteAfter" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ImageSettings_CollectionId",
-                table: "ImageSettings",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_InventoryItemImages_CollectionId",
-                table: "InventoryItemImages",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_InventoryItemImages_CollectionId_ImageAssetId",
                 table: "InventoryItemImages",
                 columns: new[] { "CollectionId", "ImageAssetId" });
@@ -1627,11 +1587,6 @@ namespace GoodsManager.Web.Storage.Migrations
                 columns: new[] { "InventoryItemId", "SortOrder", "InventoryItemImageId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_InventoryItems_CollectionId",
-                table: "InventoryItems",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_InventoryItems_CollectionId_ProductId",
                 table: "InventoryItems",
                 columns: new[] { "CollectionId", "ProductId" });
@@ -1640,11 +1595,6 @@ namespace GoodsManager.Web.Storage.Migrations
                 name: "IX_InventoryItems_ProductId_InventoryItemId",
                 table: "InventoryItems",
                 columns: new[] { "ProductId", "InventoryItemId" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_InventoryLots_CollectionId",
-                table: "InventoryLots",
-                column: "CollectionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_InventoryLots_CollectionId_ProductId",
@@ -1657,14 +1607,9 @@ namespace GoodsManager.Web.Storage.Migrations
                 columns: new[] { "ProductId", "InventoryLotId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Organizations_CollectionId",
+                name: "IX_Organizations_CollectionId_NormalizedName_OrganizationId",
                 table: "Organizations",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Organizations_NormalizedName_OrganizationId",
-                table: "Organizations",
-                columns: new[] { "NormalizedName", "OrganizationId" });
+                columns: new[] { "CollectionId", "NormalizedName", "OrganizationId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProductChanges_CollectionId",
@@ -1682,11 +1627,6 @@ namespace GoodsManager.Web.Storage.Migrations
                 columns: new[] { "CharacterId", "ProductId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductCharacters_CollectionId",
-                table: "ProductCharacters",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ProductCharacters_CollectionId_CharacterId",
                 table: "ProductCharacters",
                 columns: new[] { "CollectionId", "CharacterId" });
@@ -1695,11 +1635,6 @@ namespace GoodsManager.Web.Storage.Migrations
                 name: "IX_ProductCharacters_CollectionId_ProductId",
                 table: "ProductCharacters",
                 columns: new[] { "CollectionId", "ProductId" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProductIdentifiers_CollectionId",
-                table: "ProductIdentifiers",
-                column: "CollectionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProductIdentifiers_CollectionId_ProductId",
@@ -1716,11 +1651,6 @@ namespace GoodsManager.Web.Storage.Migrations
                 table: "ProductIdentifiers",
                 columns: new[] { "ProductId", "Scheme", "NormalizedValue" },
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProductImages_CollectionId",
-                table: "ProductImages",
-                column: "CollectionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProductImages_CollectionId_ImageAssetId",
@@ -1751,11 +1681,6 @@ namespace GoodsManager.Web.Storage.Migrations
                 columns: new[] { "ProductId", "SortOrder", "ProductImageId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductLinks_CollectionId",
-                table: "ProductLinks",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ProductLinks_CollectionId_ProductId",
                 table: "ProductLinks",
                 columns: new[] { "CollectionId", "ProductId" });
@@ -1766,14 +1691,21 @@ namespace GoodsManager.Web.Storage.Migrations
                 columns: new[] { "ProductId", "ProductLinkId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Products_CollectionId",
-                table: "Products",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Products_CollectionId_CategoryId",
                 table: "Products",
                 columns: new[] { "CollectionId", "CategoryId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Products_CollectionId_CreatedAt_ProductId",
+                table: "Products",
+                columns: new[] { "CollectionId", "CreatedAt", "ProductId" },
+                descending: new[] { false, true, false },
+                filter: "DeletedAt IS NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Products_CollectionId_DeletedAt_NormalizedName_ProductId",
+                table: "Products",
+                columns: new[] { "CollectionId", "DeletedAt", "NormalizedName", "ProductId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Products_CollectionId_ManufacturerId",
@@ -1781,49 +1713,27 @@ namespace GoodsManager.Web.Storage.Migrations
                 columns: new[] { "CollectionId", "ManufacturerId" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Products_CollectionId_NormalizedName_ProductId",
+                table: "Products",
+                columns: new[] { "CollectionId", "NormalizedName", "ProductId" },
+                filter: "DeletedAt IS NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Products_CollectionId_SellerId",
                 table: "Products",
                 columns: new[] { "CollectionId", "SellerId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Products_CreatedAt_ProductId",
+                name: "IX_Products_CollectionId_UpdatedAt_ProductId",
                 table: "Products",
-                columns: new[] { "CreatedAt", "ProductId" },
-                descending: new[] { true, false },
+                columns: new[] { "CollectionId", "UpdatedAt", "ProductId" },
+                descending: new[] { false, true, false },
                 filter: "DeletedAt IS NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Products_DeletedAt_NormalizedName_ProductId",
-                table: "Products",
-                columns: new[] { "DeletedAt", "NormalizedName", "ProductId" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Products_NormalizedName_ProductId",
-                table: "Products",
-                columns: new[] { "NormalizedName", "ProductId" },
-                filter: "DeletedAt IS NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Products_UpdatedAt_ProductId",
-                table: "Products",
-                columns: new[] { "UpdatedAt", "ProductId" },
-                descending: new[] { true, false },
-                filter: "DeletedAt IS NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProductSearchDocuments_CollectionId",
-                table: "ProductSearchDocuments",
-                column: "CollectionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProductSearchDocuments_CollectionId_ProductId",
                 table: "ProductSearchDocuments",
                 columns: new[] { "CollectionId", "ProductId" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProductTags_CollectionId",
-                table: "ProductTags",
-                column: "CollectionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProductTags_CollectionId_ProductId",
@@ -1841,11 +1751,6 @@ namespace GoodsManager.Web.Storage.Migrations
                 columns: new[] { "TagId", "ProductId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductWorks_CollectionId",
-                table: "ProductWorks",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ProductWorks_CollectionId_ProductId",
                 table: "ProductWorks",
                 columns: new[] { "CollectionId", "ProductId" });
@@ -1861,14 +1766,9 @@ namespace GoodsManager.Web.Storage.Migrations
                 columns: new[] { "WorkId", "ProductId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Series_CollectionId",
+                name: "IX_Series_CollectionId_NormalizedName_SeriesId",
                 table: "Series",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Series_NormalizedName_SeriesId",
-                table: "Series",
-                columns: new[] { "NormalizedName", "SeriesId" });
+                columns: new[] { "CollectionId", "NormalizedName", "SeriesId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_SystemAlerts_AlertKey",
@@ -1882,19 +1782,9 @@ namespace GoodsManager.Web.Storage.Migrations
                 column: "ResolvedAt");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Tags_CollectionId",
+                name: "IX_Tags_CollectionId_NormalizedName_TagId",
                 table: "Tags",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Tags_NormalizedName_TagId",
-                table: "Tags",
-                columns: new[] { "NormalizedName", "TagId" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TemporaryUploads_CollectionId",
-                table: "TemporaryUploads",
-                column: "CollectionId");
+                columns: new[] { "CollectionId", "NormalizedName", "TagId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_TemporaryUploads_CollectionId_ImageAssetId",
@@ -1923,19 +1813,9 @@ namespace GoodsManager.Web.Storage.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Works_CollectionId",
+                name: "IX_Works_CollectionId_NormalizedName_WorkId",
                 table: "Works",
-                column: "CollectionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Works_NormalizedName_WorkId",
-                table: "Works",
-                columns: new[] { "NormalizedName", "WorkId" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_WorkSeries_CollectionId",
-                table: "WorkSeries",
-                column: "CollectionId");
+                columns: new[] { "CollectionId", "NormalizedName", "WorkId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_WorkSeries_CollectionId_SeriesId",

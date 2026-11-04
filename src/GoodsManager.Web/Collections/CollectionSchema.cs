@@ -100,7 +100,30 @@ public static class CollectionSchema
             entity.HasOne(typeof(CollectionSpace)).WithMany().HasForeignKey("CollectionId").OnDelete(DeleteBehavior.Restrict);
         }
 
+        RemoveRedundantCollectionIndexes(model);
+
         SeedCategories(model);
+    }
+
+    /// <summary>所属を先頭に持つ無条件のキー・複合索引で代用できる単独索引だけを除く。</summary>
+    private static void RemoveRedundantCollectionIndexes(ModelBuilder model)
+    {
+        foreach (var type in ScopedTypes)
+        {
+            var entity = model.Entity(type).Metadata;
+            var standalone = entity.GetIndexes().SingleOrDefault(index => index.Properties.Count == 1 && index.Properties[0].Name == "CollectionId");
+            if (standalone is null || standalone.IsUnique || standalone.GetFilter() is not null)
+            {
+                continue;
+            }
+
+            var covered = entity.GetKeys().Any(key => key.Properties[0].Name == "CollectionId")
+                || entity.GetIndexes().Any(index => index != standalone && index.GetFilter() is null && index.Properties[0].Name == "CollectionId");
+            if (covered)
+            {
+                entity.RemoveIndex(standalone);
+            }
+        }
     }
 
     private static void SeedCategories(ModelBuilder model)

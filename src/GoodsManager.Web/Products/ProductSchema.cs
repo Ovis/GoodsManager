@@ -201,7 +201,8 @@ public static class ProductSchema
             e.HasOne<Category>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Organization>().WithMany().HasForeignKey(x => x.ManufacturerId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Organization>().WithMany().HasForeignKey(x => x.SellerId).OnDelete(DeleteBehavior.Restrict);
-            e.HasIndex(x => new { x.DeletedAt, x.NormalizedName, x.Id });
+            e.Property<Guid>("CollectionId");
+            e.HasIndex("CollectionId", nameof(Product.DeletedAt), nameof(Product.NormalizedName), nameof(Product.Id));
         });
 
         model.Entity<ProductIdentifier>(e =>

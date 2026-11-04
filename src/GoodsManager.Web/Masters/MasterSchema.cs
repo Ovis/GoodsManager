@@ -233,7 +233,7 @@ public static class MasterSchema
         model.Entity<Category>(e =>
         {
             e.HasOne<Category>().WithMany().HasForeignKey(x => x.ParentCategoryId).OnDelete(DeleteBehavior.Restrict);
-            e.HasIndex(x => new { x.ParentCategoryId, x.SortOrder, x.Id });
+            e.HasIndex("CollectionId", nameof(Category.ParentCategoryId), nameof(Category.SortOrder), nameof(Category.Id));
             e.ToTable("Categories", t =>
             {
                 t.HasCheckConstraint("CK_Category_Parent", "ParentCategoryId IS NULL OR ParentCategoryId<>CategoryId");
@@ -282,7 +282,9 @@ public static class MasterSchema
             e.Property(x => x.Name).IsRequired();
             e.Property(x => x.NormalizedName).IsRequired();
             e.Property(x => x.Revision).IsConcurrencyToken();
-            e.HasIndex(x => new { x.NormalizedName, x.Id });
+            // 所属の既定値と参照制約はCollectionSchemaへ集約し、ここでは索引に必要な型だけを宣言する。
+            e.Property<Guid>("CollectionId");
+            e.HasIndex("CollectionId", nameof(INamedMaster.NormalizedName), nameof(INamedMaster.Id));
             e.ToTable(table, t =>
             {
                 t.HasCheckConstraint($"CK_{table}_Name", $"length(Name) BETWEEN 1 AND 200 AND length(trim(Name,{Whitespace}))>0");
