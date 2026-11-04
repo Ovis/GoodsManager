@@ -54,6 +54,18 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
             }
 
             db.Add(new Collections.CollectionMember { CollectionId = Collections.CollectionSchema.DefaultId, UserId = user.Id, Role = "manager" });
+            if (request.CreateSampleCollection)
+            {
+                // アカウント登録だけを先に確定し、画像や商品の準備失敗で登録を取り消さない。
+                var now = clock.GetUtcNow();
+                var sample = new Collections.CollectionSpace { Id = Guid.NewGuid(), Name = "サンプルコレクション", SampleStatus = "pending", CreatedAt = now, UpdatedAt = now };
+                db.Add(sample);
+                db.Add(new Collections.CollectionMember { CollectionId = sample.Id, UserId = user.Id, Role = "manager" });
+                var settings = new Images.ImageSettings { CreatedAt = now, UpdatedAt = now };
+                db.Add(settings);
+                db.Entry(settings).Property("CollectionId").CurrentValue = sample.Id;
+            }
+
             await db.SaveChangesAsync();
             await IncrementRevisionAsync();
             await transaction.CommitAsync();
@@ -351,7 +363,8 @@ public sealed class AuthController(AppDbContext db, UserManager<AppUser> users, 
     }
 }
 
-public sealed record SetupRequest(string LoginId, string Password, string? SetupToken);
+/// <summary>最初のアカウントと、任意の独立した試用コレクションを作る入力。</summary>
+public sealed record SetupRequest(string LoginId, string Password, string? SetupToken, bool CreateSampleCollection = false);
 public sealed record LoginRequest(string LoginId, string Password, bool RememberMe);
 public sealed record VerificationRequest(string? Password, Guid? ChallengeId, System.Text.Json.JsonElement? Credential);
 public sealed record ChangePasswordRequest(string NewPassword, VerificationRequest Verification);

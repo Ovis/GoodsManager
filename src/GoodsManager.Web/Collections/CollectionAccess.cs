@@ -57,6 +57,11 @@ public static class CollectionAccess
             }
 
             db.CollectionId = id;
+            if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)
+                && await db.Set<CollectionSpace>().AnyAsync(x => x.Id == id && (x.SampleStatus == "pending" || x.SampleStatus == "failed"), context.RequestAborted))
+            {
+                throw new MasterProblem(409, "SAMPLE_COLLECTION_NOT_READY");
+            }
         }
 
         await next(context);

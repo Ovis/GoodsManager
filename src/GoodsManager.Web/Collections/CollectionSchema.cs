@@ -15,6 +15,8 @@ public sealed class CollectionSpace
     }
     public string Name { get; set; } = "";
     public long Revision { get; set; } = 1;
+    /// <summary>サンプル準備の状態。通常のコレクションはnull、失敗時は管理画面から再実行できる。</summary>
+    public string? SampleStatus { get; set; }
     public DateTimeOffset CreatedAt
     {
         get; set;
@@ -51,6 +53,8 @@ public static class CollectionSchema
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).ValueGeneratedNever();
             e.Property(x => x.Revision).IsConcurrencyToken();
+            e.ToTable("Collections", t => t.HasCheckConstraint("CK_Collection_SampleStatus", "SampleStatus IS NULL OR SampleStatus IN ('pending','ready','failed')"));
+            e.HasIndex(x => new { x.SampleStatus, x.CreatedAt });
             e.HasData(new CollectionSpace { Id = DefaultId, Name = "マイコレクション", Revision = 1, CreatedAt = DateTimeOffset.UnixEpoch, UpdatedAt = DateTimeOffset.UnixEpoch });
         });
 
@@ -61,6 +65,18 @@ public static class CollectionSchema
             e.HasOne<CollectionSpace>().WithMany().HasForeignKey(x => x.CollectionId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.UserId, x.CollectionId });
+        });
+        model.Entity<CollectionRequest>(e =>
+        {
+            e.ToTable("CollectionRequest", t =>
+            {
+                t.HasCheckConstraint("CK_CollectionRequest_Status", "StatusCode IN (200,201)");
+                t.HasCheckConstraint("CK_CollectionRequest_Hash", "length(RequestHash)=64 AND RequestHash NOT GLOB '*[^0-9a-f]*'");
+                t.HasCheckConstraint("CK_CollectionRequest_Response", "json_valid(ResponseJson)=1 AND json_type(ResponseJson)='object'");
+            });
+            e.HasKey(x => new { x.UserId, x.Operation, x.Key });
+            e.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.ExpiresAt);
         });
         foreach (var type in ScopedTypes)
         {

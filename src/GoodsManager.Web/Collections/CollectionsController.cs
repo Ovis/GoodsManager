@@ -1,6 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using GoodsManager.Web.Auth;
 using GoodsManager.Web.Images;
 using GoodsManager.Web.Masters;
@@ -12,147 +9,133 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GoodsManager.Web.Collections;
 
-public sealed record CreateCollectionRequest(string Name, Guid? ImportFrom = null);
+/// <summary>空・設定コピー・サンプルから新しいコレクションを作る入力。</summary>
+public sealed record CreateCollectionRequest(string Name, Guid? ImportFrom = null, bool WithSamples = false);
+
+/// <summary>商品などの内容を変更せず、コレクション名だけを変更する入力。</summary>
 public sealed record RenameCollectionRequest(string Name);
 
+/// <summary>所属の作成・設定コピー・サンプル準備・名前変更を管理する。</summary>
 [Authorize]
 [ApiController]
 [Route("api/v1/collections")]
-public sealed class CollectionsController(AppDbContext db, SignInManager<AppUser> signIn, AuthWriteGate gate, TimeProvider clock) : ControllerBase
+public sealed class CollectionsController(AppDbContext db, SignInManager<AppUser> signIn, CollectionWrites writes) : ControllerBase
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    /// <summary>認証済みアカウントの所属だけを照会する。</summary>
     private Guid UserId => Guid.Parse(signIn.UserManager.GetUserId(User)!);
 
-    private static string Etag(CollectionSpace space) => $"\"collection:{space.Id:D}:{space.Revision}\"";
-
-    private static object View(CollectionSpace space, string role) => new { space.Id, space.Name, role, revision = space.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture), etag = Etag(space) };
-
+    /// <summary>参加中のコレクションと、サンプル準備状態を返す。</summary>
     [HttpGet]
     public async Task<IActionResult> List()
     {
         var rows = await (from member in db.Set<CollectionMember>().AsNoTracking() join space in db.Set<CollectionSpace>().AsNoTracking() on member.CollectionId equals space.Id where member.UserId == UserId orderby space.CreatedAt, space.Id select new { Space = space, member.Role }).ToArrayAsync(HttpContext.RequestAborted);
         return Ok(new
         {
-            items = rows.Select(x => View(x.Space, x.Role))
+            items = rows.Select(x => CollectionWrites.View(x.Space, x.Role))
         });
     }
 
+    /// <summary>サンプル投入は独立した準備処理へ渡し、通常の作成要求で待ち続けない。</summary>
     [HttpPost]
     [RequestSizeLimit(65536)]
-    public Task<IActionResult> Create(CreateCollectionRequest request) => Write(null, request.Name, request.ImportFrom);
-
-    [HttpPut("{id:guid}")]
-    [RequestSizeLimit(65536)]
-    public Task<IActionResult> Rename(Guid id, RenameCollectionRequest request) => Write(id, request.Name, null);
-
-    private async Task<IActionResult> Write(Guid? id, string name, Guid? source)
+    public Task<IActionResult> Create(CreateCollectionRequest request)
     {
-        if (!StorageValues.IsValidText(name, 1, 200) || string.IsNullOrWhiteSpace(name) || source == Guid.Empty || !Guid.TryParseExact(Request.Headers["Idempotency-Key"], "D", out var key) || key == Guid.Empty)
+        if (!StorageValues.IsValidText(request.Name, 1, 200) || string.IsNullOrWhiteSpace(request.Name) || request.ImportFrom == Guid.Empty || request.WithSamples && request.ImportFrom.HasValue)
         {
             throw MasterInput.Invalid();
         }
 
-        var token = HttpContext.RequestAborted;
-        await gate.Semaphore.WaitAsync(token);
-        try
+        return writes.ExecuteAsync(HttpContext, "POST:/api/v1/collections", request, 201, async (user, now, token) =>
         {
-            await using var transaction = await db.Database.BeginTransactionAsync(token);
-            var user = await AuthenticationState.GetCurrentUserAsync(db, signIn, User) ?? throw new MasterProblem(401, "SESSION_EXPIRED");
-            if (id.HasValue && !await db.Set<CollectionMember>().AnyAsync(x => x.CollectionId == id && x.UserId == user.Id && x.Role == "manager", token))
-            {
-                throw new MasterProblem(403, "COLLECTION_MANAGER_REQUIRED");
-            }
-
-            if (source.HasValue && !await db.Set<CollectionMember>().AnyAsync(x => x.CollectionId == source && x.UserId == user.Id, token))
+            if (request.ImportFrom.HasValue && !await db.Set<CollectionMember>().AnyAsync(x => x.CollectionId == request.ImportFrom && x.UserId == user.Id, token))
             {
                 throw new MasterProblem(404, "COLLECTION_NOT_FOUND");
             }
 
-            var scope = id.HasValue ? $"PUT:/api/v1/collections/{id:D}" : "POST:/api/v1/collections";
-            var condition = Request.Headers.IfMatch.ToString();
-            var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+            if (request.ImportFrom.HasValue && await db.Set<CollectionSpace>().AnyAsync(x => x.Id == request.ImportFrom && (x.SampleStatus == "pending" || x.SampleStatus == "failed"), token))
             {
-                name,
-                source,
-                condition
-            }))));
-            var now = clock.GetUtcNow();
-
-            var prior = await db.Set<IdempotencyRecord>().SingleOrDefaultAsync(x => x.UserId == user.Id && x.OperationScope == scope && x.Key == key && EF.Property<Guid>(x, "CollectionId") == CollectionSchema.DefaultId, token);
-            if (prior is not null && prior.ExpiresAt > now)
-            {
-                if (prior.RequestHash != hash)
-                {
-                    throw new MasterProblem(409, "IDEMPOTENCY_KEY_REUSED");
-                }
-
-                Response.Headers.ETag = prior.ResponseEtag;
-
-                return new ContentResult { StatusCode = prior.ResponseStatus, ContentType = "application/json", Content = prior.ResponseJson };
+                throw new MasterProblem(409, "SAMPLE_COLLECTION_NOT_READY");
             }
 
-            if (prior is not null)
+            var space = new CollectionSpace { Id = Guid.NewGuid(), Name = request.Name, SampleStatus = request.WithSamples ? "pending" : null, CreatedAt = now, UpdatedAt = now };
+            db.Add(space);
+            db.Add(new CollectionMember { CollectionId = space.Id, UserId = user.Id, Role = "manager" });
+            if (request.ImportFrom.HasValue)
             {
-                await db.Set<IdempotencyRecord>().Where(x => x.UserId == user.Id && x.OperationScope == scope && x.Key == key && EF.Property<Guid>(x, "CollectionId") == CollectionSchema.DefaultId).ExecuteDeleteAsync(token);
-                db.Entry(prior).State = EntityState.Detached;
-            }
-
-            CollectionSpace space;
-            if (id.HasValue)
-            {
-                space = await db.Set<CollectionSpace>().SingleAsync(x => x.Id == id, token);
-                if (condition.Length == 0)
-                {
-                    throw new MasterProblem(428, "PRECONDITION_REQUIRED");
-                }
-
-                if (condition != Etag(space))
-                {
-                    throw new MasterProblem(412, "REVISION_MISMATCH");
-                }
-
-                space.Name = name;
-                space.Revision = checked(space.Revision + 1);
-                space.UpdatedAt = now;
+                await Import(request.ImportFrom.Value, space.Id, now, token);
             }
             else
             {
-                space = new CollectionSpace { Id = Guid.NewGuid(), Name = name, CreatedAt = now, UpdatedAt = now };
-                db.Add(space);
-                db.Add(new CollectionMember { CollectionId = space.Id, UserId = user.Id, Role = "manager" });
-                if (source.HasValue)
-                {
-                    await Import(source.Value, space.Id, now, token);
-                }
-                else
-                {
-                    Add(new ImageSettings { CreatedAt = now, UpdatedAt = now }, space.Id);
-                }
+                Add(new ImageSettings { CreatedAt = now, UpdatedAt = now }, space.Id);
             }
 
-            var response = JsonSerializer.Serialize(View(space, "manager"), Json);
-            db.Add(new IdempotencyRecord { UserId = user.Id, OperationScope = scope, Key = key, RequestHash = hash, ResponseStatus = id.HasValue ? 200 : 201, ResponseJson = response, ResponseEtag = Etag(space), CompletedAt = now, ExpiresAt = now.AddDays(7) });
-
-            var state = await db.SystemStates.SingleAsync(token);
-            state.DataRevision = checked(state.DataRevision + 1);
-            state.UpdatedAt = now;
-            await db.SaveChangesAsync(token);
-            await transaction.CommitAsync(token);
-            Response.Headers.ETag = Etag(space);
-
-            return new ContentResult { StatusCode = id.HasValue ? 200 : 201, ContentType = "application/json", Content = response };
-        }
-        finally { gate.Semaphore.Release(); }
+            return space;
+        });
     }
 
+    /// <summary>管理権限と取得済み更新条件を確認して名前を変更する。</summary>
+    [HttpPut("{id:guid}")]
+    [RequestSizeLimit(65536)]
+    public Task<IActionResult> Rename(Guid id, RenameCollectionRequest request)
+    {
+        if (!StorageValues.IsValidText(request.Name, 1, 200) || string.IsNullOrWhiteSpace(request.Name))
+        {
+            throw MasterInput.Invalid("name");
+        }
+
+        return writes.ExecuteAsync(HttpContext, $"PUT:/api/v1/collections/{id:D}", request, 200, async (user, now, token) =>
+        {
+            var space = await ManagedAsync(id, user.Id, token);
+            CollectionWrites.CheckVersion(space, Request.Headers.IfMatch.ToString());
+            space.Name = request.Name;
+            space.Revision = checked(space.Revision + 1);
+            space.UpdatedAt = now;
+            return space;
+        });
+    }
+
+    /// <summary>失敗した専用コレクションだけを再び準備待ちにする。</summary>
+    [HttpPost("{id:guid}/samples/retry")]
+    [RequestSizeLimit(65536)]
+    public Task<IActionResult> RetrySamples(Guid id) => writes.ExecuteAsync(HttpContext, $"POST:/api/v1/collections/{id:D}/samples/retry", new
+    {
+    }, 200, async (user, now, token) =>
+    {
+        var space = await ManagedAsync(id, user.Id, token);
+        CollectionWrites.CheckVersion(space, Request.Headers.IfMatch.ToString());
+        if (space.SampleStatus != "failed")
+        {
+            throw new MasterProblem(409, "SAMPLE_RETRY_NOT_AVAILABLE");
+        }
+
+        space.SampleStatus = "pending";
+        space.Revision = checked(space.Revision + 1);
+        space.UpdatedAt = now;
+        return space;
+    });
+
+    /// <summary>非参加者へ存在を公開せず、参加者の管理権限を確認する。</summary>
+    private async Task<CollectionSpace> ManagedAsync(Guid id, Guid userId, CancellationToken token)
+    {
+        var member = await db.Set<CollectionMember>().AsNoTracking().SingleOrDefaultAsync(x => x.CollectionId == id && x.UserId == userId, token) ?? throw new MasterProblem(404, "COLLECTION_NOT_FOUND");
+        if (member.Role != "manager")
+        {
+            throw new MasterProblem(403, "COLLECTION_MANAGER_REQUIRED");
+        }
+
+        return await db.Set<CollectionSpace>().SingleAsync(x => x.Id == id, token);
+    }
+    /// <summary>設定コピーと新規設定へ、コピー先の所属を明示する。</summary>
     private void Add(object value, Guid destination)
     {
         db.Add(value);
         db.Entry(value).Property("CollectionId").CurrentValue = destination;
     }
 
+    /// <summary>マスター階層・関連・画像設定だけをコピーし、商品と画像を持ち込まない。</summary>
     private async Task Import(Guid source, Guid destination, DateTimeOffset now, CancellationToken token)
     {
+        // 新しいIDへ対応付けてから、親子関係とマスター間関連を復元する。
         async Task<Dictionary<Guid, Guid>> Copy<T>() where T : class, INamedMaster, new()
         {
             var rows = await db.Set<T>().AsNoTracking().Where(x => EF.Property<Guid>(x, "CollectionId") == source).ToArrayAsync(token);

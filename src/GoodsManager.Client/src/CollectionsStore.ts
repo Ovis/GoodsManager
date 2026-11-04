@@ -2,7 +2,7 @@ import {api,ApiError,errorText,type ApiClient} from './api';
 import {mutation} from './RegistrationStore';
 import {validText} from './registration-state.mjs';
 
-export type CollectionSpace={id:string;name:string;role:'manager'|'editor';etag:string;revision:string};
+export type CollectionSpace={id:string;name:string;role:'manager'|'editor';etag:string;revision:string;sampleStatus?:'pending'|'ready'|'failed'|null};
 
 export class CollectionsStore{
     items:CollectionSpace[]=[];
@@ -15,7 +15,7 @@ export class CollectionsStore{
     ack=false;
     rename:{id:string;name:string;etag:string}|null=null;
     conflict=false;
-    intent:'create'|'rename'|null=null;
+    intent:'create'|'rename'|'retry'|null=null;
     private readVersion=0;
     private version=0;
     private listeners=new Set<()=>void>();
@@ -47,6 +47,9 @@ export class CollectionsStore{
         try{
             const result=await this.request<{items:CollectionSpace[]}>('/collections');
             if(version===this.readVersion){
+                const completed=result.items.find(x=>x.sampleStatus==='ready'&&this.items.some(old=>old.id===x.id&&old.sampleStatus==='pending'));
+                if(completed)this.notice='「'+completed.name+'」のサンプルを準備できました。';
+
                 this.items=result.items;
                 this.loaded=true;
             }
@@ -80,7 +83,7 @@ export class CollectionsStore{
             return;
         }
 
-        if(!rename&&this.importFrom&&!this.ack){
+        if(!rename&&this.importFrom&&this.importFrom!=='@samples'&&!this.ack){
             this.error='設定コピーの内容を確認してください。';
             this.notify();
 
@@ -91,7 +94,8 @@ export class CollectionsStore{
         this.error='';
         this.notice='';
         try{
-            const promise=rename?this.save.begin('/collections/'+this.rename!.id,{name},this.rename!.etag,'PUT'):this.save.begin('/collections',{name,importFrom:this.importFrom||null});
+            const createBody=this.importFrom==='@samples'?{name,withSamples:true}:{name,importFrom:this.importFrom||null};
+            const promise=rename?this.save.begin('/collections/'+this.rename!.id,{name},this.rename!.etag,'PUT'):this.save.begin('/collections',createBody);
             this.notify();
             this.complete(await promise);
         }
@@ -126,12 +130,28 @@ export class CollectionsStore{
         }else this.rename=null;
 
         this.conflict=false;
-        this.notice='「'+space.name+'」を'+(this.intent==='create'?'作成':'変更')+'しました。';
+        this.notice=space.sampleStatus==='pending'?'「'+space.name+'」のサンプルを準備しています。': '「'+space.name+'」を'+(this.intent==='create'?'作成':'変更')+'しました。';
     }
 
     private failed(error:unknown){
         this.error=this.save.state==='unknown'?'結果を確認できませんでした。同じ要求で結果を確認してください。':errorText(error);
         if(error instanceof ApiError&&error.status===412)this.conflict=true;
+    }
+
+    async retrySamples(space:CollectionSpace){
+        if(this.locked)return;
+
+        this.intent='retry';
+        this.error='';
+        try{
+            const promise=this.save.begin('/collections/'+space.id+'/samples/retry',{},space.etag);
+            this.notify();
+            this.complete(await promise);
+        }catch(e){
+            this.failed(e);
+        }finally{
+            this.notify();
+        }
     }
 
     async review(){

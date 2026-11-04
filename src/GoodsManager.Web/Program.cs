@@ -64,6 +64,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddScoped<OperationVerification>();
 builder.Services.AddScoped<AccountRecovery>();
 builder.Services.AddScoped<ProductOperations>();
+builder.Services.AddScoped<GoodsManager.Web.Collections.CollectionWrites>();
+builder.Services.AddScoped<GoodsManager.Web.Samples.SampleCollectionSeeder>();
+builder.Services.AddHostedService<GoodsManager.Web.Samples.SampleCollectionWorker>();
 builder.Services.AddScoped<InventoryOperations>();
 builder.Services.AddScoped<ProductWrites>();
 builder.Services.AddScoped<DuplicateChecks>();

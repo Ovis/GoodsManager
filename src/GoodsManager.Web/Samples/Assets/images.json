@@ -1,0 +1,98 @@
+[
+  {
+    "ThumbnailWidth": 320,
+    "DisplayWidth": 640,
+    "ThumbnailHeight": 320,
+    "DisplayHeight": 640,
+    "File": "badge-0.png",
+    "SourceSha256": "83e3755f7e781ba150d9a56ddd5829e3764d397413e6e54951b3c4635014ea26"
+  },
+  {
+    "ThumbnailWidth": 320,
+    "DisplayWidth": 640,
+    "ThumbnailHeight": 320,
+    "DisplayHeight": 640,
+    "File": "badge-2.png",
+    "SourceSha256": "153907c2c2fe03247dd166ca1ab0e11f711764fe1bcac373651d7763df98cfde"
+  },
+  {
+    "ThumbnailWidth": 320,
+    "DisplayWidth": 640,
+    "ThumbnailHeight": 320,
+    "DisplayHeight": 640,
+    "File": "book-0.png",
+    "SourceSha256": "0a88ebf89835af7e5c7e3c7f98f76baa6a63eae8b6686d1f2066466286857919"
+  },
+  {
+    "ThumbnailWidth": 320,
+    "DisplayWidth": 640,
+    "ThumbnailHeight": 320,
+    "DisplayHeight": 640,
+    "File": "key-1.png",
+    "SourceSha256": "834414ec9bd960df17e6a79894f2876a7572765fb58c11e000e384c5ad1e018a"
+  },
+  {
+    "ThumbnailWidth": 320,
+    "DisplayWidth": 640,
+    "ThumbnailHeight": 320,
+    "DisplayHeight": 640,
+    "File": "key-2.png",
+    "SourceSha256": "2e5b67f42a9afc878249b48d4a343bd2091da6d0030683309f340a3a2a14c980"
+  },
+  {
+    "ThumbnailWidth": 320,
+    "DisplayWidth": 640,
+    "ThumbnailHeight": 320,
+    "DisplayHeight": 640,
+    "File": "mug-3.png",
+    "SourceSha256": "32db868fa139ebb8086d18c95894e379a31007b5eb4ec1b48f2c34b680441f20"
+  },
+  {
+    "ThumbnailWidth": 320,
+    "DisplayWidth": 640,
+    "ThumbnailHeight": 320,
+    "DisplayHeight": 640,
+    "File": "plush-1.png",
+    "SourceSha256": "4913eca0338b7aae304daacc543de5181062d1a7fa91108667e3c9c13509a5a4"
+  },
+  {
+    "ThumbnailWidth": 320,
+    "DisplayWidth": 640,
+    "ThumbnailHeight": 320,
+    "DisplayHeight": 640,
+    "File": "plush-2.png",
+    "SourceSha256": "024b5ac823852e660dd77fee594382cabfce9e2b2f88b89b1ba370ea67bc9296"
+  },
+  {
+    "ThumbnailWidth": 320,
+    "DisplayWidth": 640,
+    "ThumbnailHeight": 320,
+    "DisplayHeight": 640,
+    "File": "poster-2.png",
+    "SourceSha256": "22ce0efbcf67d818b8a801d2bc00ecd409b65323a08996980e8665f51207e6a3"
+  },
+  {
+    "ThumbnailWidth": 320,
+    "DisplayWidth": 640,
+    "ThumbnailHeight": 320,
+    "DisplayHeight": 640,
+    "File": "poster-3.png",
+    "SourceSha256": "aa53213f9b23d2653779c42e13cf5250959a7d69774961a783445b6c02c5141a"
+  },
+  {
+    "ThumbnailWidth": 320,
+    "DisplayWidth": 640,
+    "ThumbnailHeight": 320,
+    "DisplayHeight": 640,
+    "File": "stand-0.png",
+    "SourceSha256": "82370b5d12b531337b2a27cdd52780b5901a888a4d0b2b5d49f0e06cb0fb4527"
+  },
+  {
+    "ThumbnailWidth": 320,
+    "DisplayWidth": 640,
+    "ThumbnailHeight": 320,
+    "DisplayHeight": 640,
+    "File": "stand-1.png",
+    "SourceSha256": "6239f660781cbf5ceb81e880aadbf870a490d0a50f3fa8c96aedbca7d191abb3"
+  }
+]

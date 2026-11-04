@@ -6,6 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Samples/Assets/*" LogicalName="sample-data/%(Filename)%(Extension)" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.13" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -21,6 +22,8 @@
     <None Remove="data/**/*" />
     <Content Remove="PhotoOcrAssets/**/*" />
     <None Remove="PhotoOcrAssets/**/*" />
+    <Content Remove="Samples/Assets/**/*" />
+    <None Remove="Samples/Assets/**/*" />
     <Content Include="../../third-party/application/**/*" Link="notices/application/%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="BuildCollectionClient" AfterTargets="ComputeFilesToPublish" Condition="'$(DesignTimeBuild)' != 'true'">

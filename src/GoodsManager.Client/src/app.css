@@ -205,3 +205,5 @@
 .image-settings-page{max-width:900px;margin:auto}.image-settings-page>.panel{margin-top:20px}.image-settings-page h2{margin-bottom:18px}.image-settings-page fieldset{border:0;padding:0;margin:0;min-width:0}.image-settings-page .form-grid{margin:18px 0}.image-settings-page .editor-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}.image-settings-page input[type=number]{max-width:none}
 
 .account-page>.account-operation-group{margin:20px 0 0}.account-login-id>.btn{margin-top:16px}
+
+.setup-samples{display:flex;align-items:center;gap:8px}.setup-samples input{flex:0 0 auto;width:auto}

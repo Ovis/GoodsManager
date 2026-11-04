@@ -114,3 +114,21 @@ test('コレクション管理の要求はアカウントに結び付け、設�
     assert.deepEqual(JSON.parse(calls[0].options.body),{name:'コピー先',importFrom:'source'});
     assert.equal(state.items[0].id,'new');
 });
+
+test('サンプル入りの作成は設定コピーと区別し、コピー確認を要求しない',async t=>{
+    const calls=[];
+    fetcher(t,async(path,options)=>{
+        if(path.endsWith('/auth/csrf'))return json({token:'token'});
+
+        calls.push({path,options});
+        return json({id:'sample',name:'お試し',role:'manager',etag:'sample-etag',revision:'1',sampleStatus:'pending'});
+    });
+    const state=new CollectionsStore(apiForAccount('owner'));
+    state.name='お試し';
+    state.importFrom='@samples';
+    await state.submit();
+
+    assert.deepEqual(JSON.parse(calls[0].options.body),{name:'お試し',withSamples:true});
+    assert.equal(state.items[0].sampleStatus,'pending');
+    assert.match(state.notice,/準備しています/);
+});

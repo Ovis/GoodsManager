@@ -333,6 +333,65 @@ namespace GoodsManager.Web.Storage.Migrations
                         });
                 });
 
+            modelBuilder.Entity("GoodsManager.Web.Collections.CollectionRequest", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Operation")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Etag")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ExpiresAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResponseJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId", "Operation", "Key");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("CollectionRequest", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CollectionRequest_Etag_Storage", "typeof(\"Etag\") = 'text' AND instr(\"Etag\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_CollectionRequest_ExpiresAt_Storage", "typeof(\"ExpiresAt\") = 'integer' AND \"ExpiresAt\" BETWEEN -62135596800000 AND 253402300799999");
+
+                            t.HasCheckConstraint("CK_CollectionRequest_Hash", "length(RequestHash)=64 AND RequestHash NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_CollectionRequest_Key_Storage", "typeof(\"Key\") = 'text' AND length(\"Key\") = 36 AND instr(\"Key\", char(0)) = 0 AND substr(\"Key\",9,1) = '-' AND substr(\"Key\",14,1) = '-' AND substr(\"Key\",19,1) = '-' AND substr(\"Key\",24,1) = '-' AND length(replace(\"Key\",'-','')) = 32 AND replace(\"Key\",'-','') NOT GLOB '*[^0-9a-f]*'");
+
+                            t.HasCheckConstraint("CK_CollectionRequest_Operation_Storage", "typeof(\"Operation\") = 'text' AND instr(\"Operation\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_CollectionRequest_RequestHash_Storage", "typeof(\"RequestHash\") = 'text' AND instr(\"RequestHash\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_CollectionRequest_Response", "json_valid(ResponseJson)=1 AND json_type(ResponseJson)='object'");
+
+                            t.HasCheckConstraint("CK_CollectionRequest_ResponseJson_Storage", "typeof(\"ResponseJson\") = 'text' AND instr(\"ResponseJson\", char(0)) = 0");
+
+                            t.HasCheckConstraint("CK_CollectionRequest_Status", "StatusCode IN (200,201)");
+
+                            t.HasCheckConstraint("CK_CollectionRequest_StatusCode_Storage", "typeof(\"StatusCode\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_CollectionRequest_UserId_Storage", "typeof(\"UserId\") = 'text' AND length(\"UserId\") = 36 AND instr(\"UserId\", char(0)) = 0 AND substr(\"UserId\",9,1) = '-' AND substr(\"UserId\",14,1) = '-' AND substr(\"UserId\",19,1) = '-' AND substr(\"UserId\",24,1) = '-' AND length(replace(\"UserId\",'-','')) = 32 AND replace(\"UserId\",'-','') NOT GLOB '*[^0-9a-f]*'");
+                        });
+                });
+
             modelBuilder.Entity("GoodsManager.Web.Collections.CollectionSpace", b =>
                 {
                     b.Property<string>("Id")
@@ -349,16 +408,23 @@ namespace GoodsManager.Web.Storage.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("SampleStatus")
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("UpdatedAt")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SampleStatus", "CreatedAt");
 
                     b.ToTable("Collections", null, t =>
                         {
                             t.HasCheckConstraint("CK_Collection_Name", "length(Name) BETWEEN 1 AND 200 AND length(trim(Name,char(9,10,11,12,13,32,133,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288)))>0");
 
                             t.HasCheckConstraint("CK_Collection_Revision", "Revision>=1");
+
+                            t.HasCheckConstraint("CK_Collection_SampleStatus", "SampleStatus IS NULL OR SampleStatus IN ('pending','ready','failed')");
 
                             t.HasCheckConstraint("CK_Collections_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
 
@@ -367,6 +433,8 @@ namespace GoodsManager.Web.Storage.Migrations
                             t.HasCheckConstraint("CK_Collections_Name_Storage", "typeof(\"Name\") = 'text' AND instr(\"Name\", char(0)) = 0");
 
                             t.HasCheckConstraint("CK_Collections_Revision_Storage", "typeof(\"Revision\") = 'integer'");
+
+                            t.HasCheckConstraint("CK_Collections_SampleStatus_Storage", "\"SampleStatus\" IS NULL OR (typeof(\"SampleStatus\") = 'text' AND instr(\"SampleStatus\", char(0)) = 0)");
 
                             t.HasCheckConstraint("CK_Collections_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");
                         });
@@ -2741,6 +2809,15 @@ namespace GoodsManager.Web.Storage.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoodsManager.Web.Collections.CollectionRequest", b =>
+                {
+                    b.HasOne("GoodsManager.Web.Auth.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

@@ -56,6 +56,8 @@ export function apiForAccount(accountId:string):ApiClient{
 }
 
 export function errorText(error: unknown) {
+    if(error instanceof ApiError&&error.code==='SAMPLE_COLLECTION_NOT_READY')return 'サンプルの準備が完了するまで編集できません。コレクション管理で準備状況を確認してください。';
+
     return error instanceof ApiError ? error.message : error instanceof DOMException && error.name==='NotAllowedError' ? 'パスキー認証を完了できませんでした。再試行するか、パスワードでログインしてください。' : error instanceof DOMException && error.name==='NotSupportedError' ? 'このブラウザではパスキーを利用できません。対応ブラウザを使うか、パスワードでログインしてください。' : '通信を完了できませんでした。接続を確認し、再試行してください。';
 }
 
