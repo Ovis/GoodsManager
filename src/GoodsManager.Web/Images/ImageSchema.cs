@@ -6,7 +6,6 @@ namespace GoodsManager.Web.Images;
 
 public sealed class ImageSettings
 {
-    public int Id { get; set; } = 1;
     public bool KeepOriginal
     {
         get; set;
@@ -234,9 +233,8 @@ public static class ImageSchema
     {
         model.Entity<ImageSettings>(e =>
         {
-            e.ToTable("ImageSettings", t => { t.HasCheckConstraint("CK_ImageSettings_Singleton", "Id=1"); t.HasCheckConstraint("CK_ImageSettings_Values", "DisplayMaxEdge BETWEEN 1 AND 4096 AND ThumbMaxEdge BETWEEN 1 AND 1024 AND ThumbMaxEdge<=DisplayMaxEdge AND DisplayQuality BETWEEN 1 AND 100 AND ThumbQuality BETWEEN 1 AND 100 AND Revision>=1"); });
-            e.HasKey(x => x.Id);
-            e.Property(x => x.Id).ValueGeneratedNever();
+            e.ToTable("ImageSettings", t => t.HasCheckConstraint("CK_ImageSettings_Values", "DisplayMaxEdge BETWEEN 1 AND 4096 AND ThumbMaxEdge BETWEEN 1 AND 1024 AND ThumbMaxEdge<=DisplayMaxEdge AND DisplayQuality BETWEEN 1 AND 100 AND ThumbQuality BETWEEN 1 AND 100 AND Revision>=1"));
+            // 主キーはCollectionSchemaが所属列に設定する。全体で1件とする旧IDは持たない。
             e.Property(x => x.Revision).IsConcurrencyToken();
         });
 

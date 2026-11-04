@@ -61,16 +61,23 @@ public sealed class MigrationReviewTests
         Assert.That(await response.Content.ReadAsStringAsync(), Does.Not.Contain("Unknown").And.Not.Contain(app.DataDirectory));
     }
 
-    [Test]
-    public async Task StartupRejectsPreCollectionDatabaseWithoutDeletingItsData()
+    /// <summary>公開前に廃止した構造のDBを開かず、既存データを保護して新規作成を要求する。</summary>
+    [TestCase("20261018032448_InitialSystemState")]
+    [TestCase("20261028152309_CollectionFoundation")]
+    public async Task StartupRejectsRetiredDevelopmentDatabaseWithoutDeletingItsData(string retiredMigration)
     {
         await using var app = new TestApplication();
         Directory.CreateDirectory(app.DataDirectory);
-        await ExecuteAsync(app.DataDirectory, "CREATE TABLE __EFMigrationsHistory(MigrationId TEXT PRIMARY KEY,ProductVersion TEXT NOT NULL); INSERT INTO __EFMigrationsHistory VALUES('20261018032448_InitialSystemState','10.0.0'); CREATE TABLE SavedData(Value TEXT NOT NULL); INSERT INTO SavedData VALUES('keep-me')");
+        await ExecuteAsync(app.DataDirectory, $"CREATE TABLE __EFMigrationsHistory(MigrationId TEXT PRIMARY KEY,ProductVersion TEXT NOT NULL); INSERT INTO __EFMigrationsHistory VALUES('{retiredMigration}','10.0.0'); CREATE TABLE SavedData(Value TEXT NOT NULL); INSERT INTO SavedData VALUES('keep-me')");
 
-        Assert.ThrowsAsync<InvalidOperationException>(async () => { using var client = app.CreateClient(); await client.GetAsync("/health/ready"); });
+        Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            using var client = app.CreateClient();
+            await client.GetAsync("/health/ready");
+        });
+
         Assert.That(await ExecuteAsync(app.DataDirectory, "SELECT Value FROM SavedData"), Is.EqualTo("keep-me"));
-        Assert.That(await ExecuteAsync(app.DataDirectory, "SELECT MigrationId FROM __EFMigrationsHistory"), Is.EqualTo("20261018032448_InitialSystemState"));
+        Assert.That(await ExecuteAsync(app.DataDirectory, "SELECT MigrationId FROM __EFMigrationsHistory"), Is.EqualTo(retiredMigration));
     }
 
     /// <summary>停止中の一時DBを変更・照会し、再起動前に接続を解放</summary>

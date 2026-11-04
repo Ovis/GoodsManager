@@ -500,7 +500,6 @@ namespace GoodsManager.Web.Storage.Migrations
                 columns: table => new
                 {
                     CollectionId = table.Column<string>(type: "TEXT", nullable: false, defaultValue: "c011ec70-0000-4000-8000-000000000001"),
-                    Id = table.Column<int>(type: "INTEGER", nullable: false),
                     KeepOriginal = table.Column<long>(type: "INTEGER", nullable: false),
                     DisplayMaxEdge = table.Column<int>(type: "INTEGER", nullable: false),
                     DisplayQuality = table.Column<int>(type: "INTEGER", nullable: false),
@@ -517,10 +516,8 @@ namespace GoodsManager.Web.Storage.Migrations
                     table.CheckConstraint("CK_ImageSettings_CreatedAt_Storage", "typeof(\"CreatedAt\") = 'integer' AND \"CreatedAt\" BETWEEN -62135596800000 AND 253402300799999");
                     table.CheckConstraint("CK_ImageSettings_DisplayMaxEdge_Storage", "typeof(\"DisplayMaxEdge\") = 'integer'");
                     table.CheckConstraint("CK_ImageSettings_DisplayQuality_Storage", "typeof(\"DisplayQuality\") = 'integer'");
-                    table.CheckConstraint("CK_ImageSettings_Id_Storage", "typeof(\"Id\") = 'integer'");
                     table.CheckConstraint("CK_ImageSettings_KeepOriginal_Storage", "typeof(\"KeepOriginal\") = 'integer' AND \"KeepOriginal\" IN (0,1)");
                     table.CheckConstraint("CK_ImageSettings_Revision_Storage", "typeof(\"Revision\") = 'integer'");
-                    table.CheckConstraint("CK_ImageSettings_Singleton", "Id=1");
                     table.CheckConstraint("CK_ImageSettings_ThumbMaxEdge_Storage", "typeof(\"ThumbMaxEdge\") = 'integer'");
                     table.CheckConstraint("CK_ImageSettings_ThumbQuality_Storage", "typeof(\"ThumbQuality\") = 'integer'");
                     table.CheckConstraint("CK_ImageSettings_UpdatedAt_Storage", "typeof(\"UpdatedAt\") = 'integer' AND \"UpdatedAt\" BETWEEN -62135596800000 AND 253402300799999");

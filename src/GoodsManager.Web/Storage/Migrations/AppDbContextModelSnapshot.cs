@@ -560,9 +560,6 @@ namespace GoodsManager.Web.Storage.Migrations
                     b.Property<int>("DisplayQuality")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Id")
-                        .HasColumnType("INTEGER");
-
                     b.Property<long>("KeepOriginal")
                         .HasColumnType("INTEGER");
 
@@ -591,13 +588,9 @@ namespace GoodsManager.Web.Storage.Migrations
 
                             t.HasCheckConstraint("CK_ImageSettings_DisplayQuality_Storage", "typeof(\"DisplayQuality\") = 'integer'");
 
-                            t.HasCheckConstraint("CK_ImageSettings_Id_Storage", "typeof(\"Id\") = 'integer'");
-
                             t.HasCheckConstraint("CK_ImageSettings_KeepOriginal_Storage", "typeof(\"KeepOriginal\") = 'integer' AND \"KeepOriginal\" IN (0,1)");
 
                             t.HasCheckConstraint("CK_ImageSettings_Revision_Storage", "typeof(\"Revision\") = 'integer'");
-
-                            t.HasCheckConstraint("CK_ImageSettings_Singleton", "Id=1");
 
                             t.HasCheckConstraint("CK_ImageSettings_ThumbMaxEdge_Storage", "typeof(\"ThumbMaxEdge\") = 'integer'");
 
