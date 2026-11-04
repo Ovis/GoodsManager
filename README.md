@@ -4,6 +4,8 @@
 
 React・バーコード読み取り・SQLite・SkiaSharpなどのライセンスと著作権表示は、配布物の `notices/application/`（Dockerでは `/app/notices/application/`）に同梱しています。ブラウザー向けライブラリの表示は配信するJavaScriptにも含めています。写真の文字読み取りについては `PhotoOcrAssets/notices/` に別途収録しています。
 
+バックアップのマニフェストには、版番号とソース識別情報を含むビルドの版を記録します。Dockerイメージのビルド引数 `APP_VERSION`（既定 `1.0.0`）と `SOURCE_REVISION` で指定でき、`SOURCE_REVISION` を省略した場合はビルド対象ソースからSHA-256を計算して付けます。
+
 ## できること
 
 - コレクションの作成・名前変更・切り替えと、分類などの設定コピー

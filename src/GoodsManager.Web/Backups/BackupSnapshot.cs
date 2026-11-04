@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using GoodsManager.Web.Images;
@@ -118,7 +119,10 @@ public static class BackupSnapshot
             entries.Add(new(relative, input.Length, await BackupArchive.CopyHashAsync(input, null, input.Length, token)));
         }
 
-        return new(1, typeof(BackupSnapshot).Assembly.GetName().Version?.ToString() ?? "1.0", schema, revision, now.ToUniversalTime(), id, kind, entries);
+        var appVersion = typeof(BackupSnapshot).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? throw new InvalidOperationException("アプリのビルド識別情報が存在しない");
+
+        return new(1, appVersion, schema, revision, now.ToUniversalTime(), id, kind, entries);
     }
 
     /// <summary>本体DBを変更せず、復元できない一時状態と到達しない画像をコピー側だけから除く</summary>

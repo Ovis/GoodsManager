@@ -20,6 +20,25 @@ namespace GoodsManager.Tests;
 /// <summary>実ZIP・実SQLiteで保全範囲、失敗時の世代保持、復元切替を検証</summary>
 public sealed class BackupTests
 {
+    /// <summary>作成したZIPへ、アセンブリ互換用の番号ではなくビルド識別情報を記録する。</summary>
+    [Test]
+    public async Task ManifestIdentifiesTheApplicationBuild()
+    {
+        var id = await Create();
+        await Run(id);
+        using var zip = System.IO.Compression.ZipFile.OpenRead(await PathFor(id));
+        var entry = zip.GetEntry("manifest.json") ?? throw new InvalidDataException("マニフェストが存在しない");
+        await using var stream = entry.Open();
+        var manifest = await JsonSerializer.DeserializeAsync<BackupManifest>(stream, BackupArchive.Json)
+            ?? throw new InvalidDataException("マニフェストが空");
+        var assembly = typeof(BackupSnapshot).Assembly;
+        var identity = assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .Cast<System.Reflection.AssemblyInformationalVersionAttribute>().Single().InformationalVersion;
+
+        Assert.That(manifest.AppVersion, Is.EqualTo(identity));
+        Assert.That(manifest.AppVersion, Is.Not.EqualTo(assembly.GetName().Version?.ToString()));
+    }
+
     private TestApplication app = null!;
     private HttpClient owner = null!;
     private Guid productId;

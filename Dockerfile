@@ -2,6 +2,8 @@
 FROM node:24.16.0-bookworm-slim@sha256:ca520832af80fa37a57c14077ed0fcdd83b5aefccc356059fdc3a9a05b78ae1f AS node
 FROM mcr.microsoft.com/dotnet/sdk:10.0.402@sha256:3a48280a9a7c6276c3eeaba1efa6a08820f18c84fb9e6274c187719ecfaf9fbc AS build
 ARG TARGETARCH
+ARG APP_VERSION=1.0.0
+ARG SOURCE_REVISION
 RUN test "$TARGETARCH" = "amd64"
 COPY --from=node /usr/local/ /usr/local/
 WORKDIR /source
@@ -12,7 +14,10 @@ COPY third-party/photo-ocr/ third-party/photo-ocr/
 COPY third-party/application/ third-party/application/
 COPY src/GoodsManager.Web/ src/GoodsManager.Web/
 COPY src/GoodsManager.Client/ src/GoodsManager.Client/
-RUN dotnet publish src/GoodsManager.Web -c Release -r linux-x64 --self-contained false -o /publish
+# Gitを含まないビルドコンテキストでも、同じ版の異なるソースを識別できるようにする。
+RUN revision="${SOURCE_REVISION:-$(find src tools third-party -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f1)}" \
+    && dotnet publish src/GoodsManager.Web -c Release -r linux-x64 --self-contained false -o /publish \
+       -p:Version="$APP_VERSION" -p:SourceRevisionId="$revision"
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.13@sha256:d5633778c754e89a386882eddf8dbee6942447a8a4b8267c19cf1e1158d0b0ac AS runtime
 ARG TARGETARCH
