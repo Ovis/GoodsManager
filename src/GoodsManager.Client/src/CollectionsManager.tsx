@@ -1,7 +1,7 @@
 import {useEffect,useSyncExternalStore} from 'react';
 import type {CollectionsStore} from './CollectionsStore';
 
-/** 独立したコレクションを空・設定コピー・サンプルから作成する。 */
+/** 独立したコレクションの作成と、範囲を確認した全体削除を行う。 */
 export function CollectionsManager({store,current,onOpen}:{store:CollectionsStore;current:string;onOpen:(id:string)=>void}){
     useSyncExternalStore(store.subscribe,store.snapshot);
     const preparing=store.items.some(x=>x.sampleStatus==='pending');
@@ -62,8 +62,26 @@ export function CollectionsManager({store,current,onOpen}:{store:CollectionsStor
                     <button className="btn" disabled={x.sampleStatus==='pending'||x.sampleStatus==='failed'} onClick={()=>onOpen(x.id)}>開く</button>
                     {x.role==='manager'&&<>
                         <button className="btn quiet" disabled={store.locked} onClick={()=>store.edit(x)}>名前を変更</button>
+                        <button className="btn danger quiet" disabled={store.locked||store.reviewing} onClick={()=>void store.reviewDelete(x)}>削除</button>
                     </>}
                 </div>
+                {store.deletion?.id===x.id&&<div className="collection-delete note">
+                    <h3>コレクション全体を削除</h3>
+                    <p>商品 {store.deletion.products}件・ゴミ箱 {store.deletion.trashedProducts}件・所持ロット {store.deletion.lots}件・個体 {store.deletion.items}件・画像の関連 {store.deletion.images}件・マスター {store.deletion.masters}件</p>
+                    {store.deletion.canDelete?<>
+                        <p>このコレクションの商品・所持品・マスター・画像をすべて削除します。編集中の入力も破棄されます。この操作は取り消せません。</p>
+                        <label className="field">確認のため「{x.name}」と入力<input value={store.deleteName} disabled={store.locked} autoComplete="off" onChange={e=>{
+                            store.deleteName=e.target.value;
+                            store.notify();
+                        }}/></label>
+                        <button className="btn danger" disabled={store.locked||store.deleteName!==store.deletion.name} onClick={()=>void store.remove()}>コレクションを削除</button>
+                    </>:<p role="alert">最後のコレクションは削除できません。別のコレクションを作成してください。他の参加者についても最後の1件は保護されます。</p>}
+                    <button className="btn quiet" disabled={store.locked} onClick={()=>{
+                        store.deletion=null;
+                        store.deleteName='';
+                        store.notify();
+                    }}>キャンセル</button>
+                </div>}
                 {store.rename?.id===x.id&&<div className="collection-rename">
                     <label className="field">新しい名前<input value={store.rename.name} disabled={store.locked} onChange={e=>{
                         if(store.rename)store.rename.name=e.target.value;

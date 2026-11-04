@@ -132,3 +132,51 @@ test('サンプル入りの作成は設定コピーと区別し、コピー確�
     assert.equal(state.items[0].sampleStatus,'pending');
     assert.match(state.notice,/準備しています/);
 });
+
+test('全体削除は名前の一致を要求し、結果不明の再送では元の確認内容を保つ',async t=>{
+    const calls=[];
+    let deletions=0;
+    fetcher(t,async(path,options)=>{
+        if(path.endsWith('/auth/csrf'))return json({token:'token'});
+        if(path.endsWith('/delete-impact'))return json({id:'A',name:'試用',etag:'etag',confirmation:'confirmed',canDelete:true});
+
+        calls.push({path,options});
+        if(++deletions===1)throw new Error('response lost');
+
+        return json({id:'A',name:'試用',etag:'etag',role:'manager',revision:'1'});
+    });
+    const state=new CollectionsStore(apiForAccount('owner'));
+    state.items=[{id:'A',name:'試用',etag:'etag',role:'manager',revision:'1'},{id:'B',name:'実データ',etag:'b',role:'manager',revision:'1'}];
+    await state.reviewDelete(state.items[0]);
+    await state.remove();
+    assert.equal(calls.length,0);
+    state.deleteName='試用';
+    await state.remove();
+    assert.equal(state.save.state,'unknown');
+    state.deleteName='画面の入力を変更';
+    await state.replay();
+
+    assert.equal(calls[0].options.body,calls[1].options.body);
+    assert.equal(calls[0].options.headers['Idempotency-Key'],calls[1].options.headers['Idempotency-Key']);
+    assert.equal(calls[1].options.headers['If-Match'],'etag');
+    assert.deepEqual(state.items.map(x=>x.id),['B']);
+    assert.equal(state.deletion,null);
+});
+
+test('最後の所属は画面から削除せず、他所の削除確認へ流用しない',async()=>{
+    let writes=0;
+    const state=new CollectionsStore(async(path)=>{
+        if(path.endsWith('/delete-impact'))return {id:'A',name:'最後の1件',etag:'a',confirmation:'only',canDelete:false};
+
+        writes++;
+        return {};
+    });
+    const space={id:'A',name:'最後の1件',etag:'a',role:'manager',revision:'1'};
+    state.items=[space];
+    await state.reviewDelete(space);
+    state.deleteName=space.name;
+    await state.remove();
+
+    assert.equal(writes,0);
+    assert.equal(state.items.length,1);
+});

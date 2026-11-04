@@ -15,11 +15,14 @@ public sealed record CreateCollectionRequest(string Name, Guid? ImportFrom = nul
 /// <summary>商品などの内容を変更せず、コレクション名だけを変更する入力。</summary>
 public sealed record RenameCollectionRequest(string Name);
 
-/// <summary>所属の作成・設定コピー・サンプル準備・名前変更を管理する。</summary>
+/// <summary>件数の確認時点とコレクション名を照合して、全体削除を明示する入力。</summary>
+public sealed record DeleteCollectionRequest(string Name, string Confirmation);
+
+/// <summary>所属の作成・設定コピー・名前変更・全体削除を管理する。</summary>
 [Authorize]
 [ApiController]
 [Route("api/v1/collections")]
-public sealed class CollectionsController(AppDbContext db, SignInManager<AppUser> signIn, CollectionWrites writes) : ControllerBase
+public sealed class CollectionsController(AppDbContext db, SignInManager<AppUser> signIn, CollectionWrites writes, CollectionDeletion deletion) : ControllerBase
 {
     /// <summary>認証済みアカウントの所属だけを照会する。</summary>
     private Guid UserId => Guid.Parse(signIn.UserManager.GetUserId(User)!);
@@ -111,6 +114,29 @@ public sealed class CollectionsController(AppDbContext db, SignInManager<AppUser
         space.SampleStatus = "pending";
         space.Revision = checked(space.Revision + 1);
         space.UpdatedAt = now;
+        return space;
+    });
+
+    /// <summary>削除する内容と、最後の所属を失う利用者がいないことを確認する。</summary>
+    [HttpGet("{id:guid}/delete-impact")]
+    public async Task<IActionResult> DeleteImpact(Guid id)
+    {
+        var token = HttpContext.RequestAborted;
+        await using var transaction = await db.Database.BeginTransactionAsync(token);
+        var space = await ManagedAsync(id, UserId, token);
+        var result = await deletion.ImpactAsync(space, token);
+        await transaction.CommitAsync(token);
+        return Ok(result);
+    }
+
+    /// <summary>確認した全データを削除し、同じ要求の再送にも確定済みの結果を返す。</summary>
+    [HttpDelete("{id:guid}")]
+    [RequestSizeLimit(65536)]
+    public Task<IActionResult> Delete(Guid id, DeleteCollectionRequest request) => writes.ExecuteAsync(HttpContext, $"DELETE:/api/v1/collections/{id:D}", request, 200, async (user, now, token) =>
+    {
+        var space = await ManagedAsync(id, user.Id, token);
+        CollectionWrites.CheckVersion(space, Request.Headers.IfMatch.ToString());
+        await deletion.DeleteAsync(space, request, now, token);
         return space;
     });
 

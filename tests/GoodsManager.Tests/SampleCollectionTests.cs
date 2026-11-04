@@ -15,7 +15,7 @@ using static GoodsManager.Tests.AuthenticationTests;
 
 namespace GoodsManager.Tests;
 
-/// <summary>初期登録から独立したサンプル準備と、障害時のロールバック・再実行を検証する。</summary>
+/// <summary>初期登録から独立したサンプル準備と、専用コレクションの削除・再送・最後の所属保護を検証する。</summary>
 public sealed class SampleCollectionTests
 {
     /// <summary>ワーカーの自動実行だけを止め、試験から同じ実処理を決めた時点で実行する。</summary>
@@ -148,6 +148,207 @@ public sealed class SampleCollectionTests
         await using var final = app.Services.CreateAsyncScope();
         var restored = final.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.That(await restored.Set<Product>().CountAsync(), Is.EqualTo(64));
+    }
+
+    /// <summary>確認後の変更を拒否し、全体削除後も同じ要求に同じ結果を返す。共有ファイルは別コレクションへ残す。</summary>
+    [Test]
+    public async Task DeleteChecksImpactAndReplaysAfterRemovingAllScopedRows()
+    {
+        await using var app = App();
+        using var client = Client(app);
+        await SetupAsync(client);
+        var first = await CreateAsync(client, true);
+        await PrepareAsync(app, first.Id);
+        var second = await CreateAsync(client, true);
+        await PrepareAsync(app, second.Id);
+        var path = $"collections/{first.Id}";
+        var impact = await client.GetFromJsonAsync<CollectionDeleteImpact>("/api/v1/" + path + "/delete-impact") ?? throw new InvalidOperationException();
+        Assert.That(impact.Products, Is.EqualTo(62));
+        Assert.That(impact.TrashedProducts, Is.EqualTo(2));
+        Assert.That(impact.CanDelete, Is.True);
+
+        await CreateAsync(client);
+        using var stale = await WriteAsync(client, path, new
+        {
+            name = impact.Name,
+            confirmation = impact.Confirmation
+        }, HttpMethod.Delete, impact.Etag);
+        Assert.That(stale.StatusCode, Is.EqualTo(HttpStatusCode.PreconditionFailed));
+        impact = await client.GetFromJsonAsync<CollectionDeleteImpact>("/api/v1/" + path + "/delete-impact") ?? throw new InvalidOperationException();
+        var key = Guid.NewGuid();
+        var input = new
+        {
+            name = impact.Name,
+            confirmation = impact.Confirmation
+        };
+        using var deleted = await WriteAsync(client, path, input, HttpMethod.Delete, impact.Etag, key);
+        Assert.That(deleted.StatusCode, Is.EqualTo(HttpStatusCode.OK), await deleted.Content.ReadAsStringAsync());
+        using var replay = await WriteAsync(client, path, input, HttpMethod.Delete, impact.Etag, key);
+        Assert.That(await replay.Content.ReadAsStringAsync(), Is.EqualTo(await deleted.Content.ReadAsStringAsync()));
+        Assert.That(replay.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var changedReplay = await WriteAsync(client, path, new
+        {
+            name = "別の確認",
+            confirmation = impact.Confirmation
+        }, HttpMethod.Delete, impact.Etag, key);
+        Assert.That(changedReplay.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+
+        await using var scope = app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.CollectionId = first.Id;
+        foreach (var type in CollectionSchema.ScopedTypes)
+        {
+            var table = db.Model.FindEntityType(type)?.GetTableName() ?? throw new InvalidOperationException();
+            using var command = db.Database.GetDbConnection().CreateCommand();
+            await db.Database.OpenConnectionAsync();
+            command.CommandText = $"SELECT count(*) FROM \"{table}\" WHERE CollectionId=$id";
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "$id";
+            parameter.Value = first.Id.ToString("D");
+            command.Parameters.Add(parameter);
+            Assert.That(Convert.ToInt32(await command.ExecuteScalarAsync()), Is.Zero, type.Name);
+        }
+
+        db.CollectionId = second.Id;
+        Assert.That(await db.Set<Product>().CountAsync(), Is.EqualTo(64));
+        var photo = await db.Set<ProductImage>().FirstAsync();
+        client.DefaultRequestHeaders.Remove("X-Collection-Id");
+        client.DefaultRequestHeaders.Add("X-Collection-Id", second.Id.ToString("D"));
+        Assert.That((await client.GetAsync($"/media/assets/{photo.ImageAssetId}/display?collectionId={second.Id}")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
+
+    /// <summary>最初の所属も別の所属があれば削除できるが、競合する2件の削除で0件にしない。</summary>
+    [Test]
+    public async Task DefaultCanBeDeletedButConcurrentDeletesKeepOneCollection()
+    {
+        await using var app = App();
+        using var client = Client(app);
+        await SetupAsync(client);
+        var second = await CreateAsync(client);
+        var firstImpact = await client.GetFromJsonAsync<CollectionDeleteImpact>($"/api/v1/collections/{CollectionSchema.DefaultId}/delete-impact") ?? throw new InvalidOperationException();
+        using var defaultDeleted = await WriteAsync(client, $"collections/{firstImpact.Id}", new
+        {
+            name = firstImpact.Name,
+            confirmation = firstImpact.Confirmation
+        }, HttpMethod.Delete, firstImpact.Etag);
+        Assert.That(defaultDeleted.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var third = await CreateAsync(client);
+        firstImpact = await client.GetFromJsonAsync<CollectionDeleteImpact>($"/api/v1/collections/{third.Id}/delete-impact") ?? throw new InvalidOperationException();
+        var secondImpact = await client.GetFromJsonAsync<CollectionDeleteImpact>($"/api/v1/collections/{second.Id}/delete-impact") ?? throw new InvalidOperationException();
+        var results = await Task.WhenAll(new[] { firstImpact, secondImpact }.Select(impact => WriteAsync(client, $"collections/{impact.Id}", new { name = impact.Name, confirmation = impact.Confirmation }, HttpMethod.Delete, impact.Etag)));
+        Assert.That(results.Count(x => x.StatusCode == HttpStatusCode.OK), Is.EqualTo(1));
+        Assert.That(results.Count(x => x.StatusCode == HttpStatusCode.Conflict), Is.EqualTo(1));
+        var remaining = await client.GetFromJsonAsync<JsonElement>("/api/v1/collections");
+        Assert.That(remaining.GetProperty("items").GetArrayLength(), Is.EqualTo(1));
+        await CreateAsync(client);
+    }
+
+    /// <summary>編集者は削除確認も実行もできず、管理者でも他の参加者の最後の所属を削除できない。</summary>
+    [Test]
+    public async Task DeletionRequiresManagerAndPreservesEveryMembersLastCollection()
+    {
+        await using var app = App();
+        using var owner = Client(app);
+        await SetupAsync(owner);
+        var space = await CreateAsync(owner);
+        await using (var scope = app.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var users = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<GoodsManager.Web.Auth.AppUser>>();
+            var user = new GoodsManager.Web.Auth.AppUser { Id = Guid.NewGuid(), UserName = "editor" };
+            Assert.That((await users.CreateAsync(user, Password)).Succeeded, Is.True);
+            db.Add(new CollectionMember { CollectionId = space.Id, UserId = user.Id, Role = "editor" });
+            await db.SaveChangesAsync();
+        }
+
+        var impact = await owner.GetFromJsonAsync<CollectionDeleteImpact>($"/api/v1/collections/{space.Id}/delete-impact") ?? throw new InvalidOperationException();
+        Assert.That(impact.CanDelete, Is.False);
+        using var refused = await WriteAsync(owner, $"collections/{space.Id}", new
+        {
+            name = impact.Name,
+            confirmation = impact.Confirmation
+        }, HttpMethod.Delete, impact.Etag);
+        Assert.That(refused.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+
+        using var editor = Client(app);
+        using var login = await SendAsync(editor, "auth/password", new
+        {
+            loginId = "editor",
+            password = Password,
+            rememberMe = false
+        });
+        Assert.That(login.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await editor.GetAsync($"/api/v1/collections/{space.Id}/delete-impact")).StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        using var forbidden = await WriteAsync(editor, $"collections/{space.Id}", new
+        {
+            name = impact.Name,
+            confirmation = impact.Confirmation
+        }, HttpMethod.Delete, impact.Etag);
+        Assert.That(forbidden.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+    }
+
+    /// <summary>変換処理がDBの外で進んでいても、削除済みコレクションへ画像を再公開しない。</summary>
+    [Test]
+    public async Task DeletionDuringConversionDoesNotRecreateAssets()
+    {
+        var converter = new ResumableConverter();
+        await using var app = App(services =>
+        {
+            services.Remove(services.Single(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(ImageWorker)));
+            services.Replace(ServiceDescriptor.Singleton<IImageConverter>(converter));
+        });
+        using var client = Client(app);
+        await SetupAsync(client);
+        var space = await CreateAsync(client);
+        client.DefaultRequestHeaders.Remove("X-Collection-Id");
+        client.DefaultRequestHeaders.Add("X-Collection-Id", space.Id.ToString("D"));
+        var csrf = await client.GetFromJsonAsync<JsonElement>("/api/v1/auth/csrf");
+        using var uploadRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/temporary-uploads");
+        uploadRequest.Headers.Add("X-CSRF-Token", csrf.GetProperty("token").GetString());
+        uploadRequest.Headers.Add("Client-Upload-Key", Guid.NewGuid().ToString("D"));
+        var form = new MultipartFormDataContent();
+        form.Add(new ByteArrayContent(ImageConversionTests.Png()), "file", "sample.png");
+        uploadRequest.Content = form;
+        using var accepted = await client.SendAsync(uploadRequest);
+        Assert.That(accepted.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+        var upload = await accepted.Content.ReadFromJsonAsync<JsonElement>();
+        var worker = ActivatorUtilities.CreateInstance<ImageWorker>(app.Services);
+        var processing = worker.ProcessAsync(upload.GetProperty("id").GetGuid(), CancellationToken.None);
+        try
+        {
+            await converter.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var impact = await client.GetFromJsonAsync<CollectionDeleteImpact>($"/api/v1/collections/{space.Id}/delete-impact") ?? throw new InvalidOperationException();
+            using var deleted = await WriteAsync(client, $"collections/{space.Id}", new { name = impact.Name, confirmation = impact.Confirmation }, HttpMethod.Delete, impact.Etag);
+            Assert.That(deleted.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        }
+        finally
+        {
+            converter.Resume.TrySetResult();
+            await processing.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        await using var scope = app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.That(await db.Set<TemporaryUpload>().CountAsync(), Is.Zero);
+        Assert.That(await db.Set<ImageAsset>().CountAsync(), Is.Zero);
+        Assert.That(await db.Set<ImageFile>().CountAsync(), Is.Zero);
+    }
+
+    /// <summary>変換の前後を明示的に同期し、DB書込と競合するタイミングを再現する。</summary>
+    private sealed class ResumableConverter : IImageConverter
+    {
+        /// <summary>入力の受付後、ネイティブ変換へ進む直前の到達通知。</summary>
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        /// <summary>削除確定後に変換結果を返すための再開通知。</summary>
+        public TaskCompletionSource Resume { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>再開後は実際の変換処理を使い、結果公開の直前まで進める。</summary>
+        public async Task<ConvertedImage> ConvertAsync(ImageJob job, CancellationToken token)
+        {
+            Started.TrySetResult();
+            await Resume.Task.WaitAsync(token);
+            return ImageConverter.Convert(job);
+        }
     }
 
     /// <summary>画像書込の故障だけを再現し、復旧後は同じ実装へ委譲する。</summary>

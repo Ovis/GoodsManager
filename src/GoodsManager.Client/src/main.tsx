@@ -93,7 +93,7 @@ function App() {
     useSyncExternalStore(spaces.subscribe,spaces.snapshot);
 
     const selectedId=new URLSearchParams(route.search).get('collectionId')||owner.lastCollection||spaces.items[0]?.id||'';
-    const selected=spaces.items.find(x=>x.id===selectedId);
+    const selected=spaces.items.find(x=>x.id===selectedId)||(spaces.loaded?spaces.items[0]:undefined);
     const scopeKey=selected?.id||'unselected';
     if(!owner.scopes.has(scopeKey))owner.scopes.set(scopeKey,newScope(selected?apiForCollection(selected.id,ownerId):api));
 
@@ -130,7 +130,11 @@ function App() {
     useEffect(()=>{
         if(selected){
             owner.lastCollection=selected.id;
-            if(!new URLSearchParams(route.search).has('collectionId'))navigate(route.pathname+route.search,{replace:true,state:route,collectionId:selected.id});
+            const requested=new URLSearchParams(route.search).get('collectionId');
+            if(requested!==selected.id){
+                const destination=requested?(route.pathname==='/collections'?'/collections':'/collection'):route.pathname+route.search;
+                navigate(destination,{replace:true,state:route,collectionId:selected.id});
+            }
         }
     },[selected?.id,route.key]);
     useEffect(()=>{
@@ -200,7 +204,15 @@ function App() {
         navigate(previous?.url||'/collection',{collectionId:id,state:previous?.state});
     };
     useEffect(()=>{
-        if(spaces.loaded)for(const [id,scope] of owner.scopes)if(!spaces.items.some(x=>x.id===id))scope.photoOcr.resetAuthentication();
+        if(spaces.loaded){
+            for(const [id,scope] of owner.scopes){
+                if(id!=='unselected'&&!spaces.items.some(x=>x.id===id)){
+                    scope.photoOcr.resetAuthentication();
+                    owner.scopes.delete(id);
+                    owner.routes.delete(id);
+                }
+            }
+        }
     },[spaces.snapshot()]);
 
     const collection=route.pathname==='/collection';

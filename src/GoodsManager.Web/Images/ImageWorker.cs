@@ -63,7 +63,13 @@ public sealed class ImageWorker(IServiceScopeFactory scopes, IImageFiles files, 
         {
             await using var scope = scopes.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            upload = await db.Set<TemporaryUpload>().SingleAsync(x => x.Id == id, token);
+            var pending = await db.Set<TemporaryUpload>().SingleOrDefaultAsync(x => x.Id == id, token);
+            if (pending is null)
+            {
+                return;
+            }
+
+            upload = pending;
             uploadCollectionId = (Guid)db.Entry(upload).Property("CollectionId").CurrentValue!;
             if (upload.State != "pending")
             {
@@ -139,8 +145,9 @@ public sealed class ImageWorker(IServiceScopeFactory scopes, IImageFiles files, 
                 await using var transaction = await db.Database.BeginTransactionAsync(token);
                 db.CollectionId = uploadCollectionId;
 
-                var current = await db.Set<TemporaryUpload>().SingleAsync(x => x.Id == id, token);
-                if (current.State != "processing" || current.ExpiresAt <= clock.GetUtcNow())
+                var current = await db.Set<TemporaryUpload>().SingleOrDefaultAsync(x => x.Id == id, token);
+                // 所属全体の削除でアップロードも消えた場合は、変換済みでも公開しない。
+                if (current is null || current.State != "processing" || current.ExpiresAt <= clock.GetUtcNow())
                 {
                     return;
                 }

@@ -206,4 +206,4 @@
 
 .account-page>.account-operation-group{margin:20px 0 0}.account-login-id>.btn{margin-top:16px}
 
-.setup-samples{display:flex;align-items:center;gap:8px}.setup-samples input{flex:0 0 auto;width:auto}
+.setup-samples{display:flex;align-items:center;gap:8px}.setup-samples input{flex:0 0 auto;width:auto}.collection-delete{margin-top:18px}.collection-delete>.btn{margin:12px 12px 0 0}

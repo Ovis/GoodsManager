@@ -3,6 +3,7 @@ import {mutation} from './RegistrationStore';
 import {validText} from './registration-state.mjs';
 
 export type CollectionSpace={id:string;name:string;role:'manager'|'editor';etag:string;revision:string;sampleStatus?:'pending'|'ready'|'failed'|null};
+export type CollectionDeleteImpact={id:string;name:string;etag:string;confirmation:string;canDelete:boolean;products:number;trashedProducts:number;lots:number;items:number;images:number;masters:number};
 
 export class CollectionsStore{
     items:CollectionSpace[]=[];
@@ -15,7 +16,10 @@ export class CollectionsStore{
     ack=false;
     rename:{id:string;name:string;etag:string}|null=null;
     conflict=false;
-    intent:'create'|'rename'|'retry'|null=null;
+    intent:'create'|'rename'|'delete'|'retry'|null=null;
+    deletion:CollectionDeleteImpact|null=null;
+    deleteName='';
+    reviewing=false;
     private readVersion=0;
     private version=0;
     private listeners=new Set<()=>void>();
@@ -121,6 +125,16 @@ export class CollectionsStore{
     }
 
     private complete(space:CollectionSpace){
+        if(this.intent==='delete'){
+            this.items=this.items.filter(x=>x.id!==space.id);
+            this.deletion=null;
+            this.deleteName='';
+            if(this.rename?.id===space.id)this.rename=null;
+
+            this.notice='「'+space.name+'」を削除しました。';
+            return;
+        }
+
         this.items=this.items.some(x=>x.id===space.id)?this.items.map(x=>x.id===space.id?space:x):this.items.concat(space);
         this.loaded=true;
         if(this.intent==='create'){
@@ -135,7 +149,46 @@ export class CollectionsStore{
 
     private failed(error:unknown){
         this.error=this.save.state==='unknown'?'結果を確認できませんでした。同じ要求で結果を確認してください。':errorText(error);
+        if(error instanceof ApiError&&error.code==='LAST_COLLECTION_REQUIRED')this.error='最後のコレクションは削除できません。別のコレクションを作成してください。';
+        if(error instanceof ApiError&&error.code==='COLLECTION_IMPACT_CHANGED')this.error='確認後にデータが変わりました。削除内容を再取得して確認してください。';
         if(error instanceof ApiError&&error.status===412)this.conflict=true;
+    }
+
+    async reviewDelete(space:CollectionSpace){
+        if(this.locked||this.reviewing)return;
+
+        this.reviewing=true;
+        this.deletion=null;
+        this.deleteName='';
+        this.error='';
+        this.notify();
+        try{
+            this.deletion=await this.request<CollectionDeleteImpact>('/collections/'+space.id+'/delete-impact');
+        }catch(e){
+            this.error=errorText(e);
+        }finally{
+            this.reviewing=false;
+            this.notify();
+        }
+    }
+
+    async remove(){
+        const impact=this.deletion;
+        if(this.locked||!impact?.canDelete||this.deleteName!==impact.name)return;
+
+        this.intent='delete';
+        this.error='';
+        this.notice='';
+        try{
+            const promise=this.save.begin('/collections/'+impact.id,{name:this.deleteName,confirmation:impact.confirmation},impact.etag,'DELETE');
+            this.notify();
+            this.complete(await promise);
+        }catch(e){
+            this.failed(e);
+            if(e instanceof ApiError&&e.status===412)this.deletion=null;
+        }finally{
+            this.notify();
+        }
     }
 
     async retrySamples(space:CollectionSpace){
