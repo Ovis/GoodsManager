@@ -7,7 +7,9 @@ COPY --from=node /usr/local/ /usr/local/
 WORKDIR /source
 COPY global.json ./
 COPY tools/photo-ocr/ tools/photo-ocr/
+COPY tools/notices/ tools/notices/
 COPY third-party/photo-ocr/ third-party/photo-ocr/
+COPY third-party/application/ third-party/application/
 COPY src/GoodsManager.Web/ src/GoodsManager.Web/
 COPY src/GoodsManager.Client/ src/GoodsManager.Client/
 RUN dotnet publish src/GoodsManager.Web -c Release -r linux-x64 --self-contained false -o /publish

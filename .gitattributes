@@ -4,3 +4,8 @@
 *.json text eol=lf
 *.csproj text eol=lf
 *.slnx text eol=lf
+
+# Preserve upstream license files byte-for-byte, including their whitespace.
+third-party/application/*-license.txt -text -whitespace
+third-party/application/skiasharp-third-party.txt -text -whitespace
+third-party/application/sqlitepcl-notice.txt -text -whitespace

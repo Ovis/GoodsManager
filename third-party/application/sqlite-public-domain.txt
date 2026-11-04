@@ -1,0 +1,8 @@
+SQLite native library (included in SQLitePCLRaw.lib.e_sqlite3)
+
+SQLite's core library and the sqlite3.c/sqlite3.h amalgamation are in the
+public domain. SQLitePCLRaw's packaging and managed bindings are separately
+covered by sqlitepcl-license.txt and sqlitepcl-notice.txt.
+
+Official copyright statement:
+https://www.sqlite.org/copyright.html

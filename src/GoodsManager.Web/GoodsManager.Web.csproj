@@ -21,10 +21,16 @@
     <None Remove="data/**/*" />
     <Content Remove="PhotoOcrAssets/**/*" />
     <None Remove="PhotoOcrAssets/**/*" />
+    <Content Include="../../third-party/application/**/*" Link="notices/application/%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="BuildCollectionClient" AfterTargets="ComputeFilesToPublish" Condition="'$(DesignTimeBuild)' != 'true'">
     <Exec WorkingDirectory="../GoodsManager.Client" Command="npm ci --ignore-scripts" />
     <Exec WorkingDirectory="../GoodsManager.Client" Command="npm run build" />
+    <ItemGroup>
+      <_PublishedDependencies Include="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.RelativePath)' == '$(AssemblyName).deps.json'" />
+    </ItemGroup>
+    <Error Condition="'@(_PublishedDependencies->Count())' != '1'" Text="発行する依存情報を一意に取得できません。" />
+    <Exec Command="node ../../tools/notices/verify-notices.mjs &quot;%(_PublishedDependencies.FullPath)&quot;" />
     <ItemGroup>
       <_ClientFiles Include="wwwroot/**/*" />
       <_OcrFiles Include="PhotoOcrAssets/**/*" />

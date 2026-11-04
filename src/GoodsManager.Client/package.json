@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit && vite build && npm run build:ocr",
+    "build": "node ../../tools/notices/verify-notices.mjs && tsc --noEmit && vite build && npm run build:ocr",
     "dev": "vite",
     "test": "node --test ../../tests/Browser/*.test.mjs",
     "build:ocr": "vite build --config vite.ocr.config.ts && node ../../tools/photo-ocr/prepare-assets.mjs"

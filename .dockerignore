@@ -3,9 +3,13 @@
 !tools/
 !tools/photo-ocr/
 !tools/photo-ocr/**
+!tools/notices/
+!tools/notices/**
 !third-party/
 !third-party/photo-ocr/
 !third-party/photo-ocr/**
+!third-party/application/
+!third-party/application/**
 !src/
 !src/GoodsManager.Web/
 !src/GoodsManager.Web/**

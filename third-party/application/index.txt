@@ -1,0 +1,29 @@
+GoodsManager application dependency notices
+
+The reviewed package identities and versions are listed in inventory.json.
+Keep these notices with the distributed application. A dependency change
+requires reviewing and updating the inventory and its corresponding notices.
+
+Browser bundles include the complete client-notices.txt as a comment, and
+wwwroot/notices/client-notices.txt provides the same text as a separate file.
+Server notices are distributed in notices/application/ alongside the app.
+OCR models, Worker and dependencies retain their separate inventory and
+notices in PhotoOcrAssets/notices/.
+
+Unmodified license sources:
+- React, React DOM, scheduler, Quagga2 and gl-matrix: LICENSE files from the
+  exact npm packages identified by package-lock integrity in inventory.json.
+- Microsoft ASP.NET Core Identity, EF Core, Microsoft.Data.Sqlite and
+  Microsoft.Extensions.DependencyModel: MIT, .NET Foundation and Contributors.
+  https://github.com/dotnet/efcore/blob/v10.0.13/LICENSE.txt
+- SkiaSharp 4.153.1: LICENSE.txt from the NuGet package.
+  Native notices: THIRD-PARTY-NOTICES.txt from
+  SkiaSharp.NativeAssets.Linux.NoDependencies 4.153.1, unmodified.
+  https://github.com/mono/SkiaSharp/tree/4783f51448f9b070dda4f87b83e941c9599e466e
+- SQLitePCLRaw: Apache-2.0, including upstream NOTICE.TXT.
+  https://github.com/ericsink/SQLitePCL.raw/blob/master/LICENSE.TXT
+  https://github.com/ericsink/SQLitePCL.raw/blob/master/NOTICE.TXT
+- SQLite core native library: public domain, see sqlite-public-domain.txt.
+
+The framework-dependent Docker image also retains the .NET runtime's own
+license and third-party notices under /usr/share/dotnet/.

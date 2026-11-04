@@ -1,0 +1,154 @@
+{
+  "npm": [
+    {
+      "name": "react",
+      "version": "19.3.1",
+      "integrity": "sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==",
+      "notices": [
+        "client-notices.txt"
+      ]
+    },
+    {
+      "name": "react-dom",
+      "version": "19.3.1",
+      "integrity": "sha512-Y0bARz53lhEC1NMCASs0/j+faB/zqt3R8hpvg1e8+61ZVJ4UL0UdC4cBbXfZMcIuhrfgeILTLe+ZeBCavQPtKQ==",
+      "notices": [
+        "client-notices.txt"
+      ]
+    },
+    {
+      "name": "scheduler",
+      "version": "0.28.0",
+      "integrity": "sha512-juorfCmIkIw8tT+p5BXSm6PJjQF/ycEYmKyzURCIt/RaZIhL+PulbQ9Yu2z1HdOJDdqDTlxA1+xKBmHXJsczAw==",
+      "notices": [
+        "client-notices.txt"
+      ]
+    },
+    {
+      "name": "@ericblade/quagga2",
+      "version": "1.13.0",
+      "integrity": "sha512-DlBskCfQgP+HwAsCDFYPI6qeB5ifT4BQODNmedkxr364TD3Z4YtldBaQInM4ap6Os6vJ2YcgFiUPMAOTbHgkDw==",
+      "notices": [
+        "client-notices.txt"
+      ]
+    },
+    {
+      "name": "gl-matrix",
+      "version": "3.4.4",
+      "integrity": "sha512-latSnyDNt/8zYUB6VIJ6PCh2jBjJX6gnDsoCZ7LyW7GkqrD51EWwa9qCoGixj8YqBtETQK/xY7OmpTF8xz1DdQ==",
+      "notices": [
+        "client-notices.txt"
+      ]
+    }
+  ],
+  "nuget": [
+    {
+      "name": "Microsoft.AspNetCore.Identity.EntityFrameworkCore",
+      "version": "10.0.13",
+      "notices": "dotnet-license.txt"
+    },
+    {
+      "name": "Microsoft.Data.Sqlite.Core",
+      "version": "10.0.13",
+      "notices": "dotnet-license.txt"
+    },
+    {
+      "name": "Microsoft.EntityFrameworkCore.Abstractions",
+      "version": "10.0.13",
+      "notices": "dotnet-license.txt"
+    },
+    {
+      "name": "Microsoft.EntityFrameworkCore.Relational",
+      "version": "10.0.13",
+      "notices": "dotnet-license.txt"
+    },
+    {
+      "name": "Microsoft.EntityFrameworkCore.Sqlite.Core",
+      "version": "10.0.13",
+      "notices": "dotnet-license.txt"
+    },
+    {
+      "name": "Microsoft.EntityFrameworkCore.Sqlite",
+      "version": "10.0.13",
+      "notices": "dotnet-license.txt"
+    },
+    {
+      "name": "Microsoft.EntityFrameworkCore",
+      "version": "10.0.13",
+      "notices": "dotnet-license.txt"
+    },
+    {
+      "name": "Microsoft.Extensions.DependencyModel",
+      "version": "10.0.13",
+      "notices": "dotnet-license.txt"
+    },
+    {
+      "name": "SkiaSharp.NativeAssets.Linux.NoDependencies",
+      "version": "4.153.1",
+      "notices": [
+        "skiasharp-license.txt",
+        "skiasharp-third-party.txt"
+      ]
+    },
+    {
+      "name": "SkiaSharp.NativeAssets.macOS",
+      "version": "4.153.1",
+      "notices": [
+        "skiasharp-license.txt",
+        "skiasharp-third-party.txt"
+      ]
+    },
+    {
+      "name": "SkiaSharp.NativeAssets.Win32",
+      "version": "4.153.1",
+      "notices": [
+        "skiasharp-license.txt",
+        "skiasharp-third-party.txt"
+      ]
+    },
+    {
+      "name": "SkiaSharp",
+      "version": "4.153.1",
+      "notices": [
+        "skiasharp-license.txt",
+        "skiasharp-third-party.txt"
+      ]
+    },
+    {
+      "name": "SQLitePCLRaw.bundle_e_sqlite3",
+      "version": "2.1.13",
+      "notices": [
+        "sqlitepcl-license.txt",
+        "sqlitepcl-notice.txt",
+        "sqlite-public-domain.txt"
+      ]
+    },
+    {
+      "name": "SQLitePCLRaw.core",
+      "version": "2.1.13",
+      "notices": [
+        "sqlitepcl-license.txt",
+        "sqlitepcl-notice.txt",
+        "sqlite-public-domain.txt"
+      ]
+    },
+    {
+      "name": "SQLitePCLRaw.lib.e_sqlite3",
+      "version": "2.1.13",
+      "notices": [
+        "sqlitepcl-license.txt",
+        "sqlitepcl-notice.txt",
+        "sqlite-public-domain.txt"
+      ]
+    },
+    {
+      "name": "SQLitePCLRaw.provider.e_sqlite3",
+      "version": "2.1.13",
+      "notices": [
+        "sqlitepcl-license.txt",
+        "sqlitepcl-notice.txt",
+        "sqlite-public-domain.txt"
+      ]
+    }
+  ]
+}
